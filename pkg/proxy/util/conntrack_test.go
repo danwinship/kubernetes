@@ -18,29 +18,15 @@ package util
 
 import (
 	"fmt"
-	"strings"
 	"testing"
 
 	"k8s.io/kubernetes/pkg/util/exec"
 )
 
 func TestExecConntrackTool(t *testing.T) {
-	fcmd := exec.FakeCmd{
-		CombinedOutputScript: []exec.FakeCombinedOutputAction{
-			func() ([]byte, error) { return []byte("1 flow entries have been deleted"), nil },
-			func() ([]byte, error) { return []byte("1 flow entries have been deleted"), nil },
-			func() ([]byte, error) {
-				return []byte(""), fmt.Errorf("conntrack v1.4.2 (conntrack-tools): 0 flow entries have been deleted.")
-			},
-		},
-	}
 	fexec := exec.FakeExec{
-		CommandScript: []exec.FakeCommandAction{
-			func(cmd string, args ...string) exec.Cmd { return exec.InitFakeCmd(&fcmd, cmd, args...) },
-			func(cmd string, args ...string) exec.Cmd { return exec.InitFakeCmd(&fcmd, cmd, args...) },
-			func(cmd string, args ...string) exec.Cmd { return exec.InitFakeCmd(&fcmd, cmd, args...) },
-		},
 		LookPathFunc: func(cmd string) (string, error) { return cmd, nil },
+		T: t,
 	}
 
 	testCases := [][]string{
@@ -48,10 +34,17 @@ func TestExecConntrackTool(t *testing.T) {
 		{"-D", "-p", "udp", "-d", "10.0.240.1"},
 		{"-D", "-p", "udp", "--orig-dst", "10.240.0.2", "--dst-nat", "10.0.10.2"},
 	}
-
 	expectErr := []bool{false, false, true}
 
 	for i := range testCases {
+		if !expectErr[i] {
+			fexec.AddCommand("conntrack", testCases[i]...).
+				SetCombinedOutput("1 flow entries have been deleted", nil)
+		} else {
+			fexec.AddCommand("conntrack", testCases[i]...).
+				SetCombinedOutput("", fmt.Errorf("conntrack v1.4.2 (conntrack-tools): 0 flow entries have been deleted."))
+		}
+
 		err := ExecConntrackTool(&fexec, testCases[i]...)
 
 		if expectErr[i] {
@@ -64,32 +57,14 @@ func TestExecConntrackTool(t *testing.T) {
 			}
 		}
 
-		execCmd := strings.Join(fcmd.CombinedOutputLog[i], " ")
-		expectCmd := fmt.Sprintf("%s %s", "conntrack", strings.Join(testCases[i], " "))
-
-		if execCmd != expectCmd {
-			t.Errorf("expect execute command: %s, but got: %s", expectCmd, execCmd)
-		}
+		fexec.AssertExpectedCommands()
 	}
 }
 
 func TestDeleteServiceConnections(t *testing.T) {
-	fcmd := exec.FakeCmd{
-		CombinedOutputScript: []exec.FakeCombinedOutputAction{
-			func() ([]byte, error) { return []byte("1 flow entries have been deleted"), nil },
-			func() ([]byte, error) { return []byte("1 flow entries have been deleted"), nil },
-			func() ([]byte, error) {
-				return []byte(""), fmt.Errorf("conntrack v1.4.2 (conntrack-tools): 0 flow entries have been deleted.")
-			},
-		},
-	}
 	fexec := exec.FakeExec{
-		CommandScript: []exec.FakeCommandAction{
-			func(cmd string, args ...string) exec.Cmd { return exec.InitFakeCmd(&fcmd, cmd, args...) },
-			func(cmd string, args ...string) exec.Cmd { return exec.InitFakeCmd(&fcmd, cmd, args...) },
-			func(cmd string, args ...string) exec.Cmd { return exec.InitFakeCmd(&fcmd, cmd, args...) },
-		},
 		LookPathFunc: func(cmd string) (string, error) { return cmd, nil },
+		T: t,
 	}
 
 	testCases := [][]string{
@@ -101,20 +76,20 @@ func TestDeleteServiceConnections(t *testing.T) {
 			"10.240.0.4",
 		},
 	}
+	expectErr := []bool{false, true}
 
-	svcCount := 0
 	for i := range testCases {
-		DeleteServiceConnections(&fexec, testCases[i])
 		for _, ip := range testCases[i] {
-			expectCommand := fmt.Sprintf("conntrack -D --orig-dst %s -p udp", ip)
-			execCommand := strings.Join(fcmd.CombinedOutputLog[svcCount], " ")
-			if expectCommand != execCommand {
-				t.Errorf("Exepect comand: %s, but executed %s", expectCommand, execCommand)
+			args := []string{"-D", "--orig-dst", ip, "-p", "udp"}
+			if !expectErr[i] {
+				fexec.AddCommand("conntrack", args...).
+					SetCombinedOutput("1 flow entries have been deleted", nil)
+			} else {
+				fexec.AddCommand("conntrack", args...).
+					SetCombinedOutput("", fmt.Errorf("conntrack v1.4.2 (conntrack-tools): 0 flow entries have been deleted."))
 			}
-			svcCount += 1
-		}
-		if svcCount != fexec.CommandCalls {
-			t.Errorf("Exepect comand executed %d times, but got %d", svcCount, fexec.CommandCalls)
-		}
+		}				
+		DeleteServiceConnections(&fexec, testCases[i])
+		fexec.AssertExpectedCommands()
 	}
 }

@@ -157,26 +157,7 @@ func TestCNIPlugin(t *testing.T) {
 	pluginName := fmt.Sprintf("test%d", rand.Intn(1000))
 	vendorName := fmt.Sprintf("test_vendor%d", rand.Intn(1000))
 
-	podIP := "10.0.0.2"
-	podIPOutput := fmt.Sprintf("4: eth0    inet %s/24 scope global dynamic eth0\\       valid_lft forever preferred_lft forever", podIP)
-	fakeCmds := []utilexec.FakeCommandAction{
-		func(cmd string, args ...string) utilexec.Cmd {
-			return utilexec.InitFakeCmd(&utilexec.FakeCmd{
-				CombinedOutputScript: []utilexec.FakeCombinedOutputAction{
-					func() ([]byte, error) {
-						return []byte(podIPOutput), nil
-					},
-				},
-			}, cmd, args...)
-		},
-	}
-
-	fexec := &utilexec.FakeExec{
-		CommandScript: fakeCmds,
-		LookPathFunc: func(file string) (string, error) {
-			return fmt.Sprintf("/fake-bin/%s", file), nil
-		},
-	}
+	fexec := utilexec.NewFakeExec(t, []string{"nsenter"})
 
 	mockLoCNI := &mock_cni.MockCNI{}
 	// TODO mock for the test plugin too
@@ -271,6 +252,9 @@ func TestCNIPlugin(t *testing.T) {
 	}
 
 	// Get its IP address
+	podIP := "10.0.0.2"
+	fexec.AddCommand("/fake-bin/nsenter", "--net="+pods[0].NetnsPath, "-F", "--", "ip", "-o", "-4", "addr", "show", "dev", "eth0", "scope", "global").
+		SetCombinedOutput(fmt.Sprintf("4: eth0    inet %s/24 scope global dynamic eth0\\       valid_lft forever preferred_lft forever", podIP), nil)
 	status, err := plug.GetPodNetworkStatus("podNamespace", "podName", containerID)
 	if err != nil {
 		t.Errorf("Failed to read pod network status: %v", err)
@@ -278,6 +262,7 @@ func TestCNIPlugin(t *testing.T) {
 	if status.IP.String() != podIP {
 		t.Errorf("Expected pod IP %q but got %q", podIP, status.IP.String())
 	}
+	fexec.AssertExpectedCommands()
 
 	// Tear it down
 	err = plug.TearDownPod("podNamespace", "podName", containerID)

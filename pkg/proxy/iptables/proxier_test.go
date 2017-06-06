@@ -187,21 +187,7 @@ func newFakeServiceInfo(service proxy.ServicePortName, ip net.IP, port int, prot
 }
 
 func TestDeleteEndpointConnections(t *testing.T) {
-	fcmd := exec.FakeCmd{
-		CombinedOutputScript: []exec.FakeCombinedOutputAction{
-			func() ([]byte, error) { return []byte("1 flow entries have been deleted"), nil },
-			func() ([]byte, error) {
-				return []byte(""), fmt.Errorf("conntrack v1.4.2 (conntrack-tools): 0 flow entries have been deleted.")
-			},
-		},
-	}
-	fexec := exec.FakeExec{
-		CommandScript: []exec.FakeCommandAction{
-			func(cmd string, args ...string) exec.Cmd { return exec.InitFakeCmd(&fcmd, cmd, args...) },
-			func(cmd string, args ...string) exec.Cmd { return exec.InitFakeCmd(&fcmd, cmd, args...) },
-		},
-		LookPathFunc: func(cmd string) (string, error) { return cmd, nil },
-	}
+	fexec := exec.NewFakeExec(t, nil)
 
 	serviceMap := make(map[proxy.ServicePortName]*serviceInfo)
 	svc1 := proxy.ServicePortName{NamespacedName: types.NamespacedName{Namespace: "ns1", Name: "svc1"}, Port: "p80"}
@@ -211,40 +197,47 @@ func TestDeleteEndpointConnections(t *testing.T) {
 
 	fakeProxier := Proxier{exec: &fexec, serviceMap: serviceMap}
 
-	testCases := []endpointServicePair{
+	testCases := []struct{
+		pair   endpointServicePair
+		output string
+		err    error
+	}{
 		{
-			endpoint:        "10.240.0.3:80",
-			servicePortName: svc1,
+			pair:   endpointServicePair{
+				endpoint:        "10.240.0.3:80",
+				servicePortName: svc1,
+			},
+			output: "1 flow entries have been deleted",
+			err:    nil,
 		},
 		{
-			endpoint:        "10.240.0.4:80",
-			servicePortName: svc1,
+			pair:   endpointServicePair{
+				endpoint:        "10.240.0.4:80",
+				servicePortName: svc1,
+			},
+			output: "",
+			err:    fmt.Errorf("conntrack v1.4.2 (conntrack-tools): 0 flow entries have been deleted."),
 		},
 		{
-			endpoint:        "10.240.0.5:80",
-			servicePortName: svc2,
+			pair: endpointServicePair{
+				endpoint:        "10.240.0.5:80",
+				servicePortName: svc2,
+			},
 		},
 	}
 
-	expectCommandExecCount := 0
 	for i := range testCases {
-		input := map[endpointServicePair]bool{testCases[i]: true}
-		fakeProxier.deleteEndpointConnections(input)
-		svcInfo := fakeProxier.serviceMap[testCases[i].servicePortName]
+		input := map[endpointServicePair]bool{testCases[i].pair: true}
+		svcInfo := fakeProxier.serviceMap[testCases[i].pair.servicePortName]
 		if svcInfo.protocol == api.ProtocolUDP {
 			svcIp := svcInfo.clusterIP.String()
-			endpointIp := strings.Split(testCases[i].endpoint, ":")[0]
-			expectCommand := fmt.Sprintf("conntrack -D --orig-dst %s --dst-nat %s -p udp", svcIp, endpointIp)
-			execCommand := strings.Join(fcmd.CombinedOutputLog[expectCommandExecCount], " ")
-			if expectCommand != execCommand {
-				t.Errorf("Exepect comand: %s, but executed %s", expectCommand, execCommand)
-			}
-			expectCommandExecCount += 1
+			endpointIp := strings.Split(testCases[i].pair.endpoint, ":")[0]
+			fexec.AddCommand("conntrack", "-D", "--orig-dst", svcIp, "--dst-nat", endpointIp, "-p", "udp").
+				SetCombinedOutput(testCases[i].output, testCases[i].err)
 		}
 
-		if expectCommandExecCount != fexec.CommandCalls {
-			t.Errorf("Exepect comand executed %d times, but got %d", expectCommandExecCount, fexec.CommandCalls)
-		}
+		fakeProxier.deleteEndpointConnections(input)
+		fexec.AssertExpectedCommands()
 	}
 }
 
@@ -382,11 +375,11 @@ func (fake *fakeHealthChecker) SyncEndpoints(newEndpoints map[types.NamespacedNa
 
 const testHostname = "test-hostname"
 
-func NewFakeProxier(ipt utiliptables.Interface) *Proxier {
+func NewFakeProxier(ipt utiliptables.Interface, t *testing.T) *Proxier {
 	// TODO: Call NewProxier after refactoring out the goroutine
 	// invocation into a Run() method.
 	p := &Proxier{
-		exec:                     &exec.FakeExec{},
+		exec:                     exec.NewFakeExec(t, nil),
 		serviceMap:               make(proxyServiceMap),
 		serviceChanges:           newServiceChangeMap(),
 		endpointsMap:             make(proxyEndpointsMap),
@@ -570,7 +563,7 @@ func errorf(msg string, rules []iptablestest.Rule, t *testing.T) {
 
 func TestClusterIPReject(t *testing.T) {
 	ipt := iptablestest.NewFake()
-	fp := NewFakeProxier(ipt)
+	fp := NewFakeProxier(ipt, t)
 	svcIP := "10.20.30.41"
 	svcPort := 80
 	svcPortName := proxy.ServicePortName{
@@ -604,7 +597,7 @@ func TestClusterIPReject(t *testing.T) {
 
 func TestClusterIPEndpointsJump(t *testing.T) {
 	ipt := iptablestest.NewFake()
-	fp := NewFakeProxier(ipt)
+	fp := NewFakeProxier(ipt, t)
 	svcIP := "10.20.30.41"
 	svcPort := 80
 	svcPortName := proxy.ServicePortName{
@@ -661,7 +654,7 @@ func TestClusterIPEndpointsJump(t *testing.T) {
 
 func TestLoadBalancer(t *testing.T) {
 	ipt := iptablestest.NewFake()
-	fp := NewFakeProxier(ipt)
+	fp := NewFakeProxier(ipt, t)
 	svcIP := "10.20.30.41"
 	svcPort := 80
 	svcNodePort := 3001
@@ -722,7 +715,7 @@ func TestLoadBalancer(t *testing.T) {
 
 func TestNodePort(t *testing.T) {
 	ipt := iptablestest.NewFake()
-	fp := NewFakeProxier(ipt)
+	fp := NewFakeProxier(ipt, t)
 	svcIP := "10.20.30.41"
 	svcPort := 80
 	svcNodePort := 3001
@@ -772,7 +765,7 @@ func TestNodePort(t *testing.T) {
 
 func TestExternalIPsReject(t *testing.T) {
 	ipt := iptablestest.NewFake()
-	fp := NewFakeProxier(ipt)
+	fp := NewFakeProxier(ipt, t)
 	svcIP := "10.20.30.41"
 	svcPort := 80
 	svcExternalIPs := "50.60.70.81"
@@ -806,7 +799,7 @@ func TestExternalIPsReject(t *testing.T) {
 
 func TestNodePortReject(t *testing.T) {
 	ipt := iptablestest.NewFake()
-	fp := NewFakeProxier(ipt)
+	fp := NewFakeProxier(ipt, t)
 	svcIP := "10.20.30.41"
 	svcPort := 80
 	svcNodePort := 3001
@@ -843,7 +836,7 @@ func strPtr(s string) *string {
 
 func TestOnlyLocalLoadBalancing(t *testing.T) {
 	ipt := iptablestest.NewFake()
-	fp := NewFakeProxier(ipt)
+	fp := NewFakeProxier(ipt, t)
 	svcIP := "10.20.30.41"
 	svcPort := 80
 	svcNodePort := 3001
@@ -925,7 +918,7 @@ func TestOnlyLocalLoadBalancing(t *testing.T) {
 
 func TestOnlyLocalNodePortsNoClusterCIDR(t *testing.T) {
 	ipt := iptablestest.NewFake()
-	fp := NewFakeProxier(ipt)
+	fp := NewFakeProxier(ipt, t)
 	// set cluster CIDR to empty before test
 	fp.clusterCIDR = ""
 	onlyLocalNodePorts(t, fp, ipt)
@@ -933,7 +926,7 @@ func TestOnlyLocalNodePortsNoClusterCIDR(t *testing.T) {
 
 func TestOnlyLocalNodePorts(t *testing.T) {
 	ipt := iptablestest.NewFake()
-	fp := NewFakeProxier(ipt)
+	fp := NewFakeProxier(ipt, t)
 	onlyLocalNodePorts(t, fp, ipt)
 }
 
@@ -1040,7 +1033,7 @@ func addTestPort(array []api.ServicePort, name string, protocol api.Protocol, po
 
 func TestBuildServiceMapAddRemove(t *testing.T) {
 	ipt := iptablestest.NewFake()
-	fp := NewFakeProxier(ipt)
+	fp := NewFakeProxier(ipt, t)
 
 	services := []*api.Service{
 		makeTestService("somewhere-else", "cluster-ip", func(svc *api.Service) {
@@ -1146,7 +1139,7 @@ func TestBuildServiceMapAddRemove(t *testing.T) {
 
 func TestBuildServiceMapServiceHeadless(t *testing.T) {
 	ipt := iptablestest.NewFake()
-	fp := NewFakeProxier(ipt)
+	fp := NewFakeProxier(ipt, t)
 
 	makeServiceMap(fp,
 		makeTestService("somewhere-else", "headless", func(svc *api.Service) {
@@ -1174,7 +1167,7 @@ func TestBuildServiceMapServiceHeadless(t *testing.T) {
 
 func TestBuildServiceMapServiceTypeExternalName(t *testing.T) {
 	ipt := iptablestest.NewFake()
-	fp := NewFakeProxier(ipt)
+	fp := NewFakeProxier(ipt, t)
 
 	makeServiceMap(fp,
 		makeTestService("somewhere-else", "external-name", func(svc *api.Service) {
@@ -1200,7 +1193,7 @@ func TestBuildServiceMapServiceTypeExternalName(t *testing.T) {
 
 func TestBuildServiceMapServiceUpdate(t *testing.T) {
 	ipt := iptablestest.NewFake()
-	fp := NewFakeProxier(ipt)
+	fp := NewFakeProxier(ipt, t)
 
 	servicev1 := makeTestService("somewhere", "some-service", func(svc *api.Service) {
 		svc.Spec.Type = api.ServiceTypeClusterIP
@@ -2360,7 +2353,7 @@ func Test_updateEndpointsMap(t *testing.T) {
 
 	for tci, tc := range testCases {
 		ipt := iptablestest.NewFake()
-		fp := NewFakeProxier(ipt)
+		fp := NewFakeProxier(ipt, t)
 		fp.hostname = nodeName
 
 		// First check that after adding all previous versions of endpoints,

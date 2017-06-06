@@ -107,25 +107,12 @@ func (handler *fakeIOHandler) Readlink(name string) (string, error) {
 }
 
 func TestIoHandler(t *testing.T) {
-	var fcmd exec.FakeCmd
-	fcmd = exec.FakeCmd{
-		CombinedOutputScript: []exec.FakeCombinedOutputAction{
-			// cat
-			func() ([]byte, error) {
-				return []byte("Msft    \nVirtual Disk \n"), nil
-			},
-			// cat
-			func() ([]byte, error) {
-				return []byte("Msft    \nVirtual Disk \n"), nil
-			},
-		},
-	}
-	fake := exec.FakeExec{
-		CommandScript: []exec.FakeCommandAction{
-			func(cmd string, args ...string) exec.Cmd { return exec.InitFakeCmd(&fcmd, cmd, args...) },
-			func(cmd string, args ...string) exec.Cmd { return exec.InitFakeCmd(&fcmd, cmd, args...) },
-		},
-	}
+	fake := exec.FakeExec{T: t}
+	fake.AddCommand("cat", "/sys/bus/scsi/devices/3:0:0:1/vendor", "/sys/bus/scsi/devices/3:0:0:1/model").
+		SetCombinedOutput("Msft    \nVirtual Disk \n", nil)
+	fake.AddCommand("cat", "/sys/bus/scsi/devices/4:0:0:1/vendor", "/sys/bus/scsi/devices/4:0:0:1/model").
+		SetCombinedOutput("Msft    \nVirtual Disk \n", nil)
+	defer fake.AssertExpectedCommands()
 	disk, err := findDiskByLun(lun, &fakeIOHandler{}, &fake)
 	// if no disk matches lun, exit
 	if disk != "/dev/"+devName || err != nil {

@@ -53,24 +53,13 @@ func TestFindPairInterfaceOfContainerInterface(t *testing.T) {
 			expectErr: true,
 		},
 	}
+
+	fexec := exec.NewFakeExec(t, []string{"ethtool", "nsenter"})
 	for _, test := range tests {
-		fcmd := exec.FakeCmd{
-			CombinedOutputScript: []exec.FakeCombinedOutputAction{
-				func() ([]byte, error) { return []byte(test.output), test.err },
-			},
-		}
-		fexec := exec.FakeExec{
-			CommandScript: []exec.FakeCommandAction{
-				func(cmd string, args ...string) exec.Cmd {
-					return exec.InitFakeCmd(&fcmd, cmd, args...)
-				},
-			},
-			LookPathFunc: func(file string) (string, error) {
-				return fmt.Sprintf("/fake-bin/%s", file), nil
-			},
-		}
+		fexec.AddCommand("/fake-bin/nsenter", "-t", "123", "-n", "-F", "--", "/fake-bin/ethtool", "--statistics", "eth0").
+			SetCombinedOutput(test.output, test.err)
 		nsenterArgs := []string{"-t", "123", "-n"}
-		name, err := findPairInterfaceOfContainerInterface(&fexec, "eth0", "123", nsenterArgs)
+		name, err := findPairInterfaceOfContainerInterface(fexec, "eth0", "123", nsenterArgs)
 		if test.expectErr {
 			if err == nil {
 				t.Errorf("unexpected non-error")
@@ -83,6 +72,7 @@ func TestFindPairInterfaceOfContainerInterface(t *testing.T) {
 		if name != test.expectedName {
 			t.Errorf("unexpected name: %s (expected: %s)", name, test.expectedName)
 		}
+		fexec.AssertExpectedCommands()
 	}
 }
 

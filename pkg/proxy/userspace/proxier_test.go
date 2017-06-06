@@ -210,7 +210,7 @@ func TestTCPProxy(t *testing.T) {
 		}},
 	})
 
-	fexec := makeFakeExec()
+	fexec := makeFakeExec(t)
 
 	p, err := createProxier(lb, net.ParseIP("0.0.0.0"), ipttest.NewFake(), fexec, net.ParseIP("127.0.0.1"), nil, time.Minute, time.Second, udpIdleTimeoutForTest, newProxySocket)
 	if err != nil {
@@ -237,7 +237,7 @@ func TestUDPProxy(t *testing.T) {
 		}},
 	})
 
-	fexec := makeFakeExec()
+	fexec := makeFakeExec(t)
 
 	p, err := createProxier(lb, net.ParseIP("0.0.0.0"), ipttest.NewFake(), fexec, net.ParseIP("127.0.0.1"), nil, time.Minute, time.Second, udpIdleTimeoutForTest, newProxySocket)
 	if err != nil {
@@ -264,7 +264,7 @@ func TestUDPProxyTimeout(t *testing.T) {
 		}},
 	})
 
-	fexec := makeFakeExec()
+	fexec := makeFakeExec(t)
 
 	p, err := createProxier(lb, net.ParseIP("0.0.0.0"), ipttest.NewFake(), fexec, net.ParseIP("127.0.0.1"), nil, time.Minute, time.Second, udpIdleTimeoutForTest, newProxySocket)
 	if err != nil {
@@ -303,7 +303,7 @@ func TestMultiPortProxy(t *testing.T) {
 		}},
 	})
 
-	fexec := makeFakeExec()
+	fexec := makeFakeExec(t)
 
 	p, err := createProxier(lb, net.ParseIP("0.0.0.0"), ipttest.NewFake(), fexec, net.ParseIP("127.0.0.1"), nil, time.Minute, time.Second, udpIdleTimeoutForTest, newProxySocket)
 	if err != nil {
@@ -332,7 +332,7 @@ func TestMultiPortOnServiceAdd(t *testing.T) {
 	serviceQ := proxy.ServicePortName{NamespacedName: types.NamespacedName{Namespace: "testnamespace", Name: "echo"}, Port: "q"}
 	serviceX := proxy.ServicePortName{NamespacedName: types.NamespacedName{Namespace: "testnamespace", Name: "echo"}, Port: "x"}
 
-	fexec := makeFakeExec()
+	fexec := makeFakeExec(t)
 
 	p, err := createProxier(lb, net.ParseIP("0.0.0.0"), ipttest.NewFake(), fexec, net.ParseIP("127.0.0.1"), nil, time.Minute, time.Second, udpIdleTimeoutForTest, newProxySocket)
 	if err != nil {
@@ -395,7 +395,7 @@ func TestTCPProxyStop(t *testing.T) {
 		}},
 	})
 
-	fexec := makeFakeExec()
+	fexec := makeFakeExec(t)
 
 	p, err := createProxier(lb, net.ParseIP("0.0.0.0"), ipttest.NewFake(), fexec, net.ParseIP("127.0.0.1"), nil, time.Minute, time.Second, udpIdleTimeoutForTest, newProxySocket)
 	if err != nil {
@@ -439,7 +439,7 @@ func TestUDPProxyStop(t *testing.T) {
 		}},
 	})
 
-	fexec := makeFakeExec()
+	fexec := makeFakeExec(t)
 
 	p, err := createProxier(lb, net.ParseIP("0.0.0.0"), ipttest.NewFake(), fexec, net.ParseIP("127.0.0.1"), nil, time.Minute, time.Second, udpIdleTimeoutForTest, newProxySocket)
 	if err != nil {
@@ -477,7 +477,7 @@ func TestTCPProxyUpdateDelete(t *testing.T) {
 		}},
 	})
 
-	fexec := makeFakeExec()
+	fexec := makeFakeExec(t)
 
 	p, err := createProxier(lb, net.ParseIP("0.0.0.0"), ipttest.NewFake(), fexec, net.ParseIP("127.0.0.1"), nil, time.Minute, time.Second, udpIdleTimeoutForTest, newProxySocket)
 	if err != nil {
@@ -521,7 +521,7 @@ func TestUDPProxyUpdateDelete(t *testing.T) {
 		}},
 	})
 
-	fexec := makeFakeExec()
+	fexec := makeFakeExec(t)
 
 	p, err := createProxier(lb, net.ParseIP("0.0.0.0"), ipttest.NewFake(), fexec, net.ParseIP("127.0.0.1"), nil, time.Minute, time.Second, udpIdleTimeoutForTest, newProxySocket)
 	if err != nil {
@@ -566,7 +566,7 @@ func TestTCPProxyUpdateDeleteUpdate(t *testing.T) {
 	}
 	lb.OnEndpointsAdd(endpoint)
 
-	fexec := makeFakeExec()
+	fexec := makeFakeExec(t)
 
 	p, err := createProxier(lb, net.ParseIP("0.0.0.0"), ipttest.NewFake(), fexec, net.ParseIP("127.0.0.1"), nil, time.Minute, time.Second, udpIdleTimeoutForTest, newProxySocket)
 	if err != nil {
@@ -628,7 +628,7 @@ func TestUDPProxyUpdateDeleteUpdate(t *testing.T) {
 	}
 	lb.OnEndpointsAdd(endpoint)
 
-	fexec := makeFakeExec()
+	fexec := makeFakeExec(t)
 
 	p, err := createProxier(lb, net.ParseIP("0.0.0.0"), ipttest.NewFake(), fexec, net.ParseIP("127.0.0.1"), nil, time.Minute, time.Second, udpIdleTimeoutForTest, newProxySocket)
 	if err != nil {
@@ -689,7 +689,7 @@ func TestTCPProxyUpdatePort(t *testing.T) {
 		}},
 	})
 
-	fexec := makeFakeExec()
+	fexec := makeFakeExec(t)
 
 	p, err := createProxier(lb, net.ParseIP("0.0.0.0"), ipttest.NewFake(), fexec, net.ParseIP("127.0.0.1"), nil, time.Minute, time.Second, udpIdleTimeoutForTest, newProxySocket)
 	if err != nil {
@@ -737,7 +737,7 @@ func TestUDPProxyUpdatePort(t *testing.T) {
 		}},
 	})
 
-	fexec := makeFakeExec()
+	fexec := makeFakeExec(t)
 
 	p, err := createProxier(lb, net.ParseIP("0.0.0.0"), ipttest.NewFake(), fexec, net.ParseIP("127.0.0.1"), nil, time.Minute, time.Second, udpIdleTimeoutForTest, newProxySocket)
 	if err != nil {
@@ -782,7 +782,7 @@ func TestProxyUpdatePublicIPs(t *testing.T) {
 		}},
 	})
 
-	fexec := makeFakeExec()
+	fexec := makeFakeExec(t)
 
 	p, err := createProxier(lb, net.ParseIP("0.0.0.0"), ipttest.NewFake(), fexec, net.ParseIP("127.0.0.1"), nil, time.Minute, time.Second, udpIdleTimeoutForTest, newProxySocket)
 	if err != nil {
@@ -835,7 +835,7 @@ func TestProxyUpdatePortal(t *testing.T) {
 	}
 	lb.OnEndpointsAdd(endpoint)
 
-	fexec := makeFakeExec()
+	fexec := makeFakeExec(t)
 
 	p, err := createProxier(lb, net.ParseIP("0.0.0.0"), ipttest.NewFake(), fexec, net.ParseIP("127.0.0.1"), nil, time.Minute, time.Second, udpIdleTimeoutForTest, newProxySocket)
 	if err != nil {
@@ -905,18 +905,12 @@ func TestProxyUpdatePortal(t *testing.T) {
 	waitForNumProxyLoops(t, p, 1)
 }
 
-func makeFakeExec() *exec.FakeExec {
-	fcmd := exec.FakeCmd{
-		CombinedOutputScript: []exec.FakeCombinedOutputAction{
-			func() ([]byte, error) { return []byte("1 flow entries have been deleted"), nil },
-		},
-	}
-	return &exec.FakeExec{
-		CommandScript: []exec.FakeCommandAction{
-			func(cmd string, args ...string) exec.Cmd { return exec.InitFakeCmd(&fcmd, cmd, args...) },
-		},
-		LookPathFunc: func(cmd string) (string, error) { return cmd, nil },
-	}
+func makeFakeExec(t *testing.T) *exec.FakeExec {
+	fake := exec.NewFakeExec(t, nil)
+	// FIXME: the "<nil>" here indicates a bug in the test program...
+	fake.AddCommand("conntrack", "-D", "--orig-dst", "<nil>", "-p", "udp").
+		SetCombinedOutput("1 flow entries have been deleted", nil)
+	return fake
 }
 
 // TODO(justinsb): Add test for nodePort conflict detection, once we have nodePort wired in

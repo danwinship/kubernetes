@@ -103,20 +103,10 @@ func doTestPlugin(t *testing.T, spec *volume.Spec) {
 	}
 	ep := &v1.Endpoints{ObjectMeta: metav1.ObjectMeta{Name: "foo"}, Subsets: []v1.EndpointSubset{{
 		Addresses: []v1.EndpointAddress{{IP: "127.0.0.1"}}}}}
-	var fcmd exec.FakeCmd
-	fcmd = exec.FakeCmd{
-		CombinedOutputScript: []exec.FakeCombinedOutputAction{
-			// mount
-			func() ([]byte, error) {
-				return []byte{}, nil
-			},
-		},
-	}
-	fake := exec.FakeExec{
-		CommandScript: []exec.FakeCommandAction{
-			func(cmd string, args ...string) exec.Cmd { return exec.InitFakeCmd(&fcmd, cmd, args...) },
-		},
-	}
+	fake := exec.FakeExec{T: t}
+	fake.AddCommand("mount.glusterfs", "-V").
+		SetCombinedOutput("", nil)
+	defer fake.AssertExpectedCommands()
 	pod := &v1.Pod{ObjectMeta: metav1.ObjectMeta{UID: types.UID("poduid")}}
 	mounter, err := plug.(*glusterfsPlugin).newMounterInternal(spec, ep, pod, &mount.FakeMounter{}, &fake)
 	volumePath := mounter.GetPath()

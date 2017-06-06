@@ -45,7 +45,6 @@ import (
 	"k8s.io/kubernetes/pkg/kubelet/network/kubenet"
 	nettest "k8s.io/kubernetes/pkg/kubelet/network/testing"
 	"k8s.io/kubernetes/pkg/kubelet/types"
-	utilexec "k8s.io/kubernetes/pkg/util/exec"
 	"strings"
 )
 
@@ -1414,11 +1413,6 @@ func TestGenerateRunCommand(t *testing.T) {
 			HostName:    tt.hostName,
 			Err:         tt.err,
 		}
-		rkt.execer = &utilexec.FakeExec{CommandScript: []utilexec.FakeCommandAction{func(cmd string, args ...string) utilexec.Cmd {
-			return utilexec.InitFakeCmd(&utilexec.FakeCmd{}, cmd, args...)
-		}}}
-
-		// a command should be created of this form, but the returned command shouldn't be called (asserted by having no expectations on it)
 
 		result, err := rkt.generateRunCommand(tt.pod, tt.uuid, tt.netnsName)
 		assert.Equal(t, tt.err, err, testCaseHint)

@@ -79,33 +79,8 @@ func TestGetPodNetworkStatus(t *testing.T) {
 		//TODO: add test cases for retrieving ip inside container network namespace
 	}
 
-	fakeCmds := make([]exec.FakeCommandAction, 0)
-	for _, t := range testCases {
-		// the fake commands return the IP from the given index, or an error
-		fCmd := exec.FakeCmd{
-			CombinedOutputScript: []exec.FakeCombinedOutputAction{
-				func() ([]byte, error) {
-					ip, ok := podIPMap[kubecontainer.ContainerID{ID: t.id}]
-					if !ok {
-						return nil, fmt.Errorf("Pod IP %q not found", t.id)
-					}
-					return []byte(ip), nil
-				},
-			},
-		}
-		fakeCmds = append(fakeCmds, func(cmd string, args ...string) exec.Cmd {
-			return exec.InitFakeCmd(&fCmd, cmd, args...)
-		})
-	}
-	fexec := exec.FakeExec{
-		CommandScript: fakeCmds,
-		LookPathFunc: func(file string) (string, error) {
-			return fmt.Sprintf("/fake-bin/%s", file), nil
-		},
-	}
-
 	fhost := nettest.NewFakeHost(nil)
-	fakeKubenet := newFakeKubenetPlugin(podIPMap, &fexec, fhost)
+	fakeKubenet := newFakeKubenetPlugin(podIPMap, nil, fhost)
 
 	for i, tc := range testCases {
 		out, err := fakeKubenet.GetPodNetworkStatus("", "", kubecontainer.ContainerID{ID: tc.id})
@@ -128,12 +103,7 @@ func TestGetPodNetworkStatus(t *testing.T) {
 // TestTeardownBeforeSetUp tests that a `TearDown` call does call
 // `shaper.Reset`
 func TestTeardownCallsShaper(t *testing.T) {
-	fexec := &exec.FakeExec{
-		CommandScript: []exec.FakeCommandAction{},
-		LookPathFunc: func(file string) (string, error) {
-			return fmt.Sprintf("/fake-bin/%s", file), nil
-		},
-	}
+	fexec := &exec.NewFakeExec(t, nil)
 	fhost := nettest.NewFakeHost(nil)
 	fshaper := &bandwidth.FakeShaper{}
 	mockcni := &mock_cni.MockCNI{}
@@ -162,27 +132,10 @@ func TestTeardownCallsShaper(t *testing.T) {
 
 // TestInit tests that a `Init` call with an MTU sets the MTU
 func TestInit_MTU(t *testing.T) {
-	var fakeCmds []exec.FakeCommandAction
-	{
-		// modprobe br-netfilter
-		fCmd := exec.FakeCmd{
-			CombinedOutputScript: []exec.FakeCombinedOutputAction{
-				func() ([]byte, error) {
-					return make([]byte, 0), nil
-				},
-			},
-		}
-		fakeCmds = append(fakeCmds, func(cmd string, args ...string) exec.Cmd {
-			return exec.InitFakeCmd(&fCmd, cmd, args...)
-		})
-	}
-
-	fexec := &exec.FakeExec{
-		CommandScript: fakeCmds,
-		LookPathFunc: func(file string) (string, error) {
-			return fmt.Sprintf("/fake-bin/%s", file), nil
-		},
-	}
+	fexec := exec.NewFakeExec(t, nil)
+	fexec.AddCommand("modprobe", "br-netfilter").
+		SetCombinedOutput("", nil)
+	defer fexec.AssertExpectedCommands()
 
 	fhost := nettest.NewFakeHost(nil)
 	kubenet := newFakeKubenetPlugin(map[kubecontainer.ContainerID]string{}, fexec, fhost)
@@ -237,12 +190,7 @@ func TestTearDownWithoutRuntime(t *testing.T) {
 	fhost.Runtime = nil
 	mockcni := &mock_cni.MockCNI{}
 
-	fexec := &exec.FakeExec{
-		CommandScript: []exec.FakeCommandAction{},
-		LookPathFunc: func(file string) (string, error) {
-			return fmt.Sprintf("/fake-bin/%s", file), nil
-		},
-	}
+	fexec := exec.NewFakeExec(t, nil)
 
 	kubenet := newFakeKubenetPlugin(map[kubecontainer.ContainerID]string{}, fexec, fhost)
 	kubenet.cniConfig = mockcni
