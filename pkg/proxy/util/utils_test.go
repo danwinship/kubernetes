@@ -19,6 +19,7 @@ package util
 import (
 	"context"
 	"net"
+	"reflect"
 	"testing"
 
 	"k8s.io/api/core/v1"
@@ -27,6 +28,44 @@ import (
 	"k8s.io/apimachinery/pkg/util/sets"
 	fake "k8s.io/kubernetes/pkg/proxy/util/testing"
 )
+
+func TestValidateWorks(t *testing.T) {
+	if isValidEndpoint("", 0) {
+		t.Errorf("Didn't fail for empty set")
+	}
+	if isValidEndpoint("foobar", 0) {
+		t.Errorf("Didn't fail with invalid port")
+	}
+	if isValidEndpoint("foobar", -1) {
+		t.Errorf("Didn't fail with a negative port")
+	}
+	if !isValidEndpoint("foobar", 8080) {
+		t.Errorf("Failed a valid config.")
+	}
+}
+
+func TestBuildPortsToEndpointsMap(t *testing.T) {
+	endpoints := &v1.Endpoints{
+		ObjectMeta: metav1.ObjectMeta{Name: "foo", Namespace: "testnamespace"},
+		Subsets: []v1.EndpointSubset{{
+			Addresses: []v1.EndpointAddress{{IP: "endpoint1"}},
+			Ports:     []v1.EndpointPort{{Name: "p", Port: 40}},
+		},
+			{
+				Addresses: []v1.EndpointAddress{{IP: "endpoint2"}},
+				Ports:     []v1.EndpointPort{{Name: "p", Port: 80}},
+			}},
+	}
+	portsToEndpoints := BuildPortsToEndpointsMap(endpoints)
+	if len(portsToEndpoints["p"]) == 0 {
+		t.Errorf("portsToEndpoints map doesn't contain expected endpoint name")
+	}
+	expectedPortsToEndpoints := map[string][]string{}
+	expectedPortsToEndpoints["p"] = []string{"endpoint1:40", "endpoint2:80"}
+	if !reflect.DeepEqual(expectedPortsToEndpoints, portsToEndpoints) {
+		t.Errorf("expected ports to endpoints not seen")
+	}
+}
 
 func TestIsProxyableIP(t *testing.T) {
 	testCases := []struct {
