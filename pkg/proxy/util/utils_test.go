@@ -47,21 +47,49 @@ func TestValidateWorks(t *testing.T) {
 func TestBuildPortsToEndpointsMap(t *testing.T) {
 	endpoints := &v1.Endpoints{
 		ObjectMeta: metav1.ObjectMeta{Name: "foo", Namespace: "testnamespace"},
-		Subsets: []v1.EndpointSubset{{
-			Addresses: []v1.EndpointAddress{{IP: "endpoint1"}},
-			Ports:     []v1.EndpointPort{{Name: "p", Port: 40}},
-		},
+		Subsets: []v1.EndpointSubset{
 			{
-				Addresses: []v1.EndpointAddress{{IP: "endpoint2"}},
-				Ports:     []v1.EndpointPort{{Name: "p", Port: 80}},
-			}},
+				Addresses: []v1.EndpointAddress{
+					{IP: "10.0.0.1"},
+					{IP: "10.0.0.2"},
+				},
+				Ports: []v1.EndpointPort{
+					{Name: "http", Port: 80},
+					{Name: "https", Port: 443},
+				},
+			},
+			{
+				Addresses: []v1.EndpointAddress{
+					{IP: "10.0.0.1"},
+					{IP: "10.0.0.3"},
+				},
+				Ports: []v1.EndpointPort{
+					{Name: "http", Port: 8080},
+					{Name: "dns", Port: 53},
+				},
+			},
+			{
+				Addresses: []v1.EndpointAddress{},
+				Ports: []v1.EndpointPort{
+					{Name: "http", Port: 8888},
+					{Name: "ssh", Port: 22},
+				},
+			},
+			{
+				Addresses: []v1.EndpointAddress{
+					{IP: "10.0.0.1"},
+				},
+				Ports: []v1.EndpointPort{},
+			},
+		},
 	}
+	expectedPortsToEndpoints := map[string][]string{
+		"http":  {"10.0.0.1:80", "10.0.0.2:80", "10.0.0.1:8080", "10.0.0.3:8080"},
+		"https": {"10.0.0.1:443", "10.0.0.2:443"},
+		"dns":   {"10.0.0.1:53", "10.0.0.3:53"},
+	}
+
 	portsToEndpoints := BuildPortsToEndpointsMap(endpoints)
-	if len(portsToEndpoints["p"]) == 0 {
-		t.Errorf("portsToEndpoints map doesn't contain expected endpoint name")
-	}
-	expectedPortsToEndpoints := map[string][]string{}
-	expectedPortsToEndpoints["p"] = []string{"endpoint1:40", "endpoint2:80"}
 	if !reflect.DeepEqual(expectedPortsToEndpoints, portsToEndpoints) {
 		t.Errorf("expected ports to endpoints not seen")
 	}
