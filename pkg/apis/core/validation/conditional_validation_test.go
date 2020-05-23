@@ -341,7 +341,7 @@ func TestValidateServiceIPFamily(t *testing.T) {
 			},
 		},
 		{
-			name:             "allows cross family IPs (should fail validation in future)",
+			name:             "not allowed ipfamily/clusterip mismatch",
 			dualStackEnabled: true,
 			ipFamilies:       []api.IPFamily{api.IPv4Protocol, api.IPv6Protocol},
 			svc: &api.Service{
