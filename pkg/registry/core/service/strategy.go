@@ -90,12 +90,11 @@ func (svcStrategy) NamespaceScoped() bool {
 	return true
 }
 
-// PrepareForCreate clears fields that are not allowed to be set by end users on creation.
+// PrepareForCreate sets contextual defaults and clears fields that are not allowed to be set by end users on creation.
 func (strategy svcStrategy) PrepareForCreate(ctx context.Context, obj runtime.Object) {
 	service := obj.(*api.Service)
 	service.Status = api.ServiceStatus{}
 
-	// perform contextual defaulting to the configured family, if no family has been defaulted
 	if utilfeature.DefaultFeatureGate.Enabled(features.IPv6DualStack) && service.Spec.IPFamily == nil {
 		family := strategy.ipFamilies[0]
 		service.Spec.IPFamily = &family
@@ -104,13 +103,12 @@ func (strategy svcStrategy) PrepareForCreate(ctx context.Context, obj runtime.Ob
 	dropServiceDisabledFields(service, nil)
 }
 
-// PrepareForUpdate clears fields that are not allowed to be set by end users on update.
+// PrepareForUpdate sets contextual defaults and clears fields that are not allowed to be set by end users on update.
 func (strategy svcStrategy) PrepareForUpdate(ctx context.Context, obj, old runtime.Object) {
 	newService := obj.(*api.Service)
 	oldService := old.(*api.Service)
 	newService.Status = oldService.Status
 
-	// perform contextual defaulting to the configured family, if no family has been defaulted
 	if utilfeature.DefaultFeatureGate.Enabled(features.IPv6DualStack) && newService.Spec.IPFamily == nil {
 		if oldService.Spec.IPFamily != nil {
 			newService.Spec.IPFamily = oldService.Spec.IPFamily
