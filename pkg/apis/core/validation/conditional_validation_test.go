@@ -403,7 +403,7 @@ func TestValidateServiceIPFamily(t *testing.T) {
 			expectErr: []string{"spec.ipFamily: Invalid value: \"IPv4\": field is immutable"},
 		},
 		{
-			name:             "not allowed to change ipfamily for external name (change from 1.17 alpha behavior)",
+			name:             "allowed to change ipfamily for external name",
 			dualStackEnabled: true,
 			ipFamilies:       []api.IPFamily{api.IPv4Protocol},
 			svc: &api.Service{
@@ -418,7 +418,6 @@ func TestValidateServiceIPFamily(t *testing.T) {
 					IPFamily: &ipv6,
 				},
 			},
-			expectErr: []string{"spec.ipFamily: Invalid value: \"IPv4\": field is immutable"},
 		},
 
 		{

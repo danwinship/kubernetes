@@ -72,11 +72,8 @@ func validateIPFamily(service, oldService *api.Service, allowedIPFamilies []api.
 		return errs
 	}
 
-	// A user is not allowed to change the IPFamily field.
-	// NOTE: The initial implementation of this field allowed IPFamily to be changed for ExternalName services.
-	//       That has been removed and the field is now immutable for all service types. Relaxing immutability for
-	//       things of this type is generally easier than adding it later (which is not backwards compatible).
-	if oldService != nil && oldService.Spec.IPFamily != nil {
+	// A user is not allowed to change the IPFamily field, except for ExternalName services
+	if oldService != nil && oldService.Spec.IPFamily != nil && service.Spec.Type != api.ServiceTypeExternalName {
 		errs = append(errs, ValidateImmutableField(service.Spec.IPFamily, oldService.Spec.IPFamily, field.NewPath("spec", "ipFamily"))...)
 	}
 
