@@ -486,7 +486,7 @@ func TestServiceRegistryCreateDryRun(t *testing.T) {
 		families        []api.IPFamily
 	}{
 		{
-			name:            "v4 service",
+			name:            "v4 service featuregate off",
 			enableDualStack: false,
 			families:        singleStackIPv4,
 			svc: &api.Service{
@@ -505,7 +505,7 @@ func TestServiceRegistryCreateDryRun(t *testing.T) {
 			},
 		},
 		{
-			name:            "v4 service",
+			name:            "v4 service featuregate on but singlestack",
 			enableDualStack: true,
 			families:        singleStackIPv4,
 			svc: &api.Service{
@@ -524,7 +524,7 @@ func TestServiceRegistryCreateDryRun(t *testing.T) {
 			},
 		},
 		{
-			name:            "v6 service",
+			name:            "v6 service featuregate off",
 			enableDualStack: false,
 			families:        singleStackIPv6,
 			svc: &api.Service{
@@ -544,7 +544,7 @@ func TestServiceRegistryCreateDryRun(t *testing.T) {
 			},
 		},
 		{
-			name:            "v6 service",
+			name:            "v6 service featuregate on but singlestack",
 			enableDualStack: true,
 			families:        singleStackIPv6,
 			svc: &api.Service{
@@ -996,7 +996,8 @@ func TestServiceRegistryUpdate(t *testing.T) {
 		expectErr string
 	}{
 		{
-			families: singleStackIPv4,
+			name:     "simple update",
+			families: singleStackIPv4, // not actually relevant to test
 			in: &api.Service{
 				Spec: api.ServiceSpec{
 					Selector: map[string]string{"bar": "baz1"},
@@ -1079,40 +1080,6 @@ func TestServiceRegistryUpdate(t *testing.T) {
 					Type:            api.ServiceTypeClusterIP,
 					IPFamily:        &singleStackIPv6[0],
 					Selector:        map[string]string{"bar": "baz1"},
-					Ports: []api.ServicePort{{
-						Port:       6502,
-						Protocol:   api.ProtocolTCP,
-						TargetPort: intstr.FromInt(6502),
-					}},
-				},
-			},
-		},
-		{
-			name:            "ipv6: clearing IPFamily succeeds when set",
-			enableDualStack: true,
-			families:        singleStackIPv6,
-			in: &api.Service{
-				Spec: api.ServiceSpec{
-					SessionAffinity: api.ServiceAffinityNone,
-					Type:            api.ServiceTypeClusterIP,
-					Selector:        map[string]string{"bar": "baz1"},
-					IPFamily:        &singleStackIPv6[0],
-					Ports: []api.ServicePort{{
-						Port:       6502,
-						Protocol:   api.ProtocolTCP,
-						TargetPort: intstr.FromInt(6502),
-					}},
-				},
-			},
-			update: func(svc *api.Service) {
-				svc.Spec.IPFamily = nil
-			},
-			out: &api.Service{
-				Spec: api.ServiceSpec{
-					SessionAffinity: api.ServiceAffinityNone,
-					Type:            api.ServiceTypeClusterIP,
-					Selector:        map[string]string{"bar": "baz1"},
-					IPFamily:        &singleStackIPv6[0],
 					Ports: []api.ServicePort{{
 						Port:       6502,
 						Protocol:   api.ProtocolTCP,
