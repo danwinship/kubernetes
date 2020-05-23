@@ -54,14 +54,6 @@ func validateIPFamily(service, oldService *api.Service, allowedIPFamilies []api.
 		return errs
 	}
 
-	// Special case empty list and return an error (can be removed when gates are removed, we can panic on nil allowedIPFamilies)
-	if len(allowedIPFamilies) == 0 {
-		if service.Spec.IPFamily != nil {
-			errs = append(errs, field.Invalid(field.NewPath("spec", "ipFamily"), *service.Spec.IPFamily, "may not be set"))
-		}
-		return errs
-	}
-
 	// If the gate is off, setting or changing IPFamily is not allowed, but clearing it is
 	if !utilfeature.DefaultFeatureGate.Enabled(features.IPv6DualStack) {
 		if service.Spec.IPFamily != nil {

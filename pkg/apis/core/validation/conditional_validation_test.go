@@ -154,7 +154,7 @@ func TestValidateServiceSCTP(t *testing.T) {
 
 				t.Run(fmt.Sprintf("feature enabled=%v, old object %v, new object %v", enabled, oldServiceInfo.description, newServiceInfo.description), func(t *testing.T) {
 					defer featuregatetesting.SetFeatureGateDuringTest(t, utilfeature.DefaultFeatureGate, features.SCTPSupport, enabled)()
-					errs := ValidateConditionalService(newService, oldService, nil)
+					errs := ValidateConditionalService(newService, oldService, []api.IPFamily{api.IPv4Protocol})
 					// objects should never be changed
 					if !reflect.DeepEqual(oldService, oldServiceInfo.object()) {
 						t.Errorf("old object changed: %v", diff.ObjectReflectDiff(oldService, oldServiceInfo.object()))
@@ -265,28 +265,6 @@ func TestValidateServiceIPFamily(t *testing.T) {
 		oldSvc           *api.Service
 		expectErr        []string
 	}{
-		{
-			name:             "not allowed ipv4",
-			dualStackEnabled: true,
-			ipFamilies:       []api.IPFamily{},
-			svc: &api.Service{
-				Spec: api.ServiceSpec{
-					IPFamily: &ipv4,
-				},
-			},
-			expectErr: []string{"spec.ipFamily: Invalid value: \"IPv4\": may not be set"},
-		},
-		{
-			name:             "not allowed ipv6",
-			dualStackEnabled: true,
-			ipFamilies:       []api.IPFamily{},
-			svc: &api.Service{
-				Spec: api.ServiceSpec{
-					IPFamily: &ipv6,
-				},
-			},
-			expectErr: []string{"spec.ipFamily: Invalid value: \"IPv6\": may not be set"},
-		},
 		{
 			name:             "allowed ipv4",
 			dualStackEnabled: true,
