@@ -64,9 +64,11 @@ type KubeletFlags struct {
 	// HostnameOverride is the hostname used to identify the kubelet instead
 	// of the actual hostname.
 	HostnameOverride string
-	// NodeIP is IP address of the node.
-	// If set, kubelet will use this IP address for the node.
+	// NodeIP is the value of the legacy --node-ip argument for setting Node IP
 	NodeIP string
+	// NodeIPs is used to configure the Node IP or set the preferred IP family
+	// or families when defaulting the NodeIP
+	NodeIPs string
 
 	// Container-runtime-specific options.
 	config.ContainerRuntimeOptions
@@ -332,7 +334,7 @@ func (f *KubeletFlags) AddFlags(mainfs *pflag.FlagSet) {
 
 	fs.StringVar(&f.HostnameOverride, "hostname-override", f.HostnameOverride, "If non-empty, will use this string as identification instead of the actual hostname. If --cloud-provider is set, the cloud provider determines the name of the node (consult cloud provider documentation to determine if and how the hostname is used).")
 
-	fs.StringVar(&f.NodeIP, "node-ip", f.NodeIP, "IP address of the node. If set, kubelet will use this IP address for the node. If unset, kubelet will use the node's default IPv4 address, if any, or its default IPv6 address if it has no IPv4 addresses. You can pass '::' to make it prefer the default IPv6 address rather than the default IPv4 address.")
+	fs.StringVar(&f.NodeIPs, "node-ips", f.NodeIPs, "Overrides the Node IP(s) or modifies the Node IP detection behavior. In a single-stack cluster, can be either a specific node IP address, or the string 'ipv4' or 'ipv6' to request autodetecting an IP of that family. In a dual-stack cluster, it can also be either a pair of IP addresses separated by a comma, or else 'ipv4,ipv6' or 'ipv6,ipv4' to request autodetection, with the specified ordering. If not specified, the default is 'ipv4'. Note that in a dual stack cluster a secondary IP may be detected even if not requested.")
 
 	fs.StringVar(&f.CertDirectory, "cert-dir", f.CertDirectory, "The directory where the TLS certs are located. "+
 		"If --tls-cert-file and --tls-private-key-file are provided, this flag will be ignored.")
@@ -388,6 +390,8 @@ func (f *KubeletFlags) AddFlags(mainfs *pflag.FlagSet) {
 	fs.MarkDeprecated("experimental-mounter-path", "will be removed in 1.23. in favor of using CSI.")
 	fs.BoolVar(&f.ExperimentalCheckNodeCapabilitiesBeforeMount, "experimental-check-node-capabilities-before-mount", f.ExperimentalCheckNodeCapabilitiesBeforeMount, "[Experimental] if set true, the kubelet will check the underlying node for required components (binaries, etc.) before performing the mount")
 	fs.MarkDeprecated("experimental-check-node-capabilities-before-mount", "will be removed in 1.23. in favor of using CSI.")
+	fs.StringVar(&f.NodeIP, "node-ip", f.NodeIP, "IP address of the node. If set, kubelet will use this IP address for the node. If unset, kubelet will use the node's default IPv4 address, if any, or its default IPv6 address if it has no IPv4 addresses. You can pass '::' to make it prefer the default IPv6 address rather than the default IPv4 address.")
+	fs.MarkDeprecated("node-ip", "will be removed in a future version; use --node-ips instead")
 }
 
 // AddKubeletConfigFlags adds flags for a specific kubeletconfig.KubeletConfiguration to the specified FlagSet

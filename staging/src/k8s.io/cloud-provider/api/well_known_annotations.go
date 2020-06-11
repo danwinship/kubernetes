@@ -17,10 +17,16 @@ limitations under the License.
 package api
 
 const (
-	// AnnotationAlphaProvidedIPAddr is a node IP annotation set by the "external" cloud provider.
-	// When kubelet is started with the "external" cloud provider, then
-	// it sets this annotation on the node to denote an ip address set from the
-	// cmd line flag (--node-ip). This ip is verified with the cloudprovider as valid by
-	// the cloud-controller-manager
+	// AnnotationAlphaProvidedIPAddr is a Node annotation set by kubelet. When kubelet
+	// is started with the "external" cloud provider, it sets this annotation on the
+	// Node to denote an IP address set from the command line (--node-ip). This IP is
+	// verified with the cloudprovider as valid by the cloud-controller-manager.
 	AnnotationAlphaProvidedIPAddr = "alpha.kubernetes.io/provided-node-ip"
+
+	// AnnotationAlphaRequestedNodeIPFamilies is a Node annotation set by kubelet.
+	// When kubelet is started with the "external" cloud provider, it sets this
+	// annotation on the Node to a comma-separated list of corev1.IPFamily values, to
+	// denote the IP families that it wants the cloud-controller-manager to provide
+	// addresses for in Node.Status.Addresses.
+	AnnotationAlphaRequestedNodeIPFamilies = "alpha.kubernetes.io/requested-node-ip-families"
 )

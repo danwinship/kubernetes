@@ -57,7 +57,8 @@ const (
 type Setter func(node *v1.Node) error
 
 // NodeAddress returns a Setter that updates address-related information on the node.
-func NodeAddress(nodeIP net.IP, // typically Kubelet.nodeIP
+func NodeAddress(nodeIPs []net.IP, // typically Kubelet.nodeIPs
+	legacyNodeIP net.IP, // typically Kubelet.legacyNodeIP
 	validateNodeIPFunc func(net.IP) error, // typically Kubelet.nodeIPValidator
 	hostname string, // typically Kubelet.hostname
 	hostnameOverridden bool, // was the hostname force set?
@@ -65,25 +66,27 @@ func NodeAddress(nodeIP net.IP, // typically Kubelet.nodeIP
 	cloud cloudprovider.Interface, // typically Kubelet.cloud
 	nodeAddressesFunc func() ([]v1.NodeAddress, error), // typically Kubelet.cloudResourceSyncManager.NodeAddresses
 ) Setter {
-	preferIPv4 := nodeIP == nil || nodeIP.To4() != nil
-	isPreferredIPFamily := func(ip net.IP) bool { return (ip.To4() != nil) == preferIPv4 }
-	nodeIPSpecified := nodeIP != nil && !nodeIP.IsUnspecified()
-
 	return func(node *v1.Node) error {
-		if nodeIPSpecified {
-			if err := validateNodeIPFunc(nodeIP); err != nil {
-				return fmt.Errorf("failed to validate nodeIP: %v", err)
+		for _, ip := range nodeIPs {
+			if ip.IsUnspecified() {
+				continue
 			}
-			klog.V(2).Infof("Using node IP: %q", nodeIP.String())
+			if err := validateNodeIPFunc(ip); err != nil {
+				return fmt.Errorf("failed to validate node IP: %v", err)
+			}
+			klog.V(2).Infof("Using node IP: %q", ip.String())
 		}
 
 		if externalCloudProvider {
-			if nodeIPSpecified {
-				if node.ObjectMeta.Annotations == nil {
-					node.ObjectMeta.Annotations = make(map[string]string)
-				}
-				node.ObjectMeta.Annotations[cloudproviderapi.AnnotationAlphaProvidedIPAddr] = nodeIP.String()
+			if node.ObjectMeta.Annotations == nil {
+				node.ObjectMeta.Annotations = make(map[string]string)
 			}
+
+			nodeIPStrs := make([]string, len(nodeIPs))
+			for i := range nodeIPs {
+				nodeIPStrs[i] := nodeIPs[i].String()
+			}
+			node.ObjectMeta.Annotations[cloudproviderapi.AnnotationAlphaRequestedNodeIPFamilies] = strings.Join(nodeIPStrs, ",")
 
 			// If --cloud-provider=external and node address is already set,
 			// then we return early because provider set addresses should take precedence.
@@ -99,57 +102,14 @@ func NodeAddress(nodeIP net.IP, // typically Kubelet.nodeIP
 				return err
 			}
 
-			var nodeAddresses []v1.NodeAddress
-
-			// For every address supplied by the cloud provider that matches nodeIP, nodeIP is the enforced node address for
-			// that address Type (like InternalIP and ExternalIP), meaning other addresses of the same Type are discarded.
-			// See #61921 for more information: some cloud providers may supply secondary IPs, so nodeIP serves as a way to
-			// ensure that the correct IPs show up on a Node object.
-			if nodeIPSpecified {
-				enforcedNodeAddresses := []v1.NodeAddress{}
-
-				nodeIPTypes := make(map[v1.NodeAddressType]bool)
-				for _, nodeAddress := range cloudNodeAddresses {
-					if nodeAddress.Address == nodeIP.String() {
-						enforcedNodeAddresses = append(enforcedNodeAddresses, v1.NodeAddress{Type: nodeAddress.Type, Address: nodeAddress.Address})
-						nodeIPTypes[nodeAddress.Type] = true
-					}
+			nodeAddresses := cloudNodeAddresses
+			if legacyNodeIP != nil {
+				nodeAddresses, err = handleLegacyNodeIP(nodeAddresses, legacyNodeIP)
+				if err != nil {
+					return err
 				}
-
-				// nodeIP must be among the addresses supplied by the cloud provider
-				if len(enforcedNodeAddresses) == 0 {
-					return fmt.Errorf("failed to get node address from cloud provider that matches ip: %v", nodeIP)
-				}
-
-				// nodeIP was found, now use all other addresses supplied by the cloud provider NOT of the same Type as nodeIP.
-				for _, nodeAddress := range cloudNodeAddresses {
-					if !nodeIPTypes[nodeAddress.Type] {
-						enforcedNodeAddresses = append(enforcedNodeAddresses, v1.NodeAddress{Type: nodeAddress.Type, Address: nodeAddress.Address})
-					}
-				}
-
-				nodeAddresses = enforcedNodeAddresses
-			} else if nodeIP != nil {
-				// nodeIP is "0.0.0.0" or "::"; sort cloudNodeAddresses to
-				// prefer addresses of the matching family
-				sortedAddresses := make([]v1.NodeAddress, 0, len(cloudNodeAddresses))
-				for _, nodeAddress := range cloudNodeAddresses {
-					ip := net.ParseIP(nodeAddress.Address)
-					if ip == nil || isPreferredIPFamily(ip) {
-						sortedAddresses = append(sortedAddresses, nodeAddress)
-					}
-				}
-				for _, nodeAddress := range cloudNodeAddresses {
-					ip := net.ParseIP(nodeAddress.Address)
-					if ip != nil && !isPreferredIPFamily(ip) {
-						sortedAddresses = append(sortedAddresses, nodeAddress)
-					}
-				}
-				nodeAddresses = sortedAddresses
-			} else {
-				// If nodeIP is unset, just use the addresses provided by the cloud provider as-is
-				nodeAddresses = cloudNodeAddresses
 			}
+			nodeAddresses = utilnode.FixUpNodeAddresses(nodeAddresses, nodeIPs)
 
 			switch {
 			case len(cloudNodeAddresses) == 0:
@@ -184,52 +144,142 @@ func NodeAddress(nodeIP net.IP, // typically Kubelet.nodeIP
 					existingHostnameAddress.Address = hostname
 				}
 			}
+
 			node.Status.Addresses = nodeAddresses
 		} else {
-			var ipAddr net.IP
-			var err error
-
-			// 1) Use nodeIP if set (and not "0.0.0.0"/"::")
-			// 2) If the user has specified an IP to HostnameOverride, use it
-			// 3) Lookup the IP from node name by DNS
-			// 4) Try to get the IP from the network interface used as default gateway
-			//
-			// For steps 3 and 4, IPv4 addresses are preferred to IPv6 addresses
-			// unless nodeIP is "::", in which case it is reversed.
-			if nodeIPSpecified {
-				ipAddr = nodeIP
-			} else if addr := net.ParseIP(hostname); addr != nil {
-				ipAddr = addr
-			} else {
-				var addrs []net.IP
-				addrs, _ = net.LookupIP(node.Name)
-				for _, addr := range addrs {
-					if err = validateNodeIPFunc(addr); err == nil {
-						if isPreferredIPFamily(addr) {
-							ipAddr = addr
-							break
-						} else if ipAddr == nil {
-							ipAddr = addr
-						}
-					}
-				}
-
-				if ipAddr == nil {
-					ipAddr, err = utilnet.ResolveBindAddress(nodeIP)
-				}
+			nodeIPs, err := detectNodeIPs(nodeIPs, validateNodeIPFunc, hostname, node.Name)
+			if err != nil {
+				return err
 			}
 
-			if ipAddr == nil {
-				// We tried everything we could, but the IP address wasn't fetchable; error out
-				return fmt.Errorf("can't get ip address of node %s. error: %v", node.Name, err)
+			nodeAddresses := []v1.NodeAddress{}
+			for _, ip := range nodeIPs {
+				nodeAddresses = append(nodeAddresses,
+					v1.NodeAddress{Type: v1.NodeInternalIP, Address: ip.String()})
 			}
-			node.Status.Addresses = []v1.NodeAddress{
-				{Type: v1.NodeInternalIP, Address: ipAddr.String()},
-				{Type: v1.NodeHostName, Address: hostname},
-			}
+			nodeAddresses = append(nodeAddresses, {Type: v1.NodeHostName, Address: hostname})
+			node.Status.Addresses = nodeAddresses
 		}
 		return nil
 	}
+}
+
+// If the user specified the deprecated --node-ip argument (rather than --node-ips), post-process
+// the list of addresses from the cloud in the same way it was done in the past.
+func handleLegacyNodeIP(cloudNodeAddresses []v1.NodeAddress, legacyNodeIP net.IP) ([]v1.NodeAddress, error) {
+	// If legacyNodeIP is "0.0.0.0" or "::" then sort cloudNodeAddresses to prefer addresses of
+	// the matching family
+	if legacyNodeIP.IsUnspecified() {
+		isLegacyNodeIPFamily := func(ip net.IP) bool { return (ip.To4() != nil) == (legacyNodeIP.To4() != nil) }
+
+		sortedAddresses := make([]v1.NodeAddress, 0, len(cloudNodeAddresses))
+		for _, nodeAddress := range cloudNodeAddresses {
+			ip := net.ParseIP(nodeAddress.Address)
+			if ip == nil || isLegacyNodeIPFamily(ip) {
+				sortedAddresses = append(sortedAddresses, nodeAddress)
+			}
+		}
+		for _, nodeAddress := range cloudNodeAddresses {
+			ip := net.ParseIP(nodeAddress.Address)
+			if ip != nil && !isLegacyNodeIPFamily(ip) {
+				sortedAddresses = append(sortedAddresses, nodeAddress)
+			}
+		}
+		return sortedAddresses, nil
+	}
+
+	// Else, legacyNodeIP is a specific IP address. For every address supplied by the cloud
+	// provider that matches it, legacyNodeIP is the enforced node address for that address Type
+	// (like InternalIP and ExternalIP), meaning other addresses of the same Type are discarded.
+	// (See #61921, but mostly this was an incorrect workaround for what would later be fixed in
+	// #79391 and #80747.)
+	enforcedNodeAddresses := []v1.NodeAddress{}
+
+	nodeIPTypes := make(map[v1.NodeAddressType]bool)
+	for _, nodeAddress := range cloudNodeAddresses {
+		if nodeAddress.Address == legacyNodeIP.String() {
+			enforcedNodeAddresses = append(enforcedNodeAddresses, v1.NodeAddress{Type: nodeAddress.Type, Address: nodeAddress.Address})
+			nodeIPTypes[nodeAddress.Type] = true
+		}
+	}
+
+	// legacyNodeIP must be among the addresses supplied by the cloud provider
+	if len(enforcedNodeAddresses) == 0 {
+		return nil, fmt.Errorf("failed to get node address from cloud provider that matches --node-ip %q", legacyNodeIP.String())
+	}
+
+	// legacyNodeIP was found, now use all other addresses supplied by the cloud provider NOT of the same Type as legacyNodeIP.
+	for _, nodeAddress := range cloudNodeAddresses {
+		if !nodeIPTypes[nodeAddress.Type] {
+			enforcedNodeAddresses = append(enforcedNodeAddresses, v1.NodeAddress{Type: nodeAddress.Type, Address: nodeAddress.Address})
+		}
+	}
+
+	return enforcedNodeAddresses
+}
+
+// Detect Node IPs by various means, returning once we have both families (or can't find any more)
+func detectNodeAddresses(nodeIPs []net.IP, validateNodeIPFunc func(net.IP) error, hostname, nodeName string) ([]v1.NodeAddress, error) {
+	var nodeAddresses []v1.NodeAddress
+
+	if !nodeIPs[0].IsUnspecified {
+		nodeAddresses = append(nodeAddresses, v1.NodeAddress{Type: v1.NodeInternalIP, Address: nodeIPs[0].String()})
+	}
+	if len(nodeIPs) == 2 && !nodeIPs[1].IsUnspecified {
+		nodeAddresses = append(nodeAddresses, v1.NodeAddress{Type: v1.NodeInternalIP, Address: nodeIPs[1].String()})
+	}
+	if len(nodeAddresses) == 2 {
+		return nodeAddresses, nil
+	}
+
+	// Try resolving hostname as an IP address
+	addr := net.ParseIP(hostname)
+	if addr != nil {
+		if err := validateNodeIPFunc(addr); err == nil {
+			nodeAddresses = append(nodeAddresses, v1.NodeAddress{Type: v1.NodeInternalIP, Address: addr.String()})
+		}
+	}
+
+	// Look up the node name in DNS
+	// FIXME: "node name"? Shouldn't it be hostname?
+	addrs, _ := net.LookupIP(nodeName)
+	for _, addr := range addrs {
+		if err = validateNodeIPFunc(addr); err == nil {
+			nodeAddresses = append(nodeAddresses, v1.NodeAddress{Type: v1.NodeInternalIP, Address: addr.String()})
+		}
+	}
+
+	// Try the IPs on the default interface
+	for _, nodeIP := range nodeIPs {
+		if nodeIP.IsUnspecified() {
+			if addr, err := utilnet.ResolveBindAddress(nodeIP); err == nil {
+				nodeAddresses = append(nodeAddresses, v1.NodeAddress{Type: v1.NodeInternalIP, Address: addr.String()})
+			}
+		}
+	}
+
+	nodeAddresses, err := nodeutil.FixUpNodeAddresses(nodeAddresses, nodeIPs)
+	if err != nil {
+		return nil, err
+	}
+
+	// Since all of the addresses are InternalIP, it must be the case that nodeAddresses[0] is the primary
+	// and
+}
+
+func detectIP(foundIPs []net.IP, ip net.IP) int {
+	missingIPs := 0
+	for i := range foundIPs {
+		if !foundIPs[i].IsUnspecified() {
+			continue
+		}
+		if utilnet.IsIPv6(foundIPs[i]) == utilnet.IsIPv6(ip) {
+			foundIPs[i] = ip
+		} else {
+			missingIPs++
+		}
+	}
+	return missingIPs
 }
 
 func hasAddressType(addresses []v1.NodeAddress, addressType v1.NodeAddressType) bool {

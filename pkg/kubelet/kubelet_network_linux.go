@@ -33,16 +33,17 @@ import (
 
 func (kl *Kubelet) initNetworkUtil() {
 	exec := utilexec.New()
-	dualStack := utilfeature.DefaultFeatureGate.Enabled(features.IPv6DualStack)
 
+	// At this point in startup we don't know the actual available node IPs, so we configure
+	// dual stack iptables rules if the node _might_ be dual-stack, and single-stack based on
+	// nodeIPs[0] otherwise.
 	var iptClients []utiliptables.Interface
-	// Manage IPv4 iptables rules if dual-stack is enabled, if there is no user-specified node IP,
-	// or if the user-specified node IP is IPv4
-	if dualStack || kl.nodeIP == nil || !utilnet.IsIPv6(kl.nodeIP) {
+	maybeDualStack := utilfeature.DefaultFeatureGate.Enabled(features.IPv6DualStack) && len(kl.nodeIPs) == 2
+	ipv6Primary := utilnet.IsIPv6(kl.nodeIPs[0])
+	if maybeDualStack || !ipv6Primary {
 		iptClients = append(iptClients, utiliptables.New(exec, utiliptables.ProtocolIPv4))
 	}
-	// Manage IPv6 iptables rules if dual-stack is enabled, or if the user-specified node IP is IPv6
-	if dualStack || (kl.nodeIP != nil && utilnet.IsIPv6(kl.nodeIP)) {
+	if maybeDualStack || ipv6Primary {
 		iptClients = append(iptClients, utiliptables.New(exec, utiliptables.ProtocolIPv6))
 	}
 

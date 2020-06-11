@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"sort"
 	"strings"
 	"time"
 
@@ -35,6 +36,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 	clientset "k8s.io/client-go/kubernetes"
 	v1core "k8s.io/client-go/kubernetes/typed/core/v1"
+	utilnet "k8s.io/utils/net"
 )
 
 const (
@@ -90,25 +92,57 @@ func GetPreferredNodeAddress(node *v1.Node, preferredAddressTypes []v1.NodeAddre
 	return "", &NoMatchError{addresses: node.Status.Addresses}
 }
 
-// GetNodeHostIP returns the provided node's IP, based on the priority:
-// 1. NodeInternalIP
-// 2. NodeExternalIP
-func GetNodeHostIP(node *v1.Node) (net.IP, error) {
-	addresses := node.Status.Addresses
-	addressMap := make(map[v1.NodeAddressType][]v1.NodeAddress)
-	for i := range addresses {
-		addressMap[addresses[i].Type] = append(addressMap[addresses[i].Type], addresses[i])
+// getNodeHostIPs is used internally; it is just GetNodeHostIPs with different arguments
+func getNodeHostIPs(addresses []v1.NodeAddress) ([]net.IP, error) {
+	allIPs := make([]net.IP, 0, len(addresses))
+	for _, addr := range addresses {
+		if addr.Type == v1.NodeInternalIP {
+			ip := net.ParseIP(addr.Address)
+			if ip != nil {
+				allIPs = append(allIPs, ip)
+			}
+		}
 	}
-	if addresses, ok := addressMap[v1.NodeInternalIP]; ok {
-		return net.ParseIP(addresses[0].Address), nil
+	for _, addr := range addresses {
+		if addr.Type == v1.NodeExternalIP {
+			ip := net.ParseIP(addr.Address)
+			if ip != nil {
+				allIPs = append(allIPs, ip)
+			}
+		}
 	}
-	if addresses, ok := addressMap[v1.NodeExternalIP]; ok {
-		return net.ParseIP(addresses[0].Address), nil
+
+	if len(allIPs) == 0 {
+		return nil, fmt.Errorf("host IP unknown; known addresses: %v", addresses)
 	}
-	return nil, fmt.Errorf("host IP unknown; known addresses: %v", addresses)
+	nodeIPs := []net.IP{allIPs[0]}
+	for _, ip := range allIPs {
+		if utilnet.IsIPv6(ip) != utilnet.IsIPv6(nodeIPs[0]) {
+			nodeIPs = append(nodeIPs, ip)
+			break
+		}
+	}
+	return nodeIPs, nil
 }
 
-// GetNodeIP returns the ip of node with the provided hostname
+// GetNodeHostIPs returns the provided node's "primary" and "secondary" IPs; this will
+// always return at least one IP (or an error), which is the same as would be returned by
+// GetNodeHostIP. If the node is dual stack, it will also return a second IP of the other
+// address family.
+func GetNodeHostIPs(node *v1.Node) ([]net.IP, error) {
+	return getNodeHostIPs(node.Status.Addresses)
+}
+
+// GetNodeHostIP returns the provided node's "primary" IP
+func GetNodeHostIP(node *v1.Node) (net.IP, error) {
+	ips, err := GetNodeHostIPs(node)
+	if err != nil {
+		return nil, err
+	}
+	return ips[0], nil
+}
+
+// GetNodeIP returns an IP for node with the provided hostname
 // If required, wait for the node to be defined.
 func GetNodeIP(client clientset.Interface, hostname string) net.IP {
 	var nodeIP net.IP
@@ -356,4 +390,194 @@ func fixupPatchForNodeStatusAddresses(patchBytes []byte, addresses []v1.NodeAddr
 	statusMap["addresses"] = addrArray
 
 	return json.Marshal(patchMap)
+}
+
+// ParseNodeIPs parses the kubelet --node-ips argument or the corresponding Node
+// annotation. rawNodeIPs should consist of one or two elements, where each element is
+// either an IP address or the string "ipv4" or "ipv6". If it contains two elements, one
+// must be IPv4 and the other IPv6. In the returned array, the strings "ipv4" and "ipv6"
+// are replaced with the corresponding unspecified IP address for that family.
+func ParseNodeIPs(rawNodeIPs string) ([]net.IP, error) {
+	if rawNodeIPs == "" {
+		return []net.IP{net.IPv4zero, net.IPv6zero}, nil
+	}
+
+	var nodeIPs []net.IP
+	var haveIPv4, haveIPv6 bool
+	for _, nodeIP := range strings.Split(rawNodeIPs, ",") {
+		var ip net.IP
+		nodeIP = strings.TrimSpace(nodeIP)
+		if strings.ToLower(nodeIP) == "ipv4" {
+			ip = net.IPv4zero
+			haveIPv4 = true
+		} else if strings.ToLower(nodeIP) == "ipv6" {
+			ip = net.IPv6zero
+			haveIPv6 = true
+		} else {
+			ip = net.ParseIP(nodeIP)
+			if ip == nil {
+				return nil, fmt.Errorf("bad --node-ips value %q; should be %q, %q, or an IP address", nodeIP, "ipv4", "ipv6")
+			}
+			if utilnet.IsIPv6(ip) {
+				haveIPv6 = true
+			} else {
+				haveIPv4 = true
+			}
+		}
+		nodeIPs = append(nodeIPs, ip)
+	}
+
+	if len(nodeIPs) > 2 {
+		return nil, fmt.Errorf("bad --node-ips value %q; should be 1 or 2 values", rawNodeIPs)
+	} else if len(nodeIPs) == 2 && !(haveIPv4 && haveIPv6) {
+		return nil, fmt.Errorf("bad --node-ips value %q; should have one IPv4 and one IPv6 value", rawNodeIPs)
+	}
+
+	return nodeIPs, nil
+}
+
+// ipMatches returns true if actualIP matches requestedIP (a single element of the parsed --node-ips value)
+func ipMatches(actualIP, requestedIP net.IP) bool {
+	if requestedIP.IsUnspecified() {
+		return utilnet.IsIPv6(requestedIP) == utilnet.IsIPv6(actualIP)
+	} else {
+		return actualIP.Equal(requestedIP)
+	}
+}
+
+// ipsMatch returns true if actualIPs matches requestedIPs (the parsed --node-ips value)
+func ipsMatch(actualNodeIPs, requestedNodeIPs []net.IP) bool {
+	switch {
+	case len(actualNodeIPs) == len(requestedNodeIPs):
+		// Each actual node IP must match the corresponding requested node IP.
+		for n := range actualNodeIPs {
+			if !ipMatches(actualNodeIPs[n], requestedNodeIPs[n]) {
+				return false
+			}
+		}
+		return true
+
+	case len(actualNodeIPs) == 1 && len(requestedNodeIPs) == 2:
+		// The actual node IP must match one of the requested node IPs, and the other
+		// requested node IP must be unspecified. (eg, actual=1.2.3.4 requested=ipv4,ipv6)
+		if ipMatches(actualNodeIPs[0], requestedNodeIPs[0]) && requestedNodeIPs[1].IsUnspecified() {
+			return true
+		}
+		if requestedNodeIPs[0].IsUnspecified() && ipMatches(actualNodeIPs[0], requestedNodeIPs[1]) {
+			return true
+		}
+		return false
+
+	default:
+		return false
+	}
+}
+
+// FixUpNodeAddresses is the function used by kubelet and external cloud providers to
+// filter and sort the raw list of node addresses based on the provided --node-ips
+// argument before setting it on Node.Status.Addresses, ensuring that:
+//
+//   - If nodeIPs has only 1 element then the returned list will not contain any
+//     addresses of the opposite family.
+//
+//   - The returned list does not contain any syntactically incorrect InternalIP or
+//     ExternalIP addresses.
+//
+//   - If nodeIPs specifies particular IP address or address family preferences,
+//     the returned list will be sorted in a way such that GetNodeHostIPs() will
+//     return addresses satisfying those preferences.
+//
+// If it is not possible to make nodeAddresses reflect the preferences in nodeIPs, an
+// error will be returned.
+func FixUpNodeAddresses(nodeAddresses []v1.NodeAddress, nodeIPs string) ([]v1.NodeAddress, error) {
+	requestedNodeIPs, err := ParseNodeIPs(nodeIPs)
+	if err != nil {
+		return nil, err
+	}
+
+	// If nodeIPs is a single element then we need to drop IPs of the non-matching family from
+	// nodeAddresses.
+	var dropIPv4, dropIPv6 bool
+	if len(requestedNodeIPs) == 1 {
+		dropIPv4 = utilnet.IsIPv6(requestedNodeIPs[0])
+		dropIPv6 = !dropIPv4
+	}
+
+	// bestMatch is the best match in result for each requestedNodeIP
+	var bestMatch [2]*v1.NodeAddress
+
+	// Filter/sanitize/inspect nodeAddresses
+	result := make([]v1.NodeAddress, 0, len(nodeAddresses))
+	for _, addr := range nodeAddresses {
+		if addr.Type != v1.NodeInternalIP && addr.Type != v1.NodeExternalIP {
+			result = append(result, addr)
+			continue
+		}
+
+		ip := net.ParseIP(addr.Address)
+		if ip == nil {
+			klog.Warningf("Ignoring invalid IP address %q from cloud provider", addr.Address)
+			continue
+		}
+		isIPv6 := utilnet.IsIPv6(ip)
+		if (isIPv6 && dropIPv6) || (!isIPv6 && dropIPv4) {
+			continue
+		}
+
+		result = append(result, addr)
+
+		for n := range requestedNodeIPs {
+			if bestMatch[n] == nil || (bestMatch[n].Type == v1.NodeExternalIP && addr.Type == v1.NodeInternalIP) {
+				if ipMatches(ip, requestedNodeIPs[n]) {
+					copy := addr
+					bestMatch[n] = &copy
+				}
+			}
+		}
+	}
+
+	// Bail out if there are no matches at all, or no matches for a required IP
+	if bestMatch[0] == nil && !requestedNodeIPs[0].IsUnspecified() {
+		return nil, fmt.Errorf("node has no IP matching %q", requestedNodeIPs[0].String())
+	} else if bestMatch[1] == nil && len(requestedNodeIPs) == 2 && !requestedNodeIPs[1].IsUnspecified() {
+		return nil, fmt.Errorf("node has no IP matching %q", requestedNodeIPs[1].String())
+	} else if bestMatch[0] == nil && bestMatch[1] == nil {
+		return nil, fmt.Errorf("node has no IPs matching %q", nodeIPs)
+	}
+
+	// See if we already have a valid configuration
+	actualNodeIPs, _ := getNodeHostIPs(result)
+	if ipsMatch(actualNodeIPs, requestedNodeIPs) {
+		return result, nil
+	}
+
+	// Sort with bestMatch[0] first (if it's set), then bestMatch[1] (if it's set), then
+	// everything else in the existing order.
+	sort.SliceStable(result, func(i, j int) bool {
+		// bestMatch[0] is less than everything else
+		if bestMatch[0] != nil {
+			if result[i] == *bestMatch[0] {
+				return true
+			} else if result[j] == *bestMatch[0] {
+				return false
+			}
+		}
+		// bestMatch[1] is less than everything that isn't bestMatch[0]
+		if bestMatch[1] != nil {
+			if result[i] == *bestMatch[1] {
+				return true
+			} else if result[j] == *bestMatch[1] {
+				return false
+			}
+		}
+		// everything else is unordered/stable
+		return false
+	})
+
+	actualNodeIPs, _ = getNodeHostIPs(result)
+	if !ipsMatch(actualNodeIPs, requestedNodeIPs) {
+		return nil, fmt.Errorf("could not rearrange node IPs to match %q", nodeIPs)
+	}
+
+	return result, nil
 }

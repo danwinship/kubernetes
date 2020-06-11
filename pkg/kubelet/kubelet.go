@@ -36,7 +36,6 @@ import (
 	cadvisorapi "github.com/google/cadvisor/info/v1"
 	"k8s.io/utils/integer"
 	"k8s.io/utils/mount"
-	utilnet "k8s.io/utils/net"
 
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -352,7 +351,8 @@ func NewMainKubelet(kubeCfg *kubeletconfiginternal.KubeletConfiguration,
 	hostname string,
 	hostnameOverridden bool,
 	nodeName types.NodeName,
-	nodeIP string,
+	nodeIPs []net.IP,
+	legacyNodeIP string,
 	providerID string,
 	cloudProvider string,
 	certDirectory string,
@@ -481,10 +481,6 @@ func NewMainKubelet(kubeCfg *kubeletconfiginternal.KubeletConfiguration,
 		}
 	}
 	httpClient := &http.Client{}
-	parsedNodeIP := net.ParseIP(nodeIP)
-	if utilnet.IsIPv6(parsedNodeIP) {
-		klog.V(0).Infof("IPv6 node IP (%s), assume IPv6 operation", nodeIP)
-	}
 
 	klet := &Kubelet{
 		hostname:                                hostname,
@@ -499,7 +495,7 @@ func NewMainKubelet(kubeCfg *kubeletconfiginternal.KubeletConfiguration,
 		registerNode:                            registerNode,
 		registerWithTaints:                      registerWithTaints,
 		registerSchedulable:                     registerSchedulable,
-		dnsConfigurer:                           dns.NewConfigurer(kubeDeps.Recorder, nodeRef, parsedNodeIP, clusterDNS, kubeCfg.ClusterDomain, kubeCfg.ResolverConfig),
+		dnsConfigurer:                           dns.NewConfigurer(kubeDeps.Recorder, nodeRef, nodeIPs[0], clusterDNS, kubeCfg.ClusterDomain, kubeCfg.ResolverConfig),
 		serviceLister:                           serviceLister,
 		serviceHasSynced:                        serviceHasSynced,
 		nodeLister:                              nodeLister,
@@ -528,7 +524,8 @@ func NewMainKubelet(kubeCfg *kubeletconfiginternal.KubeletConfiguration,
 		containerManager:                        kubeDeps.ContainerManager,
 		containerRuntimeName:                    containerRuntime,
 		redirectContainerStreaming:              crOptions.RedirectContainerStreaming,
-		nodeIP:                                  parsedNodeIP,
+		nodeIPs:                                 nodeIPs,
+		legacyNodeIP:                            net.ParseIP(legacyNodeIP),
 		nodeIPValidator:                         validateNodeIP,
 		clock:                                   clock.RealClock{},
 		enableControllerAttachDetach:            kubeCfg.EnableControllerAttachDetach,
@@ -1062,8 +1059,11 @@ type Kubelet struct {
 	// oneTimeInitializer is used to initialize modules that are dependent on the runtime to be up.
 	oneTimeInitializer sync.Once
 
-	// If non-nil, use this IP address for the node
-	nodeIP net.IP
+	// Node IPs passed on command-line
+	nodeIPs []net.IP
+
+	// Legacy --node-ip value passed on command-line
+	legacyNodeIP net.IP
 
 	// use this function to validate the kubelet nodeIP
 	nodeIPValidator func(net.IP) error
