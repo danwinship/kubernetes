@@ -234,6 +234,13 @@ func runConditionWithCrashProtectionWithContext(ctx context.Context, condition C
 }
 
 // Backoff holds parameters applied to a Backoff function.
+//
+// Ignoring Jitter and Cap, and the time it takes to actually run each iteration, the time
+// elapsed between the first attempt and the last will be
+//
+//      Duration * (1 - Factor ** (Steps - 1)) / (1 - Factor)
+//
+// (where "**" is exponentiation).
 type Backoff struct {
 	// The initial duration.
 	Duration time.Duration
