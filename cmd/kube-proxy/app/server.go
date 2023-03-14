@@ -533,59 +533,46 @@ func (s *ProxyServer) Run(ctx context.Context) error {
 	// Start up a metrics server if requested
 	serveMetrics(ctx, s.Config.MetricsBindAddress, s.Config.Mode, s.Config.EnableProfiling, s.flagz, metricsErrCh)
 
-	noProxyName, err := labels.NewRequirement(apis.LabelServiceProxyName, selection.DoesNotExist, nil)
-	if err != nil {
-		return err
-	}
-
-	noHeadlessEndpoints, err := labels.NewRequirement(v1.IsHeadlessService, selection.DoesNotExist, nil)
-	if err != nil {
-		return err
-	}
+	// Create an informer factory that ignores Services owned by other proxies and
+	// EndpointSlices for headless Services. (NewRequirement can't return an error if
+	// you're passing it known-valid data.)
+	noProxyName, _ := labels.NewRequirement(apis.LabelServiceProxyName, selection.DoesNotExist, nil)
+	noHeadlessEndpoints, _ := labels.NewRequirement(v1.IsHeadlessService, selection.DoesNotExist, nil)
 
 	labelSelector := labels.NewSelector()
 	labelSelector = labelSelector.Add(*noProxyName, *noHeadlessEndpoints)
 
-	// Make informers that filter out objects that want a non-default service proxy.
 	informerFactory := informers.NewSharedInformerFactoryWithOptions(s.Client, s.Config.ConfigSyncPeriod.Duration,
 		informers.WithTweakListOptions(func(options *metav1.ListOptions) {
 			options.LabelSelector = labelSelector.String()
-		}))
+		}),
+	)
 
-	// Create configs (i.e. Watches for Services, EndpointSlices and ServiceCIDRs)
-	// Note: RegisterHandler() calls need to happen before creation of Sources because sources
-	// only notify on changes, and the initial update (on process start) may be lost if no handlers
-	// are registered yet.
-	// don't watch headless services for kube-proxy, they are proxied by DNS.
+	// Create an informer factory for services that doesn't watch headless services.
 	serviceInformerFactory := informers.NewSharedInformerFactoryWithOptions(s.Client, s.Config.ConfigSyncPeriod.Duration,
 		informers.WithTweakListOptions(func(options *metav1.ListOptions) {
 			options.LabelSelector = labelSelector.String()
 			options.FieldSelector = fields.OneTermNotEqualSelector("spec.clusterIP", v1.ClusterIPNone).String()
 		}))
-	serviceConfig := config.NewServiceConfig(ctx, serviceInformerFactory.Core().V1().Services(), s.Config.ConfigSyncPeriod.Duration)
-	serviceConfig.RegisterEventHandler(s.Backend)
-	go serviceConfig.Run(ctx.Done())
 
-	endpointSliceConfig := config.NewEndpointSliceConfig(ctx, informerFactory.Discovery().V1().EndpointSlices(), s.Config.ConfigSyncPeriod.Duration)
-	endpointSliceConfig.RegisterEventHandler(s.Backend)
-	go endpointSliceConfig.Run(ctx.Done())
-
-	if utilfeature.DefaultFeatureGate.Enabled(features.MultiCIDRServiceAllocator) {
-		serviceCIDRConfig := config.NewServiceCIDRConfig(ctx, informerFactory.Networking().V1beta1().ServiceCIDRs(), s.Config.ConfigSyncPeriod.Duration)
-		serviceCIDRConfig.RegisterEventHandler(s.Backend)
-		go serviceCIDRConfig.Run(wait.NeverStop)
-	}
-	// This has to start after the calls to NewServiceConfig because that
-	// function must configure its shared informer event handlers first.
-	informerFactory.Start(wait.NeverStop)
-	serviceInformerFactory.Start(wait.NeverStop)
-
-	// Make an informer that selects for our nodename.
-	currentNodeInformerFactory := informers.NewSharedInformerFactoryWithOptions(s.Client, s.Config.ConfigSyncPeriod.Duration,
+	// Create an informer factory for nodes that selects for our nodename.
+	thisNodeInformerFactory := informers.NewSharedInformerFactoryWithOptions(s.Client, s.Config.ConfigSyncPeriod.Duration,
 		informers.WithTweakListOptions(func(options *metav1.ListOptions) {
 			options.FieldSelector = fields.OneTermEqualSelector("metadata.name", s.NodeRef.Name).String()
-		}))
-	nodeConfig := config.NewNodeConfig(ctx, currentNodeInformerFactory.Core().V1().Nodes(), s.Config.ConfigSyncPeriod.Duration)
+		}),
+	)
+
+	s.Backend.StartInformers(
+		ctx,
+		s.Config.ConfigSyncPeriod.Duration,
+		serviceInformerFactory.Core().V1().Services(),
+		informerFactory.Discovery().V1().EndpointSlices(),
+		informerFactory.Networking().V1beta1().ServiceCIDRs(),
+		thisNodeInformerFactory.Core().V1().Nodes(),
+	)
+
+	// Set up our own Node monitoring stuff
+	nodeConfig := config.NewNodeConfig(ctx, thisNodeInformerFactory.Core().V1().Nodes(), s.Config.ConfigSyncPeriod.Duration)
 	// https://issues.k8s.io/111321
 	if s.Config.DetectLocalMode == kubeproxyconfig.LocalModeNodeCIDR {
 		nodeConfig.RegisterEventHandler(proxy.NewNodePodCIDRHandler(ctx, s.podCIDRs))
@@ -595,19 +582,19 @@ func (s *ProxyServer) Run(ctx context.Context) error {
 			HealthServer: s.HealthzServer,
 		})
 	}
-	nodeConfig.RegisterEventHandler(s.Backend)
-
 	go nodeConfig.Run(wait.NeverStop)
 
-	// This has to start after the calls to NewNodeConfig because that must
-	// configure the shared informer event handler first.
-	currentNodeInformerFactory.Start(wait.NeverStop)
+	// Start the factories. (This has to happen after we create the event handlers.)
+	informerFactory.Start(wait.NeverStop)
+	serviceInformerFactory.Start(wait.NeverStop)
+	thisNodeInformerFactory.Start(wait.NeverStop)
 
 	// Birth Cry after the birth is successful
 	s.birthCry()
 
 	go s.Backend.SyncLoop()
 
+	var err error
 	select {
 	case err = <-healthzErrCh:
 		s.Recorder.Eventf(s.NodeRef, nil, api.EventTypeWarning, "FailedToStartProxierHealthcheck", "StartKubeProxy", err.Error())

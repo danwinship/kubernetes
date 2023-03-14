@@ -17,9 +17,18 @@ limitations under the License.
 package proxy
 
 import (
+	"context"
+	"time"
+
 	v1 "k8s.io/api/core/v1"
 	discovery "k8s.io/api/discovery/v1"
+	utilfeature "k8s.io/apiserver/pkg/util/feature"
+	v1informers "k8s.io/client-go/informers/core/v1"
+	discoveryv1informers "k8s.io/client-go/informers/discovery/v1"
+	networkingv1beta1informers "k8s.io/client-go/informers/networking/v1beta1"
 	"k8s.io/klog/v2"
+	"k8s.io/kubernetes/pkg/features"
+	proxyconfig "k8s.io/kubernetes/pkg/proxy/config"
 )
 
 // Backend represents a proxy backend that contains IPv4 and/or IPv6 proxiers
@@ -43,6 +52,34 @@ func (backend *Backend) SupportedFamilies() (ipv4Supported, ipv6Supported, dualS
 	ipv6Supported = backend.ipv6Proxier != nil
 	dualStackSupported = ipv4Supported && ipv6Supported
 	return
+}
+
+// StartInformers starts the runner's informers
+func (backend *Backend) StartInformers(
+	ctx context.Context,
+	informerSyncPeriod time.Duration,
+	serviceInformer v1informers.ServiceInformer,
+	endpointSliceInformer discoveryv1informers.EndpointSliceInformer,
+	serviceCIDRInformer networkingv1beta1informers.ServiceCIDRInformer,
+	nodeInformer v1informers.NodeInformer,
+) {
+	serviceConfig := proxyconfig.NewServiceConfig(ctx, serviceInformer, informerSyncPeriod)
+	serviceConfig.RegisterEventHandler(backend)
+	go serviceConfig.Run(ctx.Done())
+
+	endpointSliceConfig := proxyconfig.NewEndpointSliceConfig(ctx, endpointSliceInformer, informerSyncPeriod)
+	endpointSliceConfig.RegisterEventHandler(backend)
+	go endpointSliceConfig.Run(ctx.Done())
+
+	if utilfeature.DefaultFeatureGate.Enabled(features.MultiCIDRServiceAllocator) {
+		serviceCIDRConfig := proxyconfig.NewServiceCIDRConfig(ctx, serviceCIDRInformer, informerSyncPeriod)
+		serviceCIDRConfig.RegisterEventHandler(backend)
+		go serviceCIDRConfig.Run(ctx.Done())
+	}
+
+	nodeConfig := proxyconfig.NewNodeConfig(ctx, nodeInformer, informerSyncPeriod)
+	nodeConfig.RegisterEventHandler(backend)
+	go nodeConfig.Run(ctx.Done())
 }
 
 // Sync immediately synchronizes the Backend's current state to proxy rules.
