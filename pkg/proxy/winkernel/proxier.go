@@ -779,22 +779,20 @@ func (proxier *Proxier) isInitialized() bool {
 
 // OnServiceAdd is called whenever creation of new service object
 // is observed.
-func (proxier *Proxier) OnServiceAdd(service *v1.Service) {
-	proxier.OnServiceUpdate(nil, service)
+func (proxier *Proxier) OnServiceAdd(service *v1.Service) bool {
+	return proxier.OnServiceUpdate(nil, service)
 }
 
 // OnServiceUpdate is called whenever modification of an existing
 // service object is observed.
-func (proxier *Proxier) OnServiceUpdate(oldService, service *v1.Service) {
-	if proxier.serviceChanges.Update(oldService, service) && proxier.isInitialized() {
-		proxier.Sync()
-	}
+func (proxier *Proxier) OnServiceUpdate(oldService, service *v1.Service) bool {
+	return proxier.serviceChanges.Update(oldService, service) && proxier.isInitialized()
 }
 
 // OnServiceDelete is called whenever deletion of an existing service
 // object is observed.
-func (proxier *Proxier) OnServiceDelete(service *v1.Service) {
-	proxier.OnServiceUpdate(service, nil)
+func (proxier *Proxier) OnServiceDelete(service *v1.Service) bool {
+	return proxier.OnServiceUpdate(service, nil)
 }
 
 // OnServiceSynced is called once all the initial event handlers were
@@ -811,26 +809,20 @@ func (proxier *Proxier) OnServiceSynced() {
 
 // OnEndpointSliceAdd is called whenever creation of a new endpoint slice object
 // is observed.
-func (proxier *Proxier) OnEndpointSliceAdd(endpointSlice *discovery.EndpointSlice) {
-	if proxier.endpointsChanges.EndpointSliceUpdate(endpointSlice, false) && proxier.isInitialized() {
-		proxier.Sync()
-	}
+func (proxier *Proxier) OnEndpointSliceAdd(endpointSlice *discovery.EndpointSlice) bool {
+	return proxier.endpointsChanges.EndpointSliceUpdate(endpointSlice, false) && proxier.isInitialized()
 }
 
 // OnEndpointSliceUpdate is called whenever modification of an existing endpoint
 // slice object is observed.
-func (proxier *Proxier) OnEndpointSliceUpdate(_, endpointSlice *discovery.EndpointSlice) {
-	if proxier.endpointsChanges.EndpointSliceUpdate(endpointSlice, false) && proxier.isInitialized() {
-		proxier.Sync()
-	}
+func (proxier *Proxier) OnEndpointSliceUpdate(_, endpointSlice *discovery.EndpointSlice) bool {
+	return proxier.endpointsChanges.EndpointSliceUpdate(endpointSlice, false) && proxier.isInitialized()
 }
 
 // OnEndpointSliceDelete is called whenever deletion of an existing endpoint slice
 // object is observed.
-func (proxier *Proxier) OnEndpointSliceDelete(endpointSlice *discovery.EndpointSlice) {
-	if proxier.endpointsChanges.EndpointSliceUpdate(endpointSlice, true) && proxier.isInitialized() {
-		proxier.Sync()
-	}
+func (proxier *Proxier) OnEndpointSliceDelete(endpointSlice *discovery.EndpointSlice) bool {
+	return proxier.endpointsChanges.EndpointSliceUpdate(endpointSlice, true) && proxier.isInitialized()
 }
 
 // OnEndpointSlicesSynced is called once all the initial event handlers were

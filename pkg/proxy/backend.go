@@ -87,14 +87,14 @@ func (backend *Backend) StartInformers(
 	go nodeConfig.Run(ctx.Done())
 }
 
-// Sync immediately synchronizes the Backend's current state to proxy rules.
-func (backend *Backend) Sync() {
-	if backend.ipv4Proxier != nil {
-		backend.ipv4Proxier.Sync()
-	}
-	if backend.ipv6Proxier != nil {
-		backend.ipv6Proxier.Sync()
-	}
+// ipv4Sync immediately synchronizes the IPv4 provider
+func (backend *Backend) ipv4Sync() {
+	backend.ipv4Proxier.Sync()
+}
+
+// ipv6Sync immediately synchronizes the IPv6 provider
+func (backend *Backend) ipv6Sync() {
+	backend.ipv6Proxier.Sync()
 }
 
 // SyncLoop runs periodic work.  This is expected to run as a
@@ -116,10 +116,14 @@ func (backend *Backend) SyncLoop() {
 // OnServiceAdd is called whenever creation of new service object is observed.
 func (backend *Backend) OnServiceAdd(service *v1.Service) {
 	if backend.ipv4Proxier != nil {
-		backend.ipv4Proxier.OnServiceAdd(service)
+		if backend.ipv4Proxier.OnServiceAdd(service) {
+			backend.ipv4Sync()
+		}
 	}
 	if backend.ipv6Proxier != nil {
-		backend.ipv6Proxier.OnServiceAdd(service)
+		if backend.ipv6Proxier.OnServiceAdd(service) {
+			backend.ipv6Sync()
+		}
 	}
 }
 
@@ -127,10 +131,14 @@ func (backend *Backend) OnServiceAdd(service *v1.Service) {
 // service object is observed.
 func (backend *Backend) OnServiceUpdate(oldService, service *v1.Service) {
 	if backend.ipv4Proxier != nil {
-		backend.ipv4Proxier.OnServiceUpdate(oldService, service)
+		if backend.ipv4Proxier.OnServiceUpdate(oldService, service) {
+			backend.ipv4Sync()
+		}
 	}
 	if backend.ipv6Proxier != nil {
-		backend.ipv6Proxier.OnServiceUpdate(oldService, service)
+		if backend.ipv6Proxier.OnServiceUpdate(oldService, service) {
+			backend.ipv6Sync()
+		}
 	}
 }
 
@@ -138,10 +146,14 @@ func (backend *Backend) OnServiceUpdate(oldService, service *v1.Service) {
 // object is observed.
 func (backend *Backend) OnServiceDelete(service *v1.Service) {
 	if backend.ipv4Proxier != nil {
-		backend.ipv4Proxier.OnServiceDelete(service)
+		if backend.ipv4Proxier.OnServiceDelete(service) {
+			backend.ipv4Sync()
+		}
 	}
 	if backend.ipv6Proxier != nil {
-		backend.ipv6Proxier.OnServiceDelete(service)
+		if backend.ipv6Proxier.OnServiceDelete(service) {
+			backend.ipv6Sync()
+		}
 	}
 }
 
@@ -162,11 +174,15 @@ func (backend *Backend) OnEndpointSliceAdd(endpointSlice *discovery.EndpointSlic
 	switch endpointSlice.AddressType {
 	case discovery.AddressTypeIPv4:
 		if backend.ipv4Proxier != nil {
-			backend.ipv4Proxier.OnEndpointSliceAdd(endpointSlice)
+			if backend.ipv4Proxier.OnEndpointSliceAdd(endpointSlice) {
+				backend.ipv4Sync()
+			}
 		}
 	case discovery.AddressTypeIPv6:
 		if backend.ipv6Proxier != nil {
-			backend.ipv6Proxier.OnEndpointSliceAdd(endpointSlice)
+			if backend.ipv6Proxier.OnEndpointSliceAdd(endpointSlice) {
+				backend.ipv6Sync()
+			}
 		}
 	default:
 		klog.ErrorS(nil, "EndpointSlice address type not supported", "addressType", endpointSlice.AddressType)
@@ -179,11 +195,15 @@ func (backend *Backend) OnEndpointSliceUpdate(oldEndpointSlice, newEndpointSlice
 	switch newEndpointSlice.AddressType {
 	case discovery.AddressTypeIPv4:
 		if backend.ipv4Proxier != nil {
-			backend.ipv4Proxier.OnEndpointSliceUpdate(oldEndpointSlice, newEndpointSlice)
+			if backend.ipv4Proxier.OnEndpointSliceUpdate(oldEndpointSlice, newEndpointSlice) {
+				backend.ipv4Sync()
+			}
 		}
 	case discovery.AddressTypeIPv6:
 		if backend.ipv6Proxier != nil {
-			backend.ipv6Proxier.OnEndpointSliceUpdate(oldEndpointSlice, newEndpointSlice)
+			if backend.ipv6Proxier.OnEndpointSliceUpdate(oldEndpointSlice, newEndpointSlice) {
+				backend.ipv6Sync()
+			}
 		}
 	default:
 		klog.ErrorS(nil, "EndpointSlice address type not supported", "addressType", newEndpointSlice.AddressType)
@@ -196,11 +216,15 @@ func (backend *Backend) OnEndpointSliceDelete(endpointSlice *discovery.EndpointS
 	switch endpointSlice.AddressType {
 	case discovery.AddressTypeIPv4:
 		if backend.ipv4Proxier != nil {
-			backend.ipv4Proxier.OnEndpointSliceDelete(endpointSlice)
+			if backend.ipv4Proxier.OnEndpointSliceDelete(endpointSlice) {
+				backend.ipv4Sync()
+			}
 		}
 	case discovery.AddressTypeIPv6:
 		if backend.ipv6Proxier != nil {
-			backend.ipv6Proxier.OnEndpointSliceDelete(endpointSlice)
+			if backend.ipv6Proxier.OnEndpointSliceDelete(endpointSlice) {
+				backend.ipv6Sync()
+			}
 		}
 	default:
 		klog.ErrorS(nil, "EndpointSlice address type not supported", "addressType", endpointSlice.AddressType)
@@ -243,9 +267,11 @@ func (backend *Backend) OnNodeUpdate(oldNode, node *v1.Node) {
 		backend.topologyLabels = node.Labels
 		if backend.ipv4Proxier != nil {
 			backend.ipv4Proxier.OnTopologyChange(backend.topologyLabels)
+			backend.ipv4Sync()
 		}
 		if backend.ipv6Proxier != nil {
 			backend.ipv6Proxier.OnTopologyChange(backend.topologyLabels)
+			backend.ipv6Sync()
 		}
 	}
 }
@@ -265,8 +291,10 @@ func (backend *Backend) OnNodeSynced() {
 func (backend *Backend) OnServiceCIDRsChanged(cidrs []string) {
 	if backend.ipv4Proxier != nil {
 		backend.ipv4Proxier.OnServiceCIDRsChanged(cidrs)
+		backend.ipv4Sync()
 	}
 	if backend.ipv6Proxier != nil {
 		backend.ipv6Proxier.OnServiceCIDRsChanged(cidrs)
+		backend.ipv6Sync()
 	}
 }

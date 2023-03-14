@@ -20,15 +20,29 @@ import (
 	"fmt"
 
 	v1 "k8s.io/api/core/v1"
+	discoveryv1 "k8s.io/api/discovery/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/kubernetes/pkg/proxy/config"
 )
 
 // Proxier is the interface provided by proxier implementations.
 type Proxier interface {
-	config.EndpointSliceHandler
-	config.ServiceHandler
-	config.ServiceCIDRHandler
+	// The OnService*, OnEndpointSlice*, and OnNode* methods have the same semantics
+	// as in config.ServiceHandler, config.EndpointSliceHandler, and
+	// config.NodeHandler, but return a bool indicating whether or not a sync is
+	// needed
+	OnServiceAdd(service *v1.Service) bool
+	OnServiceUpdate(oldService, service *v1.Service) bool
+	OnServiceDelete(service *v1.Service) bool
+	OnServiceSynced()
+
+	OnEndpointSliceAdd(endpointSlice *discoveryv1.EndpointSlice) bool
+	OnEndpointSliceUpdate(oldEndpointSlice, newEndpointSlice *discoveryv1.EndpointSlice) bool
+	OnEndpointSliceDelete(endpointSlice *discoveryv1.EndpointSlice) bool
+	OnEndpointSlicesSynced()
+
+	// OnServiceCIDRsChanged is called whenever a change is observed
+	// in any of the ServiceCIDRs, and provides complete list of service cidrs.
+	OnServiceCIDRsChanged(cidrs []string)
 
 	// OnTopologyChange is called when the node's topology-related labels have changed
 	OnTopologyChange(topologyLabels map[string]string)
