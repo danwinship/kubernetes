@@ -599,10 +599,6 @@ func TestSharedRemoteEndpointUpdate(t *testing.T) {
 				}}
 		}))
 
-	proxier.mu.Lock()
-	proxier.endpointSlicesSynced = true
-	proxier.mu.Unlock()
-
 	proxier.setInitialized(true)
 	proxier.Sync()
 
@@ -1134,9 +1130,6 @@ func TestEndpointSlice(t *testing.T) {
 		t.Error()
 	}
 
-	proxier.servicesSynced = true
-	proxier.endpointSlicesSynced = true
-
 	svcPortName := proxy.ServicePortName{
 		NamespacedName: makeNSN("ns1", "svc1"),
 		Port:           "p80",
@@ -1173,7 +1166,6 @@ func TestEndpointSlice(t *testing.T) {
 	}
 
 	proxier.OnEndpointSliceAdd(endpointSlice)
-	proxier.setInitialized(true)
 	proxier.Sync()
 
 	svc := proxier.svcPortMap[svcPortName]
@@ -1204,7 +1196,6 @@ func TestNoopEndpointSlice(t *testing.T) {
 	p.OnEndpointSliceAdd(&discovery.EndpointSlice{})
 	p.OnEndpointSliceUpdate(&discovery.EndpointSlice{}, &discovery.EndpointSlice{})
 	p.OnEndpointSliceDelete(&discovery.EndpointSlice{})
-	p.OnEndpointSlicesSynced()
 }
 
 func TestFindRemoteSubnetProviderAddress(t *testing.T) {
@@ -1242,19 +1233,11 @@ func makeServiceMap(proxier *Proxier, allServices ...*v1.Service) {
 	for i := range allServices {
 		proxier.OnServiceAdd(allServices[i])
 	}
-
-	proxier.mu.Lock()
-	defer proxier.mu.Unlock()
-	proxier.servicesSynced = true
 }
 func deleteServices(proxier *Proxier, allServices ...*v1.Service) {
 	for i := range allServices {
 		proxier.OnServiceDelete(allServices[i])
 	}
-
-	proxier.mu.Lock()
-	defer proxier.mu.Unlock()
-	proxier.servicesSynced = true
 }
 
 func makeTestService(namespace, name string, svcFunc func(*v1.Service)) *v1.Service {
@@ -1275,10 +1258,6 @@ func deleteEndpointSlices(proxier *Proxier, allEndpointSlices ...*discovery.Endp
 	for i := range allEndpointSlices {
 		proxier.OnEndpointSliceDelete(allEndpointSlices[i])
 	}
-
-	proxier.mu.Lock()
-	defer proxier.mu.Unlock()
-	proxier.endpointSlicesSynced = true
 }
 
 func populateEndpointSlices(proxier *Proxier, allEndpointSlices ...*discovery.EndpointSlice) {

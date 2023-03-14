@@ -46,9 +46,6 @@ type ServiceHandler interface {
 	// OnServiceDelete is called whenever deletion of an existing service
 	// object is observed.
 	OnServiceDelete(service *v1.Service)
-	// OnServiceSynced is called once all the initial event handlers were
-	// called and the state is fully propagated to local cache.
-	OnServiceSynced()
 }
 
 // EndpointSliceHandler is an abstract interface of objects which receive
@@ -63,9 +60,6 @@ type EndpointSliceHandler interface {
 	// OnEndpointSliceDelete is called whenever deletion of an existing
 	// endpoint slice object is observed.
 	OnEndpointSliceDelete(endpointSlice *discoveryv1.EndpointSlice)
-	// OnEndpointSlicesSynced is called once all the initial event handlers were
-	// called and the state is fully propagated to local cache.
-	OnEndpointSlicesSynced()
 }
 
 // EndpointSliceConfig tracks a set of endpoints configurations.
@@ -100,18 +94,8 @@ func (c *EndpointSliceConfig) RegisterEventHandler(handler EndpointSliceHandler)
 	c.eventHandlers = append(c.eventHandlers, handler)
 }
 
-// Run waits for cache synced and invokes handlers after syncing.
-func (c *EndpointSliceConfig) Run(stopCh <-chan struct{}) {
-	c.logger.Info("Starting endpoint slice config controller")
-
-	if !cache.WaitForNamedCacheSync("endpoint slice config", stopCh, c.listerSynced) {
-		return
-	}
-
-	for _, h := range c.eventHandlers {
-		c.logger.V(3).Info("Calling handler.OnEndpointSlicesSynced()")
-		h.OnEndpointSlicesSynced()
-	}
+func (c *EndpointSliceConfig) InformerSynced() cache.InformerSynced {
+	return c.listerSynced
 }
 
 func (c *EndpointSliceConfig) handleAddEndpointSlice(obj interface{}) {
@@ -194,18 +178,8 @@ func (c *ServiceConfig) RegisterEventHandler(handler ServiceHandler) {
 	c.eventHandlers = append(c.eventHandlers, handler)
 }
 
-// Run waits for cache synced and invokes handlers after syncing.
-func (c *ServiceConfig) Run(stopCh <-chan struct{}) {
-	c.logger.Info("Starting service config controller")
-
-	if !cache.WaitForNamedCacheSync("service config", stopCh, c.listerSynced) {
-		return
-	}
-
-	for i := range c.eventHandlers {
-		c.logger.V(3).Info("Calling handler.OnServiceSynced()")
-		c.eventHandlers[i].OnServiceSynced()
-	}
+func (c *ServiceConfig) InformerSynced() cache.InformerSynced {
+	return c.listerSynced
 }
 
 func (c *ServiceConfig) handleAddService(obj interface{}) {
@@ -268,9 +242,6 @@ type NodeHandler interface {
 	// OnNodeDelete is called whenever deletion of an existing node
 	// object is observed.
 	OnNodeDelete(node *v1.Node)
-	// OnNodeSynced is called once all the initial event handlers were
-	// called and the state is fully propagated to local cache.
-	OnNodeSynced()
 }
 
 // NodeConfig tracks a set of node configurations.
@@ -306,18 +277,8 @@ func (c *NodeConfig) RegisterEventHandler(handler NodeHandler) {
 	c.eventHandlers = append(c.eventHandlers, handler)
 }
 
-// Run starts the goroutine responsible for calling registered handlers.
-func (c *NodeConfig) Run(stopCh <-chan struct{}) {
-	c.logger.Info("Starting node config controller")
-
-	if !cache.WaitForNamedCacheSync("node config", stopCh, c.listerSynced) {
-		return
-	}
-
-	for i := range c.eventHandlers {
-		c.logger.V(3).Info("Calling handler.OnNodeSynced()")
-		c.eventHandlers[i].OnNodeSynced()
-	}
+func (c *NodeConfig) InformerSynced() cache.InformerSynced {
+	return c.listerSynced
 }
 
 func (c *NodeConfig) handleAddNode(obj interface{}) {
@@ -417,14 +378,8 @@ func (c *ServiceCIDRConfig) RegisterEventHandler(handler ServiceCIDRHandler) {
 	c.eventHandlers = append(c.eventHandlers, handler)
 }
 
-// Run waits for cache synced and invokes handlers after syncing.
-func (c *ServiceCIDRConfig) Run(stopCh <-chan struct{}) {
-	c.logger.Info("Starting serviceCIDR config controller")
-
-	if !cache.WaitForNamedCacheSync("serviceCIDR config", stopCh, c.listerSynced) {
-		return
-	}
-	c.handleServiceCIDREvent(nil, nil)
+func (c *ServiceCIDRConfig) InformerSynced() cache.InformerSynced {
+	return c.listerSynced
 }
 
 // handleServiceCIDREvent is a helper function to handle Add, Update and Delete

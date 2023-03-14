@@ -28,6 +28,7 @@ import (
 	v1informers "k8s.io/client-go/informers/core/v1"
 	discoveryv1informers "k8s.io/client-go/informers/discovery/v1"
 	networkingv1beta1informers "k8s.io/client-go/informers/networking/v1beta1"
+	"k8s.io/client-go/tools/cache"
 	"k8s.io/klog/v2"
 	"k8s.io/kubernetes/pkg/features"
 	proxyconfig "k8s.io/kubernetes/pkg/proxy/config"
@@ -49,6 +50,8 @@ type Backend struct {
 	syncPeriod    time.Duration
 	minSyncPeriod time.Duration
 	healthzServer *healthcheck.ProxierHealthServer
+
+	informerWaiters []cache.InformerSynced
 
 	topologyLabels map[string]string
 }
@@ -72,9 +75,13 @@ func NewBackend(
 
 	if ipv4Proxier != nil {
 		backend.ipv4Runner = async.NewBoundedFrequencyRunner("ipv4Runner", backend.ipv4SyncNow, minSyncPeriod, time.Hour, 2)
+		// Queue a sync to occur as soon as the runner's loop is started
+		backend.ipv4Runner.Run()
 	}
 	if ipv6Proxier != nil {
 		backend.ipv6Runner = async.NewBoundedFrequencyRunner("ipv6Runner", backend.ipv6SyncNow, minSyncPeriod, time.Hour, 2)
+		// Queue a sync to occur as soon as the runner's loop is started
+		backend.ipv6Runner.Run()
 	}
 
 	return backend
@@ -99,25 +106,33 @@ func (backend *Backend) StartInformers(
 ) {
 	serviceConfig := proxyconfig.NewServiceConfig(ctx, serviceInformer, informerSyncPeriod)
 	serviceConfig.RegisterEventHandler(backend)
-	go serviceConfig.Run(ctx.Done())
+	backend.informerWaiters = append(backend.informerWaiters, serviceConfig.InformerSynced())
 
 	endpointSliceConfig := proxyconfig.NewEndpointSliceConfig(ctx, endpointSliceInformer, informerSyncPeriod)
 	endpointSliceConfig.RegisterEventHandler(backend)
-	go endpointSliceConfig.Run(ctx.Done())
+	backend.informerWaiters = append(backend.informerWaiters, endpointSliceConfig.InformerSynced())
 
 	if utilfeature.DefaultFeatureGate.Enabled(features.MultiCIDRServiceAllocator) {
 		serviceCIDRConfig := proxyconfig.NewServiceCIDRConfig(ctx, serviceCIDRInformer, informerSyncPeriod)
 		serviceCIDRConfig.RegisterEventHandler(backend)
-		go serviceCIDRConfig.Run(ctx.Done())
+		backend.informerWaiters = append(backend.informerWaiters, serviceCIDRConfig.InformerSynced())
 	}
 
 	nodeConfig := proxyconfig.NewNodeConfig(ctx, nodeInformer, informerSyncPeriod)
 	nodeConfig.RegisterEventHandler(backend)
-	go nodeConfig.Run(ctx.Done())
+	backend.informerWaiters = append(backend.informerWaiters, nodeConfig.InformerSynced())
 }
 
 // Run starts the main loop of the Backend (in other goroutines)
 func (backend *Backend) Run() {
+	go backend.waitAndRun()
+}
+
+func (backend *Backend) waitAndRun() {
+	klog.InfoS("Waiting for proxy informers to sync")
+	cache.WaitForNamedCacheSync("proxy.Runner", wait.NeverStop, backend.informerWaiters...)
+	klog.InfoS("Proxy informers are synced")
+
 	if backend.ipv4Proxier != nil {
 		metrics.SyncProxyRulesLastQueuedTimestamp.WithLabelValues(string(v1.IPv4Protocol)).SetToCurrentTime()
 		go backend.ipv4Proxier.Run()
@@ -235,17 +250,6 @@ func (backend *Backend) OnServiceDelete(service *v1.Service) {
 	}
 }
 
-// OnServiceSynced is called once all the initial event handlers were
-// called and the state is fully propagated to local cache.
-func (backend *Backend) OnServiceSynced() {
-	if backend.ipv4Proxier != nil {
-		backend.ipv4Proxier.OnServiceSynced()
-	}
-	if backend.ipv6Proxier != nil {
-		backend.ipv6Proxier.OnServiceSynced()
-	}
-}
-
 // OnEndpointSliceAdd is called whenever creation of a new endpoint slice object
 // is observed.
 func (backend *Backend) OnEndpointSliceAdd(endpointSlice *discovery.EndpointSlice) {
@@ -309,17 +313,6 @@ func (backend *Backend) OnEndpointSliceDelete(endpointSlice *discovery.EndpointS
 	}
 }
 
-// OnEndpointSlicesSynced is called once all the initial event handlers were
-// called and the state is fully propagated to local cache.
-func (backend *Backend) OnEndpointSlicesSynced() {
-	if backend.ipv4Proxier != nil {
-		backend.ipv4Proxier.OnEndpointSlicesSynced()
-	}
-	if backend.ipv6Proxier != nil {
-		backend.ipv6Proxier.OnEndpointSlicesSynced()
-	}
-}
-
 // OnNodeAdd is called when this host's node object is created.
 func (backend *Backend) OnNodeAdd(node *v1.Node) {
 	backend.OnNodeUpdate(nil, node)
@@ -357,11 +350,6 @@ func (backend *Backend) OnNodeUpdate(oldNode, node *v1.Node) {
 // OnNodeUpdate is called when this host's node object is deleted.
 func (backend *Backend) OnNodeDelete(node *v1.Node) {
 	backend.OnNodeUpdate(node, &v1.Node{})
-}
-
-// OnNodeSynced is called once all the initial event handlers were
-// called and the state is fully propagated to local cache.
-func (backend *Backend) OnNodeSynced() {
 }
 
 // OnServiceCIDRsChanged is called whenever a change is observed

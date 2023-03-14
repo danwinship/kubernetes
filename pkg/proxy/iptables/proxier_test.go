@@ -142,7 +142,6 @@ func NewFakeProxier(ipt utiliptables.Interface) *Proxier {
 			metrics.LocalhostNodePortAcceptedNFAcctCounter:     true,
 		},
 	}
-	p.setInitialized(true)
 	return p
 }
 
@@ -3163,10 +3162,6 @@ func makeServiceMap(proxier *Proxier, allServices ...*v1.Service) {
 	for i := range allServices {
 		proxier.OnServiceAdd(allServices[i])
 	}
-
-	proxier.mu.Lock()
-	defer proxier.mu.Unlock()
-	proxier.servicesSynced = true
 }
 
 type endpointExpectation struct {
@@ -3935,8 +3930,6 @@ func TestUpdateEndpointsMap(t *testing.T) {
 func TestHealthCheckNodePortWhenTerminating(t *testing.T) {
 	ipt := iptablestest.NewFake()
 	fp := NewFakeProxier(ipt)
-	fp.OnServiceSynced()
-	fp.OnEndpointSlicesSynced()
 
 	serviceName := "svc1"
 	namespaceName := "ns1"
@@ -4224,8 +4217,6 @@ func TestInternalTrafficPolicy(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			ipt := iptablestest.NewFake()
 			fp := NewFakeProxier(ipt)
-			fp.OnServiceSynced()
-			fp.OnEndpointSlicesSynced()
 
 			serviceName := "svc1"
 			namespaceName := "ns1"
@@ -4587,8 +4578,6 @@ func TestTerminatingEndpointsTrafficPolicyLocal(t *testing.T) {
 		t.Run(testcase.name, func(t *testing.T) {
 			ipt := iptablestest.NewFake()
 			fp := NewFakeProxier(ipt)
-			fp.OnServiceSynced()
-			fp.OnEndpointSlicesSynced()
 
 			fp.OnServiceAdd(service)
 
@@ -4921,8 +4910,6 @@ func TestTerminatingEndpointsTrafficPolicyCluster(t *testing.T) {
 
 			ipt := iptablestest.NewFake()
 			fp := NewFakeProxier(ipt)
-			fp.OnServiceSynced()
-			fp.OnEndpointSlicesSynced()
 
 			fp.OnServiceAdd(service)
 
@@ -6456,8 +6443,6 @@ func TestNoEndpointsMetric(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			ipt := iptablestest.NewFake()
 			fp := NewFakeProxier(ipt)
-			fp.OnServiceSynced()
-			fp.OnEndpointSlicesSynced()
 
 			serviceName := "svc1"
 			namespaceName := "ns1"

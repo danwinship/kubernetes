@@ -33,12 +33,10 @@ type Proxier interface {
 	OnServiceAdd(service *v1.Service) bool
 	OnServiceUpdate(oldService, service *v1.Service) bool
 	OnServiceDelete(service *v1.Service) bool
-	OnServiceSynced()
 
 	OnEndpointSliceAdd(endpointSlice *discoveryv1.EndpointSlice) bool
 	OnEndpointSliceUpdate(oldEndpointSlice, newEndpointSlice *discoveryv1.EndpointSlice) bool
 	OnEndpointSliceDelete(endpointSlice *discoveryv1.EndpointSlice) bool
-	OnEndpointSlicesSynced()
 
 	// OnServiceCIDRsChanged is called whenever a change is observed
 	// in any of the ServiceCIDRs, and provides complete list of service cidrs.

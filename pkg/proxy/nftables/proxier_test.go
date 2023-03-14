@@ -140,8 +140,6 @@ func NewFakeProxier(ipFamily v1.IPFamily) (*knftables.Fake, *Proxier) {
 		noEndpointNodePorts: newNFTElementStorage("map", noEndpointNodePortsMap),
 		serviceNodePorts:    newNFTElementStorage("map", serviceNodePortsMap),
 	}
-	p.setInitialized(true)
-
 	return nft, p
 }
 
@@ -1569,10 +1567,6 @@ func makeServiceMap(proxier *Proxier, allServices ...*v1.Service) {
 	for i := range allServices {
 		proxier.OnServiceAdd(allServices[i])
 	}
-
-	proxier.mu.Lock()
-	defer proxier.mu.Unlock()
-	proxier.servicesSynced = true
 }
 
 type endpointExpectation struct {
@@ -2338,8 +2332,6 @@ func TestUpdateEndpointsMap(t *testing.T) {
 // TestHealthCheckNodePortWhenTerminating tests that health check node ports are not enabled when all local endpoints are terminating
 func TestHealthCheckNodePortWhenTerminating(t *testing.T) {
 	_, fp := NewFakeProxier(v1.IPv4Protocol)
-	fp.OnServiceSynced()
-	fp.OnEndpointSlicesSynced()
 
 	serviceName := "svc1"
 	namespaceName := "ns1"
@@ -2548,8 +2540,6 @@ func TestInternalTrafficPolicy(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			nft, fp := NewFakeProxier(v1.IPv4Protocol)
-			fp.OnServiceSynced()
-			fp.OnEndpointSlicesSynced()
 
 			serviceName := "svc1"
 			namespaceName := "ns1"
@@ -2910,8 +2900,6 @@ func TestTerminatingEndpointsTrafficPolicyLocal(t *testing.T) {
 	for _, testcase := range testcases {
 		t.Run(testcase.name, func(t *testing.T) {
 			nft, fp := NewFakeProxier(v1.IPv4Protocol)
-			fp.OnServiceSynced()
-			fp.OnEndpointSlicesSynced()
 
 			fp.OnServiceAdd(service)
 
@@ -3241,10 +3229,7 @@ func TestTerminatingEndpointsTrafficPolicyCluster(t *testing.T) {
 
 	for _, testcase := range testcases {
 		t.Run(testcase.name, func(t *testing.T) {
-
 			nft, fp := NewFakeProxier(v1.IPv4Protocol)
-			fp.OnServiceSynced()
-			fp.OnEndpointSlicesSynced()
 
 			fp.OnServiceAdd(service)
 
@@ -4407,8 +4392,6 @@ func TestNoEndpointsMetric(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			_, fp := NewFakeProxier(v1.IPv4Protocol)
-			fp.OnServiceSynced()
-			fp.OnEndpointSlicesSynced()
 
 			serviceName := "svc1"
 			namespaceName := "ns1"

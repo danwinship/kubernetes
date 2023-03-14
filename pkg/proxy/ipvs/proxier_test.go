@@ -164,7 +164,6 @@ func NewFakeProxier(ctx context.Context, ipt utiliptables.Interface, ipvs utilip
 		gracefuldeleteManager: NewGracefulTerminationManager(ipvs),
 		ipFamily:              ipFamily,
 	}
-	p.setInitialized(true)
 	return p
 }
 
@@ -176,19 +175,12 @@ func makeServiceMap(proxier *Proxier, allServices ...*v1.Service) {
 	for i := range allServices {
 		proxier.OnServiceAdd(allServices[i])
 	}
-
-	proxier.mu.Lock()
-	defer proxier.mu.Unlock()
-	proxier.servicesSynced = true
 }
 
 func makeEndpointSliceMap(proxier *Proxier, allEpSlices ...*discovery.EndpointSlice) {
 	for i := range allEpSlices {
 		proxier.OnEndpointSliceAdd(allEpSlices[i])
 	}
-	proxier.mu.Lock()
-	defer proxier.mu.Unlock()
-	proxier.endpointSlicesSynced = true
 }
 
 func makeTestService(namespace, name string, svcFunc func(*v1.Service)) *v1.Service {
@@ -4133,8 +4125,6 @@ func TestMultiPortServiceBindAddr(t *testing.T) {
 		svc.Spec.Ports = addTestPort(svc.Spec.Ports, "port3", "UDP", 1236, 0, 0)
 	})
 
-	fp.servicesSynced = true
-
 	// first, add multi-port service1
 	fp.OnServiceAdd(service1)
 	fp.Sync()
@@ -4218,8 +4208,6 @@ func TestEndpointSliceE2E(t *testing.T) {
 	ipvs := ipvstest.NewFake()
 	ipset := ipsettest.NewFake(testIPSetVersion)
 	fp := NewFakeProxier(ctx, ipt, ipvs, ipset, nil, nil, v1.IPv4Protocol)
-	fp.servicesSynced = true
-	fp.endpointSlicesSynced = true
 
 	// Add initial service
 	serviceName := "svc1"
@@ -4304,8 +4292,6 @@ func TestHealthCheckNodePortE2E(t *testing.T) {
 	ipvs := ipvstest.NewFake()
 	ipset := ipsettest.NewFake(testIPSetVersion)
 	fp := NewFakeProxier(ctx, ipt, ipvs, ipset, nil, nil, v1.IPv4Protocol)
-	fp.servicesSynced = true
-	fp.endpointSlicesSynced = true
 
 	// Add initial service
 	serviceName := "svc1"
@@ -4359,9 +4345,6 @@ func Test_HealthCheckNodePortWhenTerminating(t *testing.T) {
 	ipvs := ipvstest.NewFake()
 	ipset := ipsettest.NewFake(testIPSetVersion)
 	fp := NewFakeProxier(ctx, ipt, ipvs, ipset, nil, nil, v1.IPv4Protocol)
-	fp.servicesSynced = true
-	// fp.endpointsSynced = true
-	fp.endpointSlicesSynced = true
 
 	serviceName := "svc1"
 	namespaceName := "ns1"
@@ -4578,9 +4561,6 @@ func TestTestInternalTrafficPolicyE2E(t *testing.T) {
 		ipvs := ipvstest.NewFake()
 		ipset := ipsettest.NewFake(testIPSetVersion)
 		fp := NewFakeProxier(ctx, ipt, ipvs, ipset, nil, nil, v1.IPv4Protocol)
-		fp.servicesSynced = true
-		// fp.endpointsSynced = true
-		fp.endpointSlicesSynced = true
 
 		// Add initial service
 		serviceName := "svc1"
@@ -4675,9 +4655,6 @@ func Test_EndpointSliceReadyAndTerminatingCluster(t *testing.T) {
 	ipvs := ipvstest.NewFake()
 	ipset := ipsettest.NewFake(testIPSetVersion)
 	fp := NewFakeProxier(ctx, ipt, ipvs, ipset, nil, nil, v1.IPv4Protocol)
-	fp.servicesSynced = true
-	// fp.endpointsSynced = true
-	fp.endpointSlicesSynced = true
 
 	serviceName := "svc1"
 	// Add initial service
@@ -4848,9 +4825,6 @@ func Test_EndpointSliceReadyAndTerminatingLocal(t *testing.T) {
 	ipvs := ipvstest.NewFake()
 	ipset := ipsettest.NewFake(testIPSetVersion)
 	fp := NewFakeProxier(ctx, ipt, ipvs, ipset, nil, nil, v1.IPv4Protocol)
-	fp.servicesSynced = true
-	// fp.endpointsSynced = true
-	fp.endpointSlicesSynced = true
 
 	serviceName := "svc1"
 	// Add initial service
@@ -5020,9 +4994,6 @@ func Test_EndpointSliceOnlyReadyAndTerminatingCluster(t *testing.T) {
 	ipvs := ipvstest.NewFake()
 	ipset := ipsettest.NewFake(testIPSetVersion)
 	fp := NewFakeProxier(ctx, ipt, ipvs, ipset, nil, nil, v1.IPv4Protocol)
-	fp.servicesSynced = true
-	// fp.endpointsSynced = true
-	fp.endpointSlicesSynced = true
 
 	// Add initial service
 	serviceName := "svc1"
@@ -5192,9 +5163,6 @@ func Test_EndpointSliceOnlyReadyAndTerminatingLocal(t *testing.T) {
 	ipvs := ipvstest.NewFake()
 	ipset := ipsettest.NewFake(testIPSetVersion)
 	fp := NewFakeProxier(ctx, ipt, ipvs, ipset, nil, nil, v1.IPv4Protocol)
-	fp.servicesSynced = true
-	// fp.endpointsSynced = true
-	fp.endpointSlicesSynced = true
 
 	// Add initial service
 	serviceName := "svc1"
@@ -5535,9 +5503,6 @@ func TestNoEndpointsMetric(t *testing.T) {
 		ipvs := ipvstest.NewFake()
 		ipset := ipsettest.NewFake(testIPSetVersion)
 		fp := NewFakeProxier(ctx, ipt, ipvs, ipset, []string{"10.0.0.1"}, nil, v1.IPv4Protocol)
-		fp.servicesSynced = true
-		// fp.endpointsSynced = true
-		fp.endpointSlicesSynced = true
 
 		// Add initial service
 		serviceName := "svc1"

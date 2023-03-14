@@ -52,7 +52,6 @@ type ServiceHandlerMock struct {
 	lock sync.Mutex
 
 	state   map[types.NamespacedName]*v1.Service
-	synced  bool
 	updated chan []*v1.Service
 	process func([]*v1.Service)
 }
@@ -92,17 +91,7 @@ func (h *ServiceHandlerMock) OnServiceDelete(service *v1.Service) {
 	h.sendServices()
 }
 
-func (h *ServiceHandlerMock) OnServiceSynced() {
-	h.lock.Lock()
-	defer h.lock.Unlock()
-	h.synced = true
-	h.sendServices()
-}
-
 func (h *ServiceHandlerMock) sendServices() {
-	if !h.synced {
-		return
-	}
 	services := make([]*v1.Service, 0, len(h.state))
 	for _, svc := range h.state {
 		services = append(services, svc)
@@ -147,7 +136,6 @@ type EndpointSliceHandlerMock struct {
 	lock sync.Mutex
 
 	state   map[types.NamespacedName]*discoveryv1.EndpointSlice
-	synced  bool
 	updated chan []*discoveryv1.EndpointSlice
 	process func([]*discoveryv1.EndpointSlice)
 }
@@ -187,17 +175,7 @@ func (h *EndpointSliceHandlerMock) OnEndpointSliceDelete(slice *discoveryv1.Endp
 	h.sendEndpointSlices()
 }
 
-func (h *EndpointSliceHandlerMock) OnEndpointSlicesSynced() {
-	h.lock.Lock()
-	defer h.lock.Unlock()
-	h.synced = true
-	h.sendEndpointSlices()
-}
-
 func (h *EndpointSliceHandlerMock) sendEndpointSlices() {
-	if !h.synced {
-		return
-	}
 	slices := make([]*discoveryv1.EndpointSlice, 0, len(h.state))
 	for _, eps := range h.state {
 		slices = append(slices, eps)
@@ -240,8 +218,7 @@ func TestNewServiceAddedAndNotified(t *testing.T) {
 	config := NewServiceConfig(ctx, sharedInformers.Core().V1().Services(), time.Minute)
 	handler := NewServiceHandlerMock()
 	config.RegisterEventHandler(handler)
-	sharedInformers.Start(stopCh)
-	go config.Run(stopCh)
+	go sharedInformers.Start(stopCh)
 
 	service := &v1.Service{
 		ObjectMeta: metav1.ObjectMeta{Namespace: "testnamespace", Name: "foo"},
@@ -265,8 +242,7 @@ func TestServiceAddedRemovedSetAndNotified(t *testing.T) {
 	config := NewServiceConfig(ctx, sharedInformers.Core().V1().Services(), time.Minute)
 	handler := NewServiceHandlerMock()
 	config.RegisterEventHandler(handler)
-	sharedInformers.Start(stopCh)
-	go config.Run(stopCh)
+	go sharedInformers.Start(stopCh)
 
 	service1 := &v1.Service{
 		ObjectMeta: metav1.ObjectMeta{Namespace: "testnamespace", Name: "foo"},
@@ -304,8 +280,7 @@ func TestNewServicesMultipleHandlersAddedAndNotified(t *testing.T) {
 	handler2 := NewServiceHandlerMock()
 	config.RegisterEventHandler(handler)
 	config.RegisterEventHandler(handler2)
-	sharedInformers.Start(stopCh)
-	go config.Run(stopCh)
+	go sharedInformers.Start(stopCh)
 
 	service1 := &v1.Service{
 		ObjectMeta: metav1.ObjectMeta{Namespace: "testnamespace", Name: "foo"},
@@ -339,8 +314,7 @@ func TestNewEndpointsMultipleHandlersAddedAndNotified(t *testing.T) {
 	handler2 := NewEndpointSliceHandlerMock()
 	config.RegisterEventHandler(handler)
 	config.RegisterEventHandler(handler2)
-	sharedInformers.Start(stopCh)
-	go config.Run(stopCh)
+	go sharedInformers.Start(stopCh)
 
 	endpoints1 := &discoveryv1.EndpointSlice{
 		ObjectMeta:  metav1.ObjectMeta{Namespace: "testnamespace", Name: "foo"},
@@ -386,8 +360,7 @@ func TestNewEndpointsMultipleHandlersAddRemoveSetAndNotified(t *testing.T) {
 	handler2 := NewEndpointSliceHandlerMock()
 	config.RegisterEventHandler(handler)
 	config.RegisterEventHandler(handler2)
-	sharedInformers.Start(stopCh)
-	go config.Run(stopCh)
+	go sharedInformers.Start(stopCh)
 
 	endpoints1 := &discoveryv1.EndpointSlice{
 		ObjectMeta:  metav1.ObjectMeta{Namespace: "testnamespace", Name: "foo"},

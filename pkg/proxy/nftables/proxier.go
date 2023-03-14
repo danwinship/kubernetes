@@ -34,7 +34,6 @@ import (
 	"strconv"
 	"strings"
 	"sync"
-	"sync/atomic"
 	"time"
 
 	v1 "k8s.io/api/core/v1"
@@ -114,14 +113,8 @@ type Proxier struct {
 	svcPortMap     proxy.ServicePortMap
 	endpointsMap   proxy.EndpointsMap
 	topologyLabels map[string]string
-	// endpointSlicesSynced, and servicesSynced are set to true
-	// when corresponding objects are synced after startup. This is used to avoid
-	// updating nftables with some partial data after kube-proxy restart.
-	endpointSlicesSynced bool
-	servicesSynced       bool
-	needFullSync         bool
-	initialized          int32
-	flushed              bool
+	needFullSync   bool
+	flushed        bool
 
 	// These are effectively const and do not need the mutex to be held.
 	nftables       knftables.Interface
@@ -627,18 +620,6 @@ func (proxier *Proxier) Run() {
 	// No nftables-specific work
 }
 
-func (proxier *Proxier) setInitialized(value bool) {
-	var initialized int32
-	if value {
-		initialized = 1
-	}
-	atomic.StoreInt32(&proxier.initialized, initialized)
-}
-
-func (proxier *Proxier) isInitialized() bool {
-	return atomic.LoadInt32(&proxier.initialized) > 0
-}
-
 // OnServiceAdd is called whenever creation of new service object
 // is observed.
 func (proxier *Proxier) OnServiceAdd(service *v1.Service) bool {
@@ -648,7 +629,7 @@ func (proxier *Proxier) OnServiceAdd(service *v1.Service) bool {
 // OnServiceUpdate is called whenever modification of an existing
 // service object is observed.
 func (proxier *Proxier) OnServiceUpdate(oldService, service *v1.Service) bool {
-	return proxier.serviceChanges.Update(oldService, service) && proxier.isInitialized()
+	return proxier.serviceChanges.Update(oldService, service)
 }
 
 // OnServiceDelete is called whenever deletion of an existing service
@@ -657,46 +638,22 @@ func (proxier *Proxier) OnServiceDelete(service *v1.Service) bool {
 	return proxier.OnServiceUpdate(service, nil)
 }
 
-// OnServiceSynced is called once all the initial event handlers were
-// called and the state is fully propagated to local cache.
-func (proxier *Proxier) OnServiceSynced() {
-	proxier.mu.Lock()
-	proxier.servicesSynced = true
-	proxier.setInitialized(proxier.endpointSlicesSynced)
-	proxier.mu.Unlock()
-
-	// Sync unconditionally - this is called once per lifetime.
-	proxier.Sync()
-}
-
 // OnEndpointSliceAdd is called whenever creation of a new endpoint slice object
 // is observed.
 func (proxier *Proxier) OnEndpointSliceAdd(endpointSlice *discovery.EndpointSlice) bool {
-	return proxier.endpointsChanges.EndpointSliceUpdate(endpointSlice, false) && proxier.isInitialized()
+	return proxier.endpointsChanges.EndpointSliceUpdate(endpointSlice, false)
 }
 
 // OnEndpointSliceUpdate is called whenever modification of an existing endpoint
 // slice object is observed.
 func (proxier *Proxier) OnEndpointSliceUpdate(_, endpointSlice *discovery.EndpointSlice) bool {
-	return proxier.endpointsChanges.EndpointSliceUpdate(endpointSlice, false) && proxier.isInitialized()
+	return proxier.endpointsChanges.EndpointSliceUpdate(endpointSlice, false)
 }
 
 // OnEndpointSliceDelete is called whenever deletion of an existing endpoint slice
 // object is observed.
 func (proxier *Proxier) OnEndpointSliceDelete(endpointSlice *discovery.EndpointSlice) bool {
-	return proxier.endpointsChanges.EndpointSliceUpdate(endpointSlice, true) && proxier.isInitialized()
-}
-
-// OnEndpointSlicesSynced is called once all the initial event handlers were
-// called and the state is fully propagated to local cache.
-func (proxier *Proxier) OnEndpointSlicesSynced() {
-	proxier.mu.Lock()
-	proxier.endpointSlicesSynced = true
-	proxier.setInitialized(proxier.servicesSynced)
-	proxier.mu.Unlock()
-
-	// Sync unconditionally - this is called once per lifetime.
-	proxier.Sync()
+	return proxier.endpointsChanges.EndpointSliceUpdate(endpointSlice, true)
 }
 
 // OnTopologyChange is called when the node's topology-related labels have changed
@@ -952,12 +909,6 @@ func (proxier *Proxier) logFailure(tx *knftables.Transaction) {
 func (proxier *Proxier) Sync() proxy.SyncResult {
 	proxier.mu.Lock()
 	defer proxier.mu.Unlock()
-
-	// don't sync rules till we've received services and endpoints
-	if !proxier.isInitialized() {
-		proxier.logger.V(2).Info("Not syncing nftables until Services and Endpoints have been received from master")
-		return proxy.SyncSuccess
-	}
 
 	//
 	// Below this point we will not return until we try to write the nftables rules.

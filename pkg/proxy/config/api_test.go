@@ -60,8 +60,7 @@ func TestNewServicesSourceApi_UpdatesAndMultipleServices(t *testing.T) {
 
 	serviceConfig := NewServiceConfig(ctx, sharedInformers.Core().V1().Services(), time.Minute)
 	serviceConfig.RegisterEventHandler(handler)
-	sharedInformers.Start(stopCh)
-	go serviceConfig.Run(stopCh)
+	go sharedInformers.Start(stopCh)
 
 	// Add the first service
 	fakeWatch.Add(service1v1)
@@ -141,8 +140,7 @@ func TestNewEndpointsSourceApi_UpdatesAndMultipleEndpoints(t *testing.T) {
 
 	endpointsliceConfig := NewEndpointSliceConfig(ctx, sharedInformers.Discovery().V1().EndpointSlices(), time.Minute)
 	endpointsliceConfig.RegisterEventHandler(handler)
-	sharedInformers.Start(stopCh)
-	go endpointsliceConfig.Run(stopCh)
+	go sharedInformers.Start(stopCh)
 
 	// Add the first endpoints
 	fakeWatch.Add(endpoints1v1)
@@ -229,26 +227,5 @@ func TestInitialSync(t *testing.T) {
 	})
 	if err != nil {
 		t.Fatal("Timed out waiting for the completion of handler `OnEndpointsAdd`")
-	}
-
-	svcConfig.Run(stopCh)
-	epsConfig.Run(stopCh)
-
-	gotSvc := <-svcHandler.updated
-	gotSvcState := make(map[types.NamespacedName]*v1.Service, len(gotSvc))
-	for _, svc := range gotSvc {
-		gotSvcState[types.NamespacedName{Namespace: svc.Namespace, Name: svc.Name}] = svc
-	}
-	if !reflect.DeepEqual(gotSvcState, expectedSvcState) {
-		t.Fatalf("Expected service state: %v\nGot: %v\n", expectedSvcState, gotSvcState)
-	}
-
-	gotEps := <-epsHandler.updated
-	gotEpsState := make(map[types.NamespacedName]*discoveryv1.EndpointSlice, len(gotEps))
-	for _, eps := range gotEps {
-		gotEpsState[types.NamespacedName{Namespace: eps.Namespace, Name: eps.Name}] = eps
-	}
-	if !reflect.DeepEqual(gotEpsState, expectedEpsState) {
-		t.Fatalf("Expected endpoints state: %v\nGot: %v\n", expectedEpsState, gotEpsState)
 	}
 }

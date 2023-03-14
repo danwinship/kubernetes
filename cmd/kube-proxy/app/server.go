@@ -582,7 +582,6 @@ func (s *ProxyServer) Run(ctx context.Context) error {
 			HealthServer: s.HealthzServer,
 		})
 	}
-	go nodeConfig.Run(wait.NeverStop)
 
 	// Start the factories. (This has to happen after we create the event handlers.)
 	informerFactory.Start(wait.NeverStop)
