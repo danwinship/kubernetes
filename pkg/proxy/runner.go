@@ -35,9 +35,6 @@ type Runner struct {
 	proxiers map[v1.IPFamily]Proxier
 }
 
-// Runner implements Proxier
-var _ Proxier = &Runner{}
-
 // NewRunner returns an empty Runner
 func NewRunner() *Runner {
 	return &Runner{
@@ -79,13 +76,6 @@ func (r *Runner) StartInformers(
 	}
 }
 
-// Sync immediately synchronizes the Proxier's current state to proxy rules.
-func (r *Runner) Sync() {
-	for _, proxier := range r.proxiers {
-		proxier.Sync()
-	}
-}
-
 // SyncLoop runs periodic work. This is expected to run as a goroutine or as the main loop
 // of the app. It does not return.
 func (r *Runner) SyncLoop() {
@@ -105,7 +95,9 @@ func (r *Runner) SyncLoop() {
 // OnServiceAdd is called whenever creation of new service object is observed.
 func (r *Runner) OnServiceAdd(service *v1.Service) {
 	for _, proxier := range r.proxiers {
-		proxier.OnServiceAdd(service)
+		if proxier.OnServiceAdd(service) {
+			proxier.Sync()
+		}
 	}
 }
 
@@ -113,14 +105,18 @@ func (r *Runner) OnServiceAdd(service *v1.Service) {
 // observed.
 func (r *Runner) OnServiceUpdate(oldService, service *v1.Service) {
 	for _, proxier := range r.proxiers {
-		proxier.OnServiceUpdate(oldService, service)
+		if proxier.OnServiceUpdate(oldService, service) {
+			proxier.Sync()
+		}
 	}
 }
 
 // OnServiceDelete is called whenever deletion of an existing service object is observed.
 func (r *Runner) OnServiceDelete(service *v1.Service) {
 	for _, proxier := range r.proxiers {
-		proxier.OnServiceDelete(service)
+		if proxier.OnServiceDelete(service) {
+			proxier.Sync()
+		}
 	}
 }
 
@@ -138,13 +134,13 @@ func (r *Runner) OnEndpointSliceAdd(endpointSlice *discovery.EndpointSlice) {
 	switch endpointSlice.AddressType {
 	case discovery.AddressTypeIPv4:
 		proxier := r.proxiers[v1.IPv4Protocol]
-		if proxier != nil {
-			proxier.OnEndpointSliceAdd(endpointSlice)
+		if proxier != nil && proxier.OnEndpointSliceAdd(endpointSlice) {
+			proxier.Sync()
 		}
 	case discovery.AddressTypeIPv6:
 		proxier := r.proxiers[v1.IPv6Protocol]
-		if proxier != nil {
-			proxier.OnEndpointSliceAdd(endpointSlice)
+		if proxier != nil && proxier.OnEndpointSliceAdd(endpointSlice) {
+			proxier.Sync()
 		}
 	default:
 		klog.ErrorS(nil, "EndpointSlice address type not supported", "addressType", endpointSlice.AddressType)
@@ -157,13 +153,13 @@ func (r *Runner) OnEndpointSliceUpdate(oldEndpointSlice, newEndpointSlice *disco
 	switch newEndpointSlice.AddressType {
 	case discovery.AddressTypeIPv4:
 		proxier := r.proxiers[v1.IPv4Protocol]
-		if proxier != nil {
-			proxier.OnEndpointSliceUpdate(oldEndpointSlice, newEndpointSlice)
+		if proxier != nil && proxier.OnEndpointSliceUpdate(oldEndpointSlice, newEndpointSlice) {
+			proxier.Sync()
 		}
 	case discovery.AddressTypeIPv6:
 		proxier := r.proxiers[v1.IPv6Protocol]
-		if proxier != nil {
-			proxier.OnEndpointSliceUpdate(oldEndpointSlice, newEndpointSlice)
+		if proxier != nil && proxier.OnEndpointSliceUpdate(oldEndpointSlice, newEndpointSlice) {
+			proxier.Sync()
 		}
 	default:
 		klog.ErrorS(nil, "EndpointSlice address type not supported", "addressType", newEndpointSlice.AddressType)
@@ -176,13 +172,13 @@ func (r *Runner) OnEndpointSliceDelete(endpointSlice *discovery.EndpointSlice) {
 	switch endpointSlice.AddressType {
 	case discovery.AddressTypeIPv4:
 		proxier := r.proxiers[v1.IPv4Protocol]
-		if proxier != nil {
-			proxier.OnEndpointSliceDelete(endpointSlice)
+		if proxier != nil && proxier.OnEndpointSliceDelete(endpointSlice) {
+			proxier.Sync()
 		}
 	case discovery.AddressTypeIPv6:
 		proxier := r.proxiers[v1.IPv6Protocol]
-		if proxier != nil {
-			proxier.OnEndpointSliceDelete(endpointSlice)
+		if proxier != nil && proxier.OnEndpointSliceDelete(endpointSlice) {
+			proxier.Sync()
 		}
 	default:
 		klog.ErrorS(nil, "EndpointSlice address type not supported", "addressType", endpointSlice.AddressType)
@@ -201,6 +197,7 @@ func (r *Runner) OnEndpointSlicesSynced() {
 func (r *Runner) OnTopologyChange(topologyLabels map[string]string) {
 	for _, proxier := range r.proxiers {
 		proxier.OnTopologyChange(topologyLabels)
+		proxier.Sync()
 	}
 }
 
@@ -209,5 +206,6 @@ func (r *Runner) OnTopologyChange(topologyLabels map[string]string) {
 func (r *Runner) OnServiceCIDRsChanged(cidrs []string) {
 	for _, proxier := range r.proxiers {
 		proxier.OnServiceCIDRsChanged(cidrs)
+		proxier.Sync()
 	}
 }
