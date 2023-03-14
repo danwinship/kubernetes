@@ -90,13 +90,12 @@ type Proxier interface {
 	// relevant node topology labels, and provides the observed change.
 	OnTopologyChange(topologyLabels map[string]string)
 
-	// Sync immediately synchronizes the Proxier's current state to proxy rules.
-	Sync()
+	// Run starts the proxy. This is expected to run as a goroutine or as the main
+	// loop of the app. It does not return.
+	Run()
 
-	// SyncLoop runs periodic work.
-	// This is expected to run as a goroutine or as the main loop of the app.
-	// It does not return.
-	SyncLoop()
+	// Sync immediately synchronizes the Proxier's current state to proxy rules.
+	Sync() error
 }
 
 // ServicePortName carries a namespace + name + portname.  This is the unique

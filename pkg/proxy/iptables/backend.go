@@ -130,7 +130,7 @@ func (backend *Backend) NewProxyRunner(
 	healthzServer *healthcheck.ProxyHealthServer,
 	localDetectors map[v1.IPFamily]proxyutil.LocalTrafficDetector,
 ) (*proxy.Runner, error) {
-	r := proxy.NewRunner()
+	r := proxy.NewRunner(backend.config.SyncPeriod.Duration, backend.config.MinSyncPeriod.Duration, healthzServer)
 	for family := range backend.ipts {
 		// TODO this has side effects that should only happen when Run() is invoked.
 		proxier, err := newProxier(
@@ -139,7 +139,6 @@ func (backend *Backend) NewProxyRunner(
 			backend.ipts[family],
 			utilsysctl.New(),
 			backend.config.SyncPeriod.Duration,
-			backend.config.MinSyncPeriod.Duration,
 			backend.config.Linux.MasqueradeAll,
 			*backend.config.IPTables.LocalhostNodePorts,
 			int(*backend.config.IPTables.MasqueradeBit),

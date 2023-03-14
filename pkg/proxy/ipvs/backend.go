@@ -201,7 +201,7 @@ func (backend *Backend) NewProxyRunner(
 	healthzServer *healthcheck.ProxyHealthServer,
 	localDetectors map[v1.IPFamily]proxyutil.LocalTrafficDetector,
 ) (*proxy.Runner, error) {
-	r := proxy.NewRunner()
+	r := proxy.NewRunner(backend.config.SyncPeriod.Duration, backend.config.MinSyncPeriod.Duration, healthzServer)
 	for family := range backend.ipts {
 		proxier, err := newProxier(
 			ctx,
@@ -209,8 +209,6 @@ func (backend *Backend) NewProxyRunner(
 			backend.ipts[family],
 			backend.ipvs,
 			backend.ipset,
-			backend.config.SyncPeriod.Duration,
-			backend.config.MinSyncPeriod.Duration,
 			backend.config.IPVS.ExcludeCIDRs,
 			backend.config.Linux.MasqueradeAll,
 			int(*backend.config.IPTables.MasqueradeBit),

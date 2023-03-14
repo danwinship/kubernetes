@@ -111,15 +111,13 @@ func (backend *Backend) NewProxyRunner(
 	healthzServer *healthcheck.ProxyHealthServer,
 	localDetectors map[v1.IPFamily]proxyutil.LocalTrafficDetector,
 ) (*proxy.Runner, error) {
-	r := proxy.NewRunner()
+	r := proxy.NewRunner(backend.config.SyncPeriod.Duration, backend.config.MinSyncPeriod.Duration, healthzServer)
 	for family := range backend.nfts {
 		// TODO this has side effects that should only happen when Run() is invoked.
 		proxier, err := newProxier(
 			ctx,
 			family,
 			backend.nfts[family],
-			backend.config.SyncPeriod.Duration,
-			backend.config.MinSyncPeriod.Duration,
 			backend.config.Linux.MasqueradeAll,
 			int(*backend.config.NFTables.MasqueradeBit),
 			localDetectors[family],

@@ -44,7 +44,6 @@ import (
 	"k8s.io/kubernetes/pkg/proxy/conntrack"
 	"k8s.io/kubernetes/pkg/proxy/healthcheck"
 	"k8s.io/kubernetes/pkg/proxy/metrics"
-	"k8s.io/kubernetes/pkg/proxy/runner"
 	proxyutil "k8s.io/kubernetes/pkg/proxy/util"
 	"k8s.io/kubernetes/pkg/proxy/util/nfacct"
 	utiliptables "k8s.io/kubernetes/pkg/util/iptables"
@@ -112,7 +111,6 @@ type Proxier struct {
 	lastFullSync         time.Time
 	needFullSync         bool
 	initialized          int32
-	syncRunner           *runner.BoundedFrequencyRunner // governs calls to syncProxyRules
 	syncPeriod           time.Duration
 	lastIPTablesCleanup  time.Time
 
@@ -127,7 +125,6 @@ type Proxier struct {
 	nodeIP         net.IP
 
 	serviceHealthServer healthcheck.ServiceHealthServer
-	healthzServer       *healthcheck.ProxyHealthServer
 
 	// Since converting probabilities (floats) to strings is expensive
 	// and we are using only probabilities in the format of 1/n, we are
@@ -143,7 +140,7 @@ type Proxier struct {
 	natChains                proxyutil.LineBuffer
 	natRules                 proxyutil.LineBuffer
 
-	// largeClusterMode is set at the beginning of syncProxyRules if we are
+	// largeClusterMode is set at the beginning of Sync() if we are
 	// going to end up outputting "lots" of iptables rules and so we need to
 	// optimize for performance over debuggability.
 	largeClusterMode bool
@@ -176,7 +173,6 @@ func newProxier(ctx context.Context,
 	ipt utiliptables.Interface,
 	sysctl utilsysctl.Interface,
 	syncPeriod time.Duration,
-	minSyncPeriod time.Duration,
 	masqueradeAll bool,
 	localhostNodePorts bool,
 	masqueradeBit int,
@@ -231,7 +227,6 @@ func newProxier(ctx context.Context,
 		nodeName:                 nodeName,
 		nodeIP:                   nodeIP,
 		serviceHealthServer:      serviceHealthServer,
-		healthzServer:            healthzServer,
 		precomputedProbabilities: make([]string, 0, 1001),
 		iptablesData:             bytes.NewBuffer(nil),
 		existingFilterChainsData: bytes.NewBuffer(nil),
@@ -250,14 +245,8 @@ func newProxier(ctx context.Context,
 		},
 	}
 
-	logger.V(2).Info("Iptables sync params", "minSyncPeriod", minSyncPeriod, "syncPeriod", syncPeriod, "maxSyncPeriod", proxyutil.FullSyncPeriod)
-	// We pass syncPeriod to ipt.Monitor, which will call us only if it needs to.
-	// We need to pass *some* maxInterval to NewBoundedFrequencyRunner anyway though.
-	// time.Hour is arbitrary.
-	proxier.syncRunner = runner.NewBoundedFrequencyRunner("sync-runner", proxier.syncProxyRules, minSyncPeriod, syncPeriod, proxyutil.FullSyncPeriod)
-
 	go ipt.Monitor(kubeProxyCanaryChain, []utiliptables.Table{utiliptables.TableMangle, utiliptables.TableNAT, utiliptables.TableFilter},
-		proxier.forceSyncProxyRules, syncPeriod, wait.NeverStop)
+		proxier.forceSync, syncPeriod, wait.NeverStop)
 
 	if ipt.HasRandomFully() {
 		logger.V(2).Info("Iptables supports --random-fully")
@@ -367,26 +356,9 @@ func (proxier *Proxier) probability(n int) string {
 	return proxier.precomputedProbabilities[n]
 }
 
-// Sync is called to synchronize the proxier state to iptables as soon as possible.
-func (proxier *Proxier) Sync() {
-	if proxier.healthzServer != nil {
-		proxier.healthzServer.QueuedUpdate(proxier.ipFamily)
-	}
-	metrics.SyncProxyRulesLastQueuedTimestamp.WithLabelValues(string(proxier.ipFamily)).SetToCurrentTime()
-	proxier.syncRunner.Run()
-}
-
-// SyncLoop runs periodic work.  This is expected to run as a goroutine or as the main loop of the app.  It does not return.
-func (proxier *Proxier) SyncLoop() {
-	// Update healthz timestamp at beginning in case Sync() never succeeds.
-	if proxier.healthzServer != nil {
-		proxier.healthzServer.Updated(proxier.ipFamily)
-	}
-
-	// synthesize "last change queued" time as the informers are syncing.
-	metrics.SyncProxyRulesLastQueuedTimestamp.WithLabelValues(string(proxier.ipFamily)).SetToCurrentTime()
-	proxier.syncRunner.Loop(wait.NeverStop)
-
+// Run starts the proxy
+func (proxier *Proxier) Run() {
+	// No iptables-specific things to do
 }
 
 func (proxier *Proxier) setInitialized(value bool) {
@@ -429,7 +401,7 @@ func (proxier *Proxier) OnServiceSynced() {
 	proxier.mu.Unlock()
 
 	// Sync unconditionally - this is called once per lifetime.
-	proxier.syncProxyRules()
+	proxier.Sync()
 }
 
 // OnEndpointSliceAdd is called whenever creation of a new endpoint slice object
@@ -459,7 +431,7 @@ func (proxier *Proxier) OnEndpointSlicesSynced() {
 	proxier.mu.Unlock()
 
 	// Sync unconditionally - this is called once per lifetime.
-	proxier.syncProxyRules()
+	proxier.Sync()
 }
 
 // OnTopologyChange is called whenever this node's proxy relevant topology-related labels change.
@@ -558,28 +530,28 @@ func (proxier *Proxier) appendServiceCommentLocked(args []string, svcName string
 	return append(args, "-m", "comment", "--comment", svcName)
 }
 
-// Called by the iptables.Monitor, and in response to topology changes; this calls
-// syncProxyRules() and tells it to resync all services, regardless of whether the
-// Service or Endpoints/EndpointSlice objects themselves have changed
-func (proxier *Proxier) forceSyncProxyRules() {
+// Called by the iptables.Monitor; this calls Sync() and tells it to resync all services,
+// regardless of whether the Service or Endpoints/EndpointSlice objects themselves have
+// changed
+func (proxier *Proxier) forceSync() {
 	proxier.mu.Lock()
 	proxier.needFullSync = true
 	proxier.mu.Unlock()
 
-	proxier.syncProxyRules()
+	proxier.Sync()
 }
 
 // This is where all of the iptables-save/restore calls happen.
 // The only other iptables rules are those that are setup in iptablesInit()
 // This assumes proxier.mu is NOT held
-func (proxier *Proxier) syncProxyRules() (retryError error) {
+func (proxier *Proxier) Sync() (retryError error) {
 	proxier.mu.Lock()
 	defer proxier.mu.Unlock()
 
 	// don't sync rules till we've received services and endpoints
 	if !proxier.isInitialized() {
 		proxier.logger.V(2).Info("Not syncing iptables until Services and Endpoints have been received from master")
-		return
+		return nil
 	}
 
 	// Keep track of how long syncs take.
@@ -588,13 +560,11 @@ func (proxier *Proxier) syncProxyRules() (retryError error) {
 	doFullSync := proxier.needFullSync || (time.Since(proxier.lastFullSync) > proxyutil.FullSyncPeriod)
 
 	defer func() {
-		metrics.SyncProxyRulesLatency.WithLabelValues(string(proxier.ipFamily)).Observe(metrics.SinceInSeconds(start))
 		if !doFullSync {
 			metrics.SyncPartialProxyRulesLatency.WithLabelValues(string(proxier.ipFamily)).Observe(metrics.SinceInSeconds(start))
 		} else {
 			metrics.SyncFullProxyRulesLatency.WithLabelValues(string(proxier.ipFamily)).Observe(metrics.SinceInSeconds(start))
 		}
-		proxier.logger.V(2).Info("SyncProxyRules complete", "elapsed", time.Since(start))
 	}()
 
 	serviceUpdateResult := proxier.svcPortMap.Update(proxier.serviceChanges)
@@ -634,7 +604,7 @@ func (proxier *Proxier) syncProxyRules() (retryError error) {
 		for _, jump := range append(iptablesJumpChains, iptablesKubeletJumpChains...) {
 			if _, err := proxier.iptables.EnsureChain(jump.table, jump.dstChain); err != nil {
 				proxier.logger.Error(err, "Failed to ensure chain exists", "table", jump.table, "chain", jump.dstChain)
-				return
+				return nil // FIXME
 			}
 			args := jump.extraArgs
 			if jump.comment != "" {
@@ -643,7 +613,7 @@ func (proxier *Proxier) syncProxyRules() (retryError error) {
 			args = append(args, "-j", string(jump.dstChain))
 			if _, err := proxier.iptables.EnsureRule(utiliptables.Prepend, jump.table, jump.srcChain, args...); err != nil {
 				proxier.logger.Error(err, "Failed to ensure chain jumps", "table", jump.table, "srcChain", jump.srcChain, "dstChain", jump.dstChain)
-				return
+				return nil // FIXME
 			}
 		}
 
@@ -1341,7 +1311,7 @@ func (proxier *Proxier) syncProxyRules() (retryError error) {
 			proxier.logger.Error(err, "Failed to execute iptables-restore")
 		}
 		metrics.IPTablesRestoreFailuresTotal.WithLabelValues(string(proxier.ipFamily)).Inc()
-		return
+		return nil // FIXME
 	}
 	success = true
 	proxier.needFullSync = false
@@ -1356,10 +1326,6 @@ func (proxier *Proxier) syncProxyRules() (retryError error) {
 
 	metrics.SyncProxyRulesNoLocalEndpointsTotal.WithLabelValues("internal", string(proxier.ipFamily)).Set(float64(serviceNoLocalEndpointsTotalInternal))
 	metrics.SyncProxyRulesNoLocalEndpointsTotal.WithLabelValues("external", string(proxier.ipFamily)).Set(float64(serviceNoLocalEndpointsTotalExternal))
-	if proxier.healthzServer != nil {
-		proxier.healthzServer.Updated(proxier.ipFamily)
-	}
-	metrics.SyncProxyRulesLastTimestamp.WithLabelValues(string(proxier.ipFamily)).SetToCurrentTime()
 
 	// Update service healthchecks.  The endpoints list might include services that are
 	// not "OnlyLocal", but the services list will not, and the serviceHealthServer
@@ -1375,6 +1341,7 @@ func (proxier *Proxier) syncProxyRules() (retryError error) {
 		// Finish housekeeping, clear stale conntrack entries for UDP Services
 		conntrack.CleanStaleEntries(proxier.conntrack, proxier.ipFamily, proxier.svcPortMap, proxier.endpointsMap)
 	}
+
 	return
 }
 

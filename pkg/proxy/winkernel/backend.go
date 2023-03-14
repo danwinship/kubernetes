@@ -98,12 +98,10 @@ func (backend *Backend) NewProxyRunner(
 	healthzServer *healthcheck.ProxyHealthServer,
 	_ map[v1.IPFamily]proxyutil.LocalTrafficDetector,
 ) (*proxy.Runner, error) {
-	r := proxy.NewRunner()
+	r := proxy.NewRunner(backend.config.SyncPeriod.Duration, backend.config.MinSyncPeriod.Duration, healthzServer)
 	for _, family := range backend.ipFamilies {
 		proxier, err := newProxier(
 			family,
-			backend.config.SyncPeriod.Duration,
-			backend.config.MinSyncPeriod.Duration,
 			nodeName,
 			nodeIPs[family],
 			recorder,

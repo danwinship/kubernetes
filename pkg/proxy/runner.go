@@ -18,33 +18,50 @@ package proxy
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	v1 "k8s.io/api/core/v1"
 	discovery "k8s.io/api/discovery/v1"
+	"k8s.io/apimachinery/pkg/util/wait"
 	v1informers "k8s.io/client-go/informers/core/v1"
 	discoveryv1informers "k8s.io/client-go/informers/discovery/v1"
 	networkingv1informers "k8s.io/client-go/informers/networking/v1"
 	"k8s.io/klog/v2"
 	proxyconfig "k8s.io/kubernetes/pkg/proxy/config"
+	"k8s.io/kubernetes/pkg/proxy/healthcheck"
+	"k8s.io/kubernetes/pkg/proxy/metrics"
+	"k8s.io/kubernetes/pkg/proxy/runner"
+	proxyutil "k8s.io/kubernetes/pkg/proxy/util"
 )
 
 // Runner wraps 0 or more other proxiers. Proxier API calls will be dispatched to the
 // Proxier instances depending on address family.
 type Runner struct {
 	proxiers map[v1.IPFamily]Proxier
+	bfrs     map[v1.IPFamily]*runner.BoundedFrequencyRunner
+
+	syncPeriod    time.Duration
+	minSyncPeriod time.Duration
+	healthzServer *healthcheck.ProxyHealthServer
 }
 
 // NewRunner returns an empty Runner
-func NewRunner() *Runner {
+func NewRunner(syncPeriod time.Duration, minSyncPeriod time.Duration, healthzServer *healthcheck.ProxyHealthServer) *Runner {
 	return &Runner{
 		proxiers: make(map[v1.IPFamily]Proxier),
+		bfrs:     make(map[v1.IPFamily]*runner.BoundedFrequencyRunner),
+
+		syncPeriod:    syncPeriod,
+		minSyncPeriod: minSyncPeriod,
+		healthzServer: healthzServer,
 	}
 }
 
 // AddProxier adds proxier to the Runner
 func (r *Runner) AddProxier(family v1.IPFamily, proxier Proxier) {
 	r.proxiers[family] = proxier
+	r.bfrs[family] = runner.NewBoundedFrequencyRunner(fmt.Sprintf("proxy-%s", family), func() error { return r.syncNow(family) }, r.minSyncPeriod, r.syncPeriod, proxyutil.FullSyncPeriod)
 }
 
 // StartInformers starts the runner's informers
@@ -76,27 +93,47 @@ func (r *Runner) StartInformers(
 	}
 }
 
-// SyncLoop runs periodic work. This is expected to run as a goroutine or as the main loop
-// of the app. It does not return.
-func (r *Runner) SyncLoop() {
-	switch {
-	case r.proxiers[v1.IPv4Protocol] != nil && r.proxiers[v1.IPv6Protocol] != nil:
-		go r.proxiers[v1.IPv6Protocol].SyncLoop()
-		r.proxiers[v1.IPv4Protocol].SyncLoop()
-	case r.proxiers[v1.IPv4Protocol] != nil:
-		r.proxiers[v1.IPv4Protocol].SyncLoop()
-	case r.proxiers[v1.IPv6Protocol] != nil:
-		r.proxiers[v1.IPv6Protocol].SyncLoop()
-	default:
-		select {}
+// Run starts the main loop(s) of the Runner (in goroutines)
+func (r *Runner) Run() {
+	for family := range r.proxiers {
+		metrics.SyncProxyRulesLastQueuedTimestamp.WithLabelValues(string(family)).SetToCurrentTime()
+		go r.proxiers[family].Run()
+		r.healthzServer.Updated(family)
+		go r.bfrs[family].Loop(wait.NeverStop)
 	}
+}
+
+// syncNow immediately synchronizes the indicated proxier
+func (r *Runner) syncNow(family v1.IPFamily) error {
+	// Keep track of how long syncs take.
+	start := time.Now()
+	defer func() {
+		metrics.SyncProxyRulesLatency.WithLabelValues(string(family)).Observe(metrics.SinceInSeconds(start))
+		klog.V(2).InfoS("Syncing proxy rules complete", "family", family, "elapsed", time.Since(start))
+	}()
+
+	if err := r.proxiers[family].Sync(); err != nil {
+		return err
+	}
+
+	r.healthzServer.Updated(family)
+	metrics.SyncProxyRulesLastTimestamp.WithLabelValues(string(family)).SetToCurrentTime()
+	return nil
+}
+
+// sync queues a run of the indicated proxier
+func (r *Runner) sync(family v1.IPFamily) {
+	r.healthzServer.QueuedUpdate(family)
+	metrics.SyncProxyRulesLastQueuedTimestamp.WithLabelValues(string(family)).SetToCurrentTime()
+
+	r.bfrs[family].Run()
 }
 
 // OnServiceAdd is called whenever creation of new service object is observed.
 func (r *Runner) OnServiceAdd(service *v1.Service) {
-	for _, proxier := range r.proxiers {
+	for family, proxier := range r.proxiers {
 		if proxier.OnServiceAdd(service) {
-			proxier.Sync()
+			r.sync(family)
 		}
 	}
 }
@@ -104,18 +141,18 @@ func (r *Runner) OnServiceAdd(service *v1.Service) {
 // OnServiceUpdate is called whenever modification of an existing service object is
 // observed.
 func (r *Runner) OnServiceUpdate(oldService, service *v1.Service) {
-	for _, proxier := range r.proxiers {
+	for family, proxier := range r.proxiers {
 		if proxier.OnServiceUpdate(oldService, service) {
-			proxier.Sync()
+			r.sync(family)
 		}
 	}
 }
 
 // OnServiceDelete is called whenever deletion of an existing service object is observed.
 func (r *Runner) OnServiceDelete(service *v1.Service) {
-	for _, proxier := range r.proxiers {
+	for family, proxier := range r.proxiers {
 		if proxier.OnServiceDelete(service) {
-			proxier.Sync()
+			r.sync(family)
 		}
 	}
 }
@@ -135,12 +172,12 @@ func (r *Runner) OnEndpointSliceAdd(endpointSlice *discovery.EndpointSlice) {
 	case discovery.AddressTypeIPv4:
 		proxier := r.proxiers[v1.IPv4Protocol]
 		if proxier != nil && proxier.OnEndpointSliceAdd(endpointSlice) {
-			proxier.Sync()
+			r.sync(v1.IPv4Protocol)
 		}
 	case discovery.AddressTypeIPv6:
 		proxier := r.proxiers[v1.IPv6Protocol]
 		if proxier != nil && proxier.OnEndpointSliceAdd(endpointSlice) {
-			proxier.Sync()
+			r.sync(v1.IPv6Protocol)
 		}
 	default:
 		klog.ErrorS(nil, "EndpointSlice address type not supported", "addressType", endpointSlice.AddressType)
@@ -154,12 +191,12 @@ func (r *Runner) OnEndpointSliceUpdate(oldEndpointSlice, newEndpointSlice *disco
 	case discovery.AddressTypeIPv4:
 		proxier := r.proxiers[v1.IPv4Protocol]
 		if proxier != nil && proxier.OnEndpointSliceUpdate(oldEndpointSlice, newEndpointSlice) {
-			proxier.Sync()
+			r.sync(v1.IPv4Protocol)
 		}
 	case discovery.AddressTypeIPv6:
 		proxier := r.proxiers[v1.IPv6Protocol]
 		if proxier != nil && proxier.OnEndpointSliceUpdate(oldEndpointSlice, newEndpointSlice) {
-			proxier.Sync()
+			r.sync(v1.IPv6Protocol)
 		}
 	default:
 		klog.ErrorS(nil, "EndpointSlice address type not supported", "addressType", newEndpointSlice.AddressType)
@@ -173,12 +210,12 @@ func (r *Runner) OnEndpointSliceDelete(endpointSlice *discovery.EndpointSlice) {
 	case discovery.AddressTypeIPv4:
 		proxier := r.proxiers[v1.IPv4Protocol]
 		if proxier != nil && proxier.OnEndpointSliceDelete(endpointSlice) {
-			proxier.Sync()
+			r.sync(v1.IPv4Protocol)
 		}
 	case discovery.AddressTypeIPv6:
 		proxier := r.proxiers[v1.IPv6Protocol]
 		if proxier != nil && proxier.OnEndpointSliceDelete(endpointSlice) {
-			proxier.Sync()
+			r.sync(v1.IPv6Protocol)
 		}
 	default:
 		klog.ErrorS(nil, "EndpointSlice address type not supported", "addressType", endpointSlice.AddressType)
@@ -195,17 +232,17 @@ func (r *Runner) OnEndpointSlicesSynced() {
 
 // OnTopologyChange is called whenever change in proxy relevant topology labels is observed.
 func (r *Runner) OnTopologyChange(topologyLabels map[string]string) {
-	for _, proxier := range r.proxiers {
+	for family, proxier := range r.proxiers {
 		proxier.OnTopologyChange(topologyLabels)
-		proxier.Sync()
+		r.sync(family)
 	}
 }
 
 // OnServiceCIDRsChanged is called whenever a change is observed in any of the
 // ServiceCIDRs, and provides complete list of service cidrs.
 func (r *Runner) OnServiceCIDRsChanged(cidrs []string) {
-	for _, proxier := range r.proxiers {
+	for family, proxier := range r.proxiers {
 		proxier.OnServiceCIDRsChanged(cidrs)
-		proxier.Sync()
+		r.sync(family)
 	}
 }

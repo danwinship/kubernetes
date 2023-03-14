@@ -38,14 +38,12 @@ import (
 	discovery "k8s.io/api/discovery/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
-	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/tools/events"
 	"k8s.io/klog/v2"
 	"k8s.io/kubernetes/pkg/proxy"
 	"k8s.io/kubernetes/pkg/proxy/conntrack"
 	"k8s.io/kubernetes/pkg/proxy/healthcheck"
 	"k8s.io/kubernetes/pkg/proxy/metrics"
-	"k8s.io/kubernetes/pkg/proxy/runner"
 	proxyutil "k8s.io/kubernetes/pkg/proxy/util"
 	netutils "k8s.io/utils/net"
 	"k8s.io/utils/ptr"
@@ -122,8 +120,6 @@ type Proxier struct {
 	lastFullSync         time.Time
 	needFullSync         bool
 	initialized          int32
-	syncRunner           *runner.BoundedFrequencyRunner // governs calls to syncProxyRules
-	syncPeriod           time.Duration
 	flushed              bool
 
 	// These are effectively const and do not need the mutex to be held.
@@ -169,8 +165,6 @@ var _ proxy.Proxier = &Proxier{}
 func newProxier(ctx context.Context,
 	ipFamily v1.IPFamily,
 	nft knftables.Interface,
-	syncPeriod time.Duration,
-	minSyncPeriod time.Duration,
 	masqueradeAll bool,
 	masqueradeBit int,
 	localDetector proxyutil.LocalTrafficDetector,
@@ -198,7 +192,6 @@ func newProxier(ctx context.Context,
 		endpointsMap:        make(proxy.EndpointsMap),
 		endpointsChanges:    proxy.NewEndpointsChangeTracker(ipFamily, nodeName, newEndpointInfo, nil),
 		needFullSync:        true,
-		syncPeriod:          syncPeriod,
 		nftables:            nft,
 		masqueradeAll:       masqueradeAll,
 		masqueradeMark:      masqueradeMark,
@@ -220,11 +213,6 @@ func newProxier(ctx context.Context,
 		noEndpointNodePorts: newNFTElementStorage("map", noEndpointNodePortsMap),
 		serviceNodePorts:    newNFTElementStorage("map", serviceNodePortsMap),
 	}
-
-	logger.V(2).Info("NFTables sync params", "minSyncPeriod", minSyncPeriod, "syncPeriod", syncPeriod, "maxSyncPeriod", proxyutil.FullSyncPeriod)
-	// We need to pass *some* maxInterval to NewBoundedFrequencyRunner. time.Hour is arbitrary.
-	proxier.syncRunner = runner.NewBoundedFrequencyRunner("sync-runner", proxier.syncProxyRules, minSyncPeriod, syncPeriod, proxyutil.FullSyncPeriod)
-
 	return proxier, nil
 }
 
@@ -281,7 +269,7 @@ func newEndpointInfo(baseInfo *proxy.BaseEndpointInfo, svcPortName *proxy.Servic
 // https://wiki.nftables.org/wiki-nftables/index.php/Configuring_chains.
 //
 // These are set up from setupNFTables() and then not directly referenced by
-// syncProxyRules().
+// Sync().
 //
 // All of our base chains have names that are just "${type}-${hook}". e.g., "nat-prerouting".
 type nftablesBaseChain struct {
@@ -309,7 +297,7 @@ var nftablesBaseChains = []nftablesBaseChain{
 
 // nftablesJumpChains lists our top-level "regular chains" that are jumped to directly
 // from one of the base chains. These are set up from setupNFTables(), and some of them
-// are also referenced in syncProxyRules().
+// are also referenced in Sync().
 type nftablesJumpChain struct {
 	dstChain  string
 	srcChain  string
@@ -619,25 +607,31 @@ func (proxier *Proxier) setupNFTables(tx *knftables.Transaction) {
 	proxier.serviceNodePorts.readOrReset(tx, proxier.nftables, proxier.logger)
 }
 
-// Sync is called to synchronize the proxier state to nftables as soon as possible.
-func (proxier *Proxier) Sync() {
-	if proxier.healthzServer != nil {
-		proxier.healthzServer.QueuedUpdate(proxier.ipFamily)
+// CleanupLeftovers removes all nftables rules and chains created by the Proxier
+// It returns true if an error was encountered. Errors are logged.
+func CleanupLeftovers(ctx context.Context) bool {
+	logger := klog.FromContext(ctx)
+	var encounteredError bool
+
+	for _, family := range []knftables.Family{knftables.IPv4Family, knftables.IPv6Family} {
+		nft, err := knftables.New(family, kubeProxyTable)
+		if err == nil {
+			tx := nft.NewTransaction()
+			tx.Delete(&knftables.Table{})
+			err = nft.Run(ctx, tx)
+		}
+		if err != nil && !knftables.IsNotFound(err) {
+			logger.Error(err, "Error cleaning up nftables rules")
+			encounteredError = true
+		}
 	}
-	metrics.SyncProxyRulesLastQueuedTimestamp.WithLabelValues(string(proxier.ipFamily)).SetToCurrentTime()
-	proxier.syncRunner.Run()
+
+	return encounteredError
 }
 
-// SyncLoop runs periodic work.  This is expected to run as a goroutine or as the main loop of the app.  It does not return.
-func (proxier *Proxier) SyncLoop() {
-	// Update healthz timestamp at beginning in case Sync() never succeeds.
-	if proxier.healthzServer != nil {
-		proxier.healthzServer.Updated(proxier.ipFamily)
-	}
-
-	// synthesize "last change queued" time as the informers are syncing.
-	metrics.SyncProxyRulesLastQueuedTimestamp.WithLabelValues(string(proxier.ipFamily)).SetToCurrentTime()
-	proxier.syncRunner.Loop(wait.NeverStop)
+// Run runs the proxy
+func (proxier *Proxier) Run() {
+	// No nftables-specific work
 }
 
 func (proxier *Proxier) setInitialized(value bool) {
@@ -679,7 +673,7 @@ func (proxier *Proxier) OnServiceSynced() {
 	proxier.mu.Unlock()
 
 	// Sync unconditionally - this is called once per lifetime.
-	proxier.syncProxyRules()
+	proxier.Sync()
 }
 
 // OnEndpointSliceAdd is called whenever creation of a new endpoint slice object
@@ -709,7 +703,7 @@ func (proxier *Proxier) OnEndpointSlicesSynced() {
 	proxier.mu.Unlock()
 
 	// Sync unconditionally - this is called once per lifetime.
-	proxier.syncProxyRules()
+	proxier.Sync()
 }
 
 // OnTopologyChange is called whenever this node's proxy relevant topology-related labels change.
@@ -974,14 +968,14 @@ func (proxier *Proxier) logFailure(tx *knftables.Transaction) {
 
 // This is where all of the nftables calls happen.
 // This assumes proxier.mu is NOT held
-func (proxier *Proxier) syncProxyRules() (retryError error) {
+func (proxier *Proxier) Sync() (retryError error) {
 	proxier.mu.Lock()
 	defer proxier.mu.Unlock()
 
 	// don't sync rules till we've received services and endpoints
 	if !proxier.isInitialized() {
 		proxier.logger.V(2).Info("Not syncing nftables until Services and Endpoints have been received from master")
-		return
+		return nil
 	}
 
 	// Keep track of how long syncs take.
@@ -995,13 +989,11 @@ func (proxier *Proxier) syncProxyRules() (retryError error) {
 
 	defer func() {
 		proxier.syncedOnce = true
-		metrics.SyncProxyRulesLatency.WithLabelValues(string(proxier.ipFamily)).Observe(metrics.SinceInSeconds(start))
 		if !doFullSync {
 			metrics.SyncPartialProxyRulesLatency.WithLabelValues(string(proxier.ipFamily)).Observe(metrics.SinceInSeconds(start))
 		} else {
 			metrics.SyncFullProxyRulesLatency.WithLabelValues(string(proxier.ipFamily)).Observe(metrics.SinceInSeconds(start))
 		}
-		proxier.logger.V(2).Info("SyncProxyRules complete", "elapsed", time.Since(start))
 	}()
 
 	serviceUpdateResult := proxier.svcPortMap.Update(proxier.serviceChanges)
@@ -1012,7 +1004,6 @@ func (proxier *Proxier) syncProxyRules() (retryError error) {
 	success := false
 	defer func() {
 		if !success {
-			proxier.logger.Info("Sync failed", "retryingTime", proxier.syncPeriod)
 			retryError = fmt.Errorf("Sync failed")
 			// proxier.serviceChanges and proxier.endpointChanges have already
 			// been flushed, so we've lost the state needed to be able to do
@@ -1665,7 +1656,7 @@ func (proxier *Proxier) syncProxyRules() (retryError error) {
 		clear(proxier.staleChains)
 		// Log failed transaction and list full kube-proxy table.
 		proxier.logFailure(tx)
-		return
+		return nil // FIXME
 	}
 	success = true
 	proxier.needFullSync = false
@@ -1680,10 +1671,6 @@ func (proxier *Proxier) syncProxyRules() (retryError error) {
 
 	metrics.SyncProxyRulesNoLocalEndpointsTotal.WithLabelValues("internal", string(proxier.ipFamily)).Set(float64(serviceNoLocalEndpointsTotalInternal))
 	metrics.SyncProxyRulesNoLocalEndpointsTotal.WithLabelValues("external", string(proxier.ipFamily)).Set(float64(serviceNoLocalEndpointsTotalExternal))
-	if proxier.healthzServer != nil {
-		proxier.healthzServer.Updated(proxier.ipFamily)
-	}
-	metrics.SyncProxyRulesLastTimestamp.WithLabelValues(string(proxier.ipFamily)).SetToCurrentTime()
 
 	// Update service healthchecks.  The endpoints list might include services that are
 	// not "OnlyLocal", but the services list will not, and the serviceHealthServer

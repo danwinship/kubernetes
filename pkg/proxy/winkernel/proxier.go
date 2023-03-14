@@ -37,7 +37,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	apiutil "k8s.io/apimachinery/pkg/util/net"
 	"k8s.io/apimachinery/pkg/util/sets"
-	"k8s.io/apimachinery/pkg/util/wait"
 	utilfeature "k8s.io/apiserver/pkg/util/feature"
 	"k8s.io/client-go/tools/events"
 	"k8s.io/klog/v2"
@@ -45,8 +44,6 @@ import (
 	"k8s.io/kubernetes/pkg/proxy"
 	"k8s.io/kubernetes/pkg/proxy/apis/config"
 	"k8s.io/kubernetes/pkg/proxy/healthcheck"
-	"k8s.io/kubernetes/pkg/proxy/metrics"
-	"k8s.io/kubernetes/pkg/proxy/runner"
 	proxyutil "k8s.io/kubernetes/pkg/proxy/util"
 	netutils "k8s.io/utils/net"
 )
@@ -155,8 +152,8 @@ type remoteSubnetInfo struct {
 
 const (
 	NETWORK_TYPE_OVERLAY = "overlay"
-	// MAX_COUNT_STALE_LOADBALANCERS is the maximum number of stale loadbalancers which cleanedup in single syncproxyrules.
-	// If there are more stale loadbalancers to clean, it will go to next iteration of syncproxyrules.
+	// MAX_COUNT_STALE_LOADBALANCERS is the maximum number of stale loadbalancers which cleanedup in single Sync().
+	// If there are more stale loadbalancers to clean, it will go to next iteration of Sync().
 	MAX_COUNT_STALE_LOADBALANCERS = 20
 )
 
@@ -584,13 +581,11 @@ type Proxier struct {
 	endpointSlicesSynced bool
 	servicesSynced       bool
 	initialized          int32
-	syncRunner           *runner.BoundedFrequencyRunner // governs calls to syncProxyRules
 	// These are effectively const and do not need the mutex to be held.
 	nodeName string
 	nodeIP   net.IP
 
 	serviceHealthServer healthcheck.ServiceHealthServer
-	healthzServer       *healthcheck.ProxyHealthServer
 
 	hns               HostNetworkService
 	hcn               HcnService
@@ -641,8 +636,6 @@ var _ proxy.Proxier = &Proxier{}
 // newProxier returns a new single-stack winkernel proxier.
 func newProxier(
 	ipFamily v1.IPFamily,
-	syncPeriod time.Duration,
-	minSyncPeriod time.Duration,
 	nodeName string,
 	nodeIP net.IP,
 	recorder events.EventRecorder,
@@ -661,7 +654,7 @@ func newProxier(
 	}
 
 	hcnImpl := newHcnImpl()
-	proxier, err := newProxierInternal(
+	return newProxierInternal(
 		ipFamily,
 		nodeName,
 		nodeIP,
@@ -673,14 +666,6 @@ func newProxier(
 		config,
 		true, // waitForHNSOverlay
 	)
-	if err != nil {
-		return nil, err
-	}
-
-	klog.V(3).Info("Record sync params", "minSyncPeriod", minSyncPeriod, "syncPeriod", syncPeriod, "maxSyncPeriod", proxyutil.FullSyncPeriod)
-	proxier.syncRunner = runner.NewBoundedFrequencyRunner("sync-runner", proxier.syncProxyRules, minSyncPeriod, syncPeriod, proxyutil.FullSyncPeriod)
-
-	return proxier, nil
 }
 
 // allow internal testing of proxier
@@ -774,7 +759,6 @@ func newProxierInternal(
 		nodeName:              nodeName,
 		nodeIP:                nodeIP,
 		serviceHealthServer:   serviceHealthServer,
-		healthzServer:         healthzServer,
 		hns:                   hns,
 		hcn:                   hcnImpl,
 		network:               *hnsNetworkInfo,
@@ -886,24 +870,9 @@ func (svcInfo *serviceInfo) deleteLoadBalancerPolicy(mapStaleLoadbalancer map[st
 	}
 }
 
-// Sync is called to synchronize the proxier state to hns as soon as possible.
-func (proxier *Proxier) Sync() {
-	if proxier.healthzServer != nil {
-		proxier.healthzServer.QueuedUpdate(proxier.ipFamily)
-	}
-	metrics.SyncProxyRulesLastQueuedTimestamp.WithLabelValues(string(proxier.ipFamily)).SetToCurrentTime()
-	proxier.syncRunner.Run()
-}
-
-// SyncLoop runs periodic work.  This is expected to run as a goroutine or as the main loop of the app.  It does not return.
-func (proxier *Proxier) SyncLoop() {
-	// Update healthz timestamp at beginning in case Sync() never succeeds.
-	if proxier.healthzServer != nil {
-		proxier.healthzServer.Updated(proxier.ipFamily)
-	}
-	// synthesize "last change queued" time as the informers are syncing.
-	metrics.SyncProxyRulesLastQueuedTimestamp.WithLabelValues(string(proxier.ipFamily)).SetToCurrentTime()
-	proxier.syncRunner.Loop(wait.NeverStop)
+// Run runs the proxy
+func (proxier *Proxier) Run() {
+	// No winkernel-specific work
 }
 
 func (proxier *Proxier) setInitialized(value bool) {
@@ -945,7 +914,7 @@ func (proxier *Proxier) OnServiceSynced() {
 	proxier.mu.Unlock()
 
 	// Sync unconditionally - this is called once per lifetime.
-	proxier.syncProxyRules()
+	proxier.Sync()
 }
 
 // OnEndpointSliceAdd is called whenever creation of a new endpoint slice object
@@ -975,7 +944,7 @@ func (proxier *Proxier) OnEndpointSlicesSynced() {
 	proxier.mu.Unlock()
 
 	// Sync unconditionally - this is called once per lifetime.
-	proxier.syncProxyRules()
+	proxier.Sync()
 }
 
 // OnServiceCIDRsChanged is called whenever a change is observed
@@ -1084,7 +1053,7 @@ func (proxier *Proxier) handleUpdateLoadbalancerFailure(err error, hnsID, svcIP 
 
 // This is where all of the hns save/restore calls happen.
 // assumes proxier.mu is held
-func (proxier *Proxier) syncProxyRules() (retryError error) {
+func (proxier *Proxier) Sync() (retryError error) {
 	proxier.mu.Lock()
 	defer proxier.mu.Unlock()
 
@@ -1093,13 +1062,6 @@ func (proxier *Proxier) syncProxyRules() (retryError error) {
 		klog.V(2).InfoS("Not syncing hns until Services and Endpoints have been received from master")
 		return
 	}
-
-	// Keep track of how long syncs take.
-	start := time.Now()
-	defer func() {
-		metrics.SyncProxyRulesLatency.WithLabelValues(string(proxier.ipFamily)).Observe(metrics.SinceInSeconds(start))
-		klog.V(4).InfoS("Syncing proxy rules complete", "elapsed", time.Since(start))
-	}()
 
 	hnsNetworkName := proxier.network.name
 	hns := proxier.hns
@@ -1117,7 +1079,7 @@ func (proxier *Proxier) syncProxyRules() (retryError error) {
 		if updatedNetwork != nil {
 			proxier.network = *updatedNetwork
 		}
-		return
+		return nil
 	}
 
 	// We assume that if this was called, we really want to sync them,
@@ -1130,7 +1092,7 @@ func (proxier *Proxier) syncProxyRules() (retryError error) {
 	queriedEndpoints, err := hns.getAllEndpointsByNetwork(hnsNetworkName)
 	if err != nil {
 		klog.ErrorS(err, "Querying HNS for endpoints failed")
-		return
+		return nil
 	}
 	if queriedEndpoints == nil {
 		klog.V(4).InfoS("No existing endpoints found in HNS")
@@ -1143,14 +1105,14 @@ func (proxier *Proxier) syncProxyRules() (retryError error) {
 	}
 	if err != nil {
 		klog.ErrorS(err, "Querying HNS for load balancers failed")
-		return
+		return nil
 	}
 	if strings.EqualFold(proxier.network.networkType, NETWORK_TYPE_OVERLAY) {
 		if _, ok := queriedEndpoints[proxier.sourceVip]; !ok {
 			_, err = newSourceVIP(hns, hnsNetworkName, proxier.sourceVip, proxier.hostMac, proxier.nodeIP.String())
 			if err != nil {
 				klog.ErrorS(err, "Source Vip endpoint creation failed")
-				return
+				return nil
 			}
 		}
 	}
@@ -1278,7 +1240,7 @@ func (proxier *Proxier) syncProxyRules() (retryError error) {
 					if err != nil {
 						klog.ErrorS(err, "Unable to find HNS Network specified, please check network name and CNI deployment", "hnsNetworkName", hnsNetworkName)
 						proxier.cleanupAllPolicies()
-						return
+						return nil
 					}
 					proxier.network = *updatedNetwork
 					providerAddress := proxier.network.findRemoteSubnetProviderAddress(ep.IP())
@@ -1650,11 +1612,6 @@ func (proxier *Proxier) syncProxyRules() (retryError error) {
 		svcInfo.policyApplied = true
 		klog.V(2).InfoS("Policy successfully applied for service", "serviceInfo", svcInfo)
 	}
-
-	if proxier.healthzServer != nil {
-		proxier.healthzServer.Updated(proxier.ipFamily)
-	}
-	metrics.SyncProxyRulesLastTimestamp.WithLabelValues(string(proxier.ipFamily)).SetToCurrentTime()
 
 	// Update service healthchecks.  The endpoints list might include services that are
 	// not "OnlyLocal", but the services list will not, and the serviceHealthServer
