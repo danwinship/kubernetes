@@ -172,8 +172,7 @@ func NewBackend(
 	if iptv4 != nil {
 		ipv4Proxier, err = newProxier(ctx, v1.IPv4Protocol,
 			iptv4, ipvs, ipset, exec,
-			syncPeriod, minSyncPeriod, parsedExcludeCIDRs[v1.IPv4Protocol],
-			masqueradeAll, masqueradeMark,
+			parsedExcludeCIDRs[v1.IPv4Protocol], masqueradeAll, masqueradeMark,
 			localDetectors[v1.IPv4Protocol], hostname, nodeIPs[v1.IPv4Protocol],
 			recorder, healthzServer, scheduler, nodePortAddresses)
 		if err != nil {
@@ -186,8 +185,7 @@ func NewBackend(
 	if iptv6 != nil {
 		ipv6Proxier, err = newProxier(ctx, v1.IPv6Protocol,
 			iptv6, ipvs, ipset, exec,
-			syncPeriod, minSyncPeriod, parsedExcludeCIDRs[v1.IPv6Protocol],
-			masqueradeAll, masqueradeMark,
+			parsedExcludeCIDRs[v1.IPv6Protocol], masqueradeAll, masqueradeMark,
 			localDetectors[v1.IPv6Protocol], hostname, nodeIPs[v1.IPv6Protocol],
 			recorder, healthzServer, scheduler, nodePortAddresses)
 		if err != nil {
@@ -197,7 +195,7 @@ func NewBackend(
 		logger.Info("No iptables support for family", "ipFamily", v1.IPv6Protocol)
 	}
 
-	return proxy.NewBackend(ipv4Proxier, ipv6Proxier), nil
+	return proxy.NewBackend(ipv4Proxier, ipv6Proxier, syncPeriod, minSyncPeriod, healthzServer), nil
 }
 
 // canUseIPVSProxier checks if we can use the ipvs Proxier.

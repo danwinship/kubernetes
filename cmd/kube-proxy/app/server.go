@@ -592,7 +592,7 @@ func (s *ProxyServer) Run(ctx context.Context) error {
 	// Birth Cry after the birth is successful
 	s.birthCry()
 
-	go s.Backend.SyncLoop()
+	s.Backend.Run()
 
 	var err error
 	select {

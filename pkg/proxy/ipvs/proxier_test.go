@@ -54,7 +54,6 @@ import (
 	"k8s.io/kubernetes/pkg/proxy/metrics"
 	proxyutil "k8s.io/kubernetes/pkg/proxy/util"
 	proxyutiltest "k8s.io/kubernetes/pkg/proxy/util/testing"
-	"k8s.io/kubernetes/pkg/util/async"
 	utiliptables "k8s.io/kubernetes/pkg/util/iptables"
 	iptablestest "k8s.io/kubernetes/pkg/util/iptables/testing"
 	"k8s.io/kubernetes/test/utils/ktesting"
@@ -166,7 +165,6 @@ func NewFakeProxier(ctx context.Context, ipt utiliptables.Interface, ipvs utilip
 		ipFamily:              ipFamily,
 	}
 	p.setInitialized(true)
-	p.syncRunner = async.NewBoundedFrequencyRunner("test-sync-runner", p.syncProxyRules, 0, time.Minute, 1)
 	return p
 }
 
@@ -266,7 +264,7 @@ func TestCleanupLeftovers(t *testing.T) {
 		}),
 	)
 
-	fp.syncProxyRules()
+	fp.Sync()
 
 	// test cleanup left over
 	if cleanupLeftovers(ctx, ipvs, ipt, ipset) {
@@ -955,7 +953,7 @@ func TestNodePortIPv4(t *testing.T) {
 			makeServiceMap(fp, test.services...)
 			populateEndpointSlices(fp, test.endpoints...)
 
-			fp.syncProxyRules()
+			fp.Sync()
 
 			if !reflect.DeepEqual(ipvs, test.expectedIPVS) {
 				t.Logf("actual ipvs state: %+v", ipvs)
@@ -1298,7 +1296,7 @@ func TestNodePortIPv6(t *testing.T) {
 			makeServiceMap(fp, test.services...)
 			populateEndpointSlices(fp, test.endpoints...)
 
-			fp.syncProxyRules()
+			fp.Sync()
 
 			if !reflect.DeepEqual(ipvs, test.expectedIPVS) {
 				t.Logf("actual ipvs state: %+v", ipvs)
@@ -1347,7 +1345,7 @@ func Test_syncEndpoint_updateWeightsOnRestart(t *testing.T) {
 	// sync proxy rules to get to the desired initial state
 	makeServiceMap(fp, svc1)
 	makeEndpointSliceMap(fp, epSlice1)
-	fp.syncProxyRules()
+	fp.Sync()
 
 	serv := &utilipvs.VirtualServer{
 		Address:   netutils.ParseIPSloppy("10.20.30.41"),
@@ -1525,7 +1523,7 @@ func TestIPv4Proxier(t *testing.T) {
 			makeServiceMap(fp, test.services...)
 			populateEndpointSlices(fp, test.endpoints...)
 
-			fp.syncProxyRules()
+			fp.Sync()
 
 			if !reflect.DeepEqual(ipvs, test.expectedIPVS) {
 				t.Logf("actual ipvs state: %v", ipvs)
@@ -1663,7 +1661,7 @@ func TestIPv6Proxier(t *testing.T) {
 			makeServiceMap(fp, test.services...)
 			populateEndpointSlices(fp, test.endpoints...)
 
-			fp.syncProxyRules()
+			fp.Sync()
 
 			if !reflect.DeepEqual(ipvs, test.expectedIPVS) {
 				t.Logf("actual ipvs state: %v", ipvs)
@@ -1682,7 +1680,7 @@ func TestMasqueradeRule(t *testing.T) {
 		ipset := ipsettest.NewFake(testIPSetVersion)
 		fp := NewFakeProxier(ctx, ipt, ipvs, ipset, nil, nil, v1.IPv4Protocol)
 		makeServiceMap(fp)
-		fp.syncProxyRules()
+		fp.Sync()
 
 		buf := bytes.NewBuffer(nil)
 		_ = ipt.SaveInto(utiliptables.TableNAT, buf)
@@ -1736,7 +1734,7 @@ func TestExternalIPsNoEndpoint(t *testing.T) {
 			}}
 		}),
 	)
-	fp.syncProxyRules()
+	fp.Sync()
 
 	// check ipvs service and destinations
 	services, err := ipvs.GetVirtualServers()
@@ -1805,7 +1803,7 @@ func TestExternalIPs(t *testing.T) {
 		}),
 	)
 
-	fp.syncProxyRules()
+	fp.Sync()
 
 	// check ipvs service and destinations
 	services, err := ipvs.GetVirtualServers()
@@ -1884,7 +1882,7 @@ func TestOnlyLocalExternalIPs(t *testing.T) {
 		}),
 	)
 
-	fp.syncProxyRules()
+	fp.Sync()
 
 	// check ipvs service and destinations
 	services, err := ipvs.GetVirtualServers()
@@ -1957,7 +1955,7 @@ func TestLoadBalancer(t *testing.T) {
 		}),
 	)
 
-	fp.syncProxyRules()
+	fp.Sync()
 
 	// Expect 2 services and 1 destination
 	epVS := &netlinktest.ExpectedVirtualServer{
@@ -2055,7 +2053,7 @@ func TestOnlyLocalNodePorts(t *testing.T) {
 	fp.networkInterfacer.(*proxyutiltest.FakeNetwork).AddInterfaceAddr(&itf1, addrs1)
 	fp.nodePortAddresses = proxyutil.NewNodePortAddresses(v1.IPv4Protocol, []string{"100.101.102.0/24"})
 
-	fp.syncProxyRules()
+	fp.Sync()
 
 	// Expect 2 services and 1 destination
 	epVS := &netlinktest.ExpectedVirtualServer{
@@ -2143,7 +2141,7 @@ func TestHealthCheckNodePort(t *testing.T) {
 	fp.networkInterfacer.(*proxyutiltest.FakeNetwork).AddInterfaceAddr(&itf1, addrs1)
 	fp.nodePortAddresses = proxyutil.NewNodePortAddresses(v1.IPv4Protocol, []string{"100.101.102.0/24"})
 
-	fp.syncProxyRules()
+	fp.Sync()
 
 	// check ipSet rules
 	makeTCPEntry := func(port int) *utilipset.Entry {
@@ -2216,7 +2214,7 @@ func TestLoadBalancerSourceRanges(t *testing.T) {
 		}),
 	)
 
-	fp.syncProxyRules()
+	fp.Sync()
 
 	// Check ipvs service and destinations
 	epVS := &netlinktest.ExpectedVirtualServer{
@@ -2328,7 +2326,7 @@ func TestAcceptIPVSTraffic(t *testing.T) {
 			}),
 		)
 	}
-	fp.syncProxyRules()
+	fp.Sync()
 
 	// Check iptables chain and rules
 	epIpt := netlinktest.ExpectedIptablesChain{
@@ -2399,7 +2397,7 @@ func TestOnlyLocalLoadBalancing(t *testing.T) {
 		}),
 	)
 
-	fp.syncProxyRules()
+	fp.Sync()
 
 	// Expect 2 services and 1 destination
 	epVS := &netlinktest.ExpectedVirtualServer{
@@ -2732,7 +2730,7 @@ func TestSessionAffinity(t *testing.T) {
 			}}
 		}),
 	)
-	fp.syncProxyRules()
+	fp.Sync()
 
 	// check ipvs service and destinations
 	services, err := ipvs.GetVirtualServers()
@@ -4139,7 +4137,7 @@ func TestMultiPortServiceBindAddr(t *testing.T) {
 
 	// first, add multi-port service1
 	fp.OnServiceAdd(service1)
-	fp.syncProxyRules()
+	fp.Sync()
 	remainingAddrs, _ := fp.netlinkHandle.ListBindAddress(defaultDummyDevice)
 	// should only remain address "172.16.55.4"
 	if len(remainingAddrs) != 1 {
@@ -4151,7 +4149,7 @@ func TestMultiPortServiceBindAddr(t *testing.T) {
 
 	// update multi-port service1 to single-port service2
 	fp.OnServiceUpdate(service1, service2)
-	fp.syncProxyRules()
+	fp.Sync()
 	remainingAddrs, _ = fp.netlinkHandle.ListBindAddress(defaultDummyDevice)
 	// should still only remain address "172.16.55.4"
 	if len(remainingAddrs) != 1 {
@@ -4162,7 +4160,7 @@ func TestMultiPortServiceBindAddr(t *testing.T) {
 
 	// update single-port service2 to multi-port service3
 	fp.OnServiceUpdate(service2, service3)
-	fp.syncProxyRules()
+	fp.Sync()
 	remainingAddrs, _ = fp.netlinkHandle.ListBindAddress(defaultDummyDevice)
 	// should still only remain address "172.16.55.4"
 	if len(remainingAddrs) != 1 {
@@ -4173,7 +4171,7 @@ func TestMultiPortServiceBindAddr(t *testing.T) {
 
 	// delete multi-port service3
 	fp.OnServiceDelete(service3)
-	fp.syncProxyRules()
+	fp.Sync()
 	remainingAddrs, _ = fp.netlinkHandle.ListBindAddress(defaultDummyDevice)
 	// all addresses should be unbound
 	if len(remainingAddrs) != 0 {
@@ -4268,7 +4266,7 @@ func TestEndpointSliceE2E(t *testing.T) {
 	}
 
 	fp.OnEndpointSliceAdd(endpointSlice)
-	fp.syncProxyRules()
+	fp.Sync()
 
 	// Ensure that Proxier updates ipvs appropriately after EndpointSlice update
 	assert.NotNil(t, fp.ipsetList["KUBE-LOOP-BACK"])
@@ -4286,7 +4284,7 @@ func TestEndpointSliceE2E(t *testing.T) {
 	assert.Equal(t, "10.0.1.3:80", realServers1[2].String())
 
 	fp.OnEndpointSliceDelete(endpointSlice)
-	fp.syncProxyRules()
+	fp.Sync()
 
 	// Ensure that Proxier updates ipvs appropriately after EndpointSlice delete
 	assert.NotNil(t, fp.ipsetList["KUBE-LOOP-BACK"])
@@ -4325,7 +4323,7 @@ func TestHealthCheckNodePortE2E(t *testing.T) {
 		},
 	}
 	fp.OnServiceAdd(&svc)
-	fp.syncProxyRules()
+	fp.Sync()
 
 	// Ensure that Proxier updates ipvs appropriately after service's being created
 	assert.NotNil(t, fp.ipsetList["KUBE-HEALTH-CHECK-NODE-PORT"])
@@ -4337,7 +4335,7 @@ func TestHealthCheckNodePortE2E(t *testing.T) {
 	newSvc := svc
 	newSvc.Spec.HealthCheckNodePort = 30001
 	fp.OnServiceUpdate(&svc, &newSvc)
-	fp.syncProxyRules()
+	fp.Sync()
 
 	// Ensure that Proxier updates ipvs appropriately after service's being updated
 	assert.NotNil(t, fp.ipsetList["KUBE-HEALTH-CHECK-NODE-PORT"])
@@ -4346,7 +4344,7 @@ func TestHealthCheckNodePortE2E(t *testing.T) {
 	assert.True(t, activeEntries2.Has("30001"), "Expected activeEntries to reference updated hc node port in spec")
 
 	fp.OnServiceDelete(&svc)
-	fp.syncProxyRules()
+	fp.Sync()
 
 	// Ensure that Proxier updates ipvs appropriately after EndpointSlice delete
 	assert.NotNil(t, fp.ipsetList["KUBE-HEALTH-CHECK-NODE-PORT"])
@@ -4626,7 +4624,7 @@ func TestTestInternalTrafficPolicyE2E(t *testing.T) {
 		}
 
 		fp.OnEndpointSliceAdd(endpointSlice)
-		fp.syncProxyRules()
+		fp.Sync()
 
 		// Ensure that Proxier updates ipvs appropriately after EndpointSlice update
 		assert.NotNil(t, fp.ipsetList["KUBE-LOOP-BACK"])
@@ -4654,7 +4652,7 @@ func TestTestInternalTrafficPolicyE2E(t *testing.T) {
 		}
 
 		fp.OnEndpointSliceDelete(endpointSlice)
-		fp.syncProxyRules()
+		fp.Sync()
 
 		// Ensure that Proxier updates ipvs appropriately after EndpointSlice delete
 		assert.NotNil(t, fp.ipsetList["KUBE-LOOP-BACK"])
@@ -4769,7 +4767,7 @@ func Test_EndpointSliceReadyAndTerminatingCluster(t *testing.T) {
 	}
 
 	fp.OnEndpointSliceAdd(endpointSlice)
-	fp.syncProxyRules()
+	fp.Sync()
 
 	// Ensure that Proxier updates ipvs appropriately after EndpointSlice update
 	assert.NotNil(t, fp.ipsetList["KUBE-LOOP-BACK"])
@@ -4812,7 +4810,7 @@ func Test_EndpointSliceReadyAndTerminatingCluster(t *testing.T) {
 	assert.Equal(t, "10.0.1.5:80", realServers1[2].String())
 
 	fp.OnEndpointSliceDelete(endpointSlice)
-	fp.syncProxyRules()
+	fp.Sync()
 
 	// Ensure that Proxier updates ipvs appropriately after EndpointSlice delete
 	assert.NotNil(t, fp.ipsetList["KUBE-LOOP-BACK"])
@@ -4942,7 +4940,7 @@ func Test_EndpointSliceReadyAndTerminatingLocal(t *testing.T) {
 	}
 
 	fp.OnEndpointSliceAdd(endpointSlice)
-	fp.syncProxyRules()
+	fp.Sync()
 
 	// Ensure that Proxier updates ipvs appropriately after EndpointSlice update
 	assert.NotNil(t, fp.ipsetList["KUBE-LOOP-BACK"])
@@ -4984,7 +4982,7 @@ func Test_EndpointSliceReadyAndTerminatingLocal(t *testing.T) {
 	assert.Equal(t, "10.0.1.2:80", realServers2[1].String())
 
 	fp.OnEndpointSliceDelete(endpointSlice)
-	fp.syncProxyRules()
+	fp.Sync()
 
 	// Ensure that Proxier updates ipvs appropriately after EndpointSlice delete
 	assert.NotNil(t, fp.ipsetList["KUBE-LOOP-BACK"])
@@ -5114,7 +5112,7 @@ func Test_EndpointSliceOnlyReadyAndTerminatingCluster(t *testing.T) {
 	}
 
 	fp.OnEndpointSliceAdd(endpointSlice)
-	fp.syncProxyRules()
+	fp.Sync()
 
 	// Ensure that Proxier updates ipvs appropriately after EndpointSlice update
 	assert.NotNil(t, fp.ipsetList["KUBE-LOOP-BACK"])
@@ -5156,7 +5154,7 @@ func Test_EndpointSliceOnlyReadyAndTerminatingCluster(t *testing.T) {
 	assert.Equal(t, "10.0.1.4:80", realServers2[2].String())
 
 	fp.OnEndpointSliceDelete(endpointSlice)
-	fp.syncProxyRules()
+	fp.Sync()
 
 	// Ensure that Proxier updates ipvs appropriately after EndpointSlice delete
 	assert.NotNil(t, fp.ipsetList["KUBE-LOOP-BACK"])
@@ -5286,7 +5284,7 @@ func Test_EndpointSliceOnlyReadyAndTerminatingLocal(t *testing.T) {
 	}
 
 	fp.OnEndpointSliceAdd(endpointSlice)
-	fp.syncProxyRules()
+	fp.Sync()
 
 	// Ensure that Proxier updates ipvs appropriately after EndpointSlice update
 	assert.NotNil(t, fp.ipsetList["KUBE-LOOP-BACK"])
@@ -5325,7 +5323,7 @@ func Test_EndpointSliceOnlyReadyAndTerminatingLocal(t *testing.T) {
 	assert.Equal(t, "10.0.1.2:80", realServers2[1].String())
 
 	fp.OnEndpointSliceDelete(endpointSlice)
-	fp.syncProxyRules()
+	fp.Sync()
 
 	// Ensure that Proxier updates ipvs appropriately after EndpointSlice delete
 	assert.NotNil(t, fp.ipsetList["KUBE-LOOP-BACK"])
@@ -5587,7 +5585,7 @@ func TestNoEndpointsMetric(t *testing.T) {
 		}
 
 		fp.OnEndpointSliceAdd(endpointSlice)
-		fp.syncProxyRules()
+		fp.Sync()
 
 		syncProxyRulesNoLocalEndpointsTotalInternal, err := testutil.GetGaugeMetricValue(metrics.SyncProxyRulesNoLocalEndpointsTotal.WithLabelValues("internal", string(fp.ipFamily)))
 		if err != nil {
@@ -5637,7 +5635,7 @@ func TestDismissLocalhostRuleExist(t *testing.T) {
 			ipset := ipsettest.NewFake(testIPSetVersion)
 			fp := NewFakeProxier(ctx, ipt, ipvs, ipset, nil, nil, test.ipFamily)
 
-			fp.syncProxyRules()
+			fp.Sync()
 
 			rules := getRules(ipt, kubeServicesChain)
 			if len(rules) <= 0 {
@@ -5757,7 +5755,7 @@ func TestLoadBalancerIngressRouteTypeProxy(t *testing.T) {
 				}),
 			)
 
-			fp.syncProxyRules()
+			fp.Sync()
 
 			services, err := fp.ipvs.GetVirtualServers()
 			if err != nil {

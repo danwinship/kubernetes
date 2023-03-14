@@ -28,8 +28,10 @@ import (
 	v1core "k8s.io/client-go/kubernetes/typed/core/v1"
 	"k8s.io/client-go/tools/events"
 	proxyapp "k8s.io/kubernetes/cmd/kube-proxy/app"
+	"k8s.io/kubernetes/pkg/cluster/ports"
 	"k8s.io/kubernetes/pkg/proxy"
 	proxyconfigapi "k8s.io/kubernetes/pkg/proxy/apis/config"
+	"k8s.io/kubernetes/pkg/proxy/healthcheck"
 	"k8s.io/utils/ptr"
 )
 
@@ -44,6 +46,10 @@ func NewHollowProxy(
 	broadcaster events.EventBroadcaster,
 	recorder events.EventRecorder,
 ) *HollowProxy {
+	syncPeriod := 30 * time.Second
+	minSyncPeriod := time.Second
+	healthzServer := healthcheck.NewProxierHealthServer(fmt.Sprintf("127.0.0.1:%d", ports.ProxyHealthzPort), 2*syncPeriod)
+
 	return &HollowProxy{
 		ProxyServer: &proxyapp.ProxyServer{
 			Config: &proxyconfigapi.KubeProxyConfiguration{
@@ -55,7 +61,7 @@ func NewHollowProxy(
 			},
 
 			Client:      client,
-			Backend:     proxy.NewBackend(nil, nil),
+			Backend:     proxy.NewBackend(nil, nil, syncPeriod, minSyncPeriod, healthzServer),
 			Broadcaster: broadcaster,
 			Recorder:    recorder,
 			NodeRef: &v1.ObjectReference{

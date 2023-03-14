@@ -166,7 +166,7 @@ func TestCreateServiceVip(t *testing.T) {
 		}),
 	)
 	proxier.setInitialized(true)
-	proxier.syncProxyRules()
+	proxier.Sync()
 
 	svc := proxier.svcPortMap[svcPortName]
 	svcInfo, ok := svc.(*serviceInfo)
@@ -226,7 +226,7 @@ func TestCreateRemoteEndpointOverlay(t *testing.T) {
 	)
 
 	proxier.setInitialized(true)
-	proxier.syncProxyRules()
+	proxier.Sync()
 
 	ep := proxier.endpointsMap[svcPortName][0]
 	epInfo, ok := ep.(*endpointInfo)
@@ -290,7 +290,7 @@ func TestCreateRemoteEndpointL2Bridge(t *testing.T) {
 		}),
 	)
 	proxier.setInitialized(true)
-	proxier.syncProxyRules()
+	proxier.Sync()
 	ep := proxier.endpointsMap[svcPortName][0]
 	epInfo, ok := ep.(*endpointInfo)
 	if !ok {
@@ -382,7 +382,7 @@ func TestSharedRemoteEndpointDelete(t *testing.T) {
 		}),
 	)
 	proxier.setInitialized(true)
-	proxier.syncProxyRules()
+	proxier.Sync()
 	ep := proxier.endpointsMap[svcPortName1][0]
 	epInfo, ok := ep.(*endpointInfo)
 	if !ok {
@@ -431,7 +431,7 @@ func TestSharedRemoteEndpointDelete(t *testing.T) {
 	)
 
 	proxier.setInitialized(true)
-	proxier.syncProxyRules()
+	proxier.Sync()
 
 	ep = proxier.endpointsMap[svcPortName1][0]
 	epInfo, ok = ep.(*endpointInfo)
@@ -526,7 +526,7 @@ func TestSharedRemoteEndpointUpdate(t *testing.T) {
 	)
 
 	proxier.setInitialized(true)
-	proxier.syncProxyRules()
+	proxier.Sync()
 	ep := proxier.endpointsMap[svcPortName1][0]
 	epInfo, ok := ep.(*endpointInfo)
 	if !ok {
@@ -604,7 +604,7 @@ func TestSharedRemoteEndpointUpdate(t *testing.T) {
 	proxier.mu.Unlock()
 
 	proxier.setInitialized(true)
-	proxier.syncProxyRules()
+	proxier.Sync()
 
 	ep = proxier.endpointsMap[svcPortName1][0]
 	epInfo, ok = ep.(*endpointInfo)
@@ -669,7 +669,7 @@ func TestCreateLoadBalancer(t *testing.T) {
 	)
 
 	proxier.setInitialized(true)
-	proxier.syncProxyRules()
+	proxier.Sync()
 
 	svc := proxier.svcPortMap[svcPortName]
 	svcInfo, ok := svc.(*serviceInfo)
@@ -1021,7 +1021,7 @@ func TestCreateDsrLoadBalancer(t *testing.T) {
 	hcn.PopulateQueriedEndpoints(endpointLocal, guid, epIpAddressRemote, macAddress, prefixLen)
 	hcn.PopulateQueriedEndpoints(endpointGw, guid, epIpAddressGw, epMacAddressGw, prefixLen)
 	proxier.setInitialized(true)
-	proxier.syncProxyRules()
+	proxier.Sync()
 
 	svc := proxier.svcPortMap[svcPortName]
 	svcInfo, ok := svc.(*serviceInfo)
@@ -1096,7 +1096,7 @@ func TestClusterIPLBInCreateDsrLoadBalancer(t *testing.T) {
 	)
 
 	proxier.setInitialized(true)
-	proxier.syncProxyRules()
+	proxier.Sync()
 
 	svc := proxier.svcPortMap[svcPortName]
 	svcInfo, ok := svc.(*serviceInfo)
@@ -1174,7 +1174,7 @@ func TestEndpointSlice(t *testing.T) {
 
 	proxier.OnEndpointSliceAdd(endpointSlice)
 	proxier.setInitialized(true)
-	proxier.syncProxyRules()
+	proxier.Sync()
 
 	svc := proxier.svcPortMap[svcPortName]
 	svcInfo, ok := svc.(*serviceInfo)

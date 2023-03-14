@@ -153,7 +153,7 @@ func NewBackend(
 			return nil, fmt.Errorf("unable to create ipv6 proxier: %v, hostname: %s, nodeIP:%v", err, hostname, nodeIPs[v1.IPv6Protocol])
 		}
 	}
-	return proxy.NewBackend(ipv4Proxier, ipv6Proxier), nil
+	return proxy.NewBackend(ipv4Proxier, ipv6Proxier, syncPeriod, minSyncPeriod, healthzServer), nil
 }
 
 func canUseWinKernelProxier() error {

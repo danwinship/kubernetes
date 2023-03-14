@@ -56,7 +56,6 @@ import (
 	"k8s.io/kubernetes/pkg/proxy/metrics"
 	proxyutil "k8s.io/kubernetes/pkg/proxy/util"
 	proxyutiltest "k8s.io/kubernetes/pkg/proxy/util/testing"
-	"k8s.io/kubernetes/pkg/util/async"
 	utiliptables "k8s.io/kubernetes/pkg/util/iptables"
 	iptablestest "k8s.io/kubernetes/pkg/util/iptables/testing"
 	netutils "k8s.io/utils/net"
@@ -144,7 +143,6 @@ func NewFakeProxier(ipt utiliptables.Interface) *Proxier {
 		},
 	}
 	p.setInitialized(true)
-	p.syncRunner = async.NewBoundedFrequencyRunner("test-sync-runner", p.syncProxyRules, 0, time.Minute, 1)
 	return p
 }
 
@@ -1708,7 +1706,7 @@ func TestOverallIPTablesRules(t *testing.T) {
 		}),
 	)
 
-	fp.syncProxyRules()
+	fp.Sync()
 
 	expected := dedent.Dedent(`
 		*filter
@@ -1849,7 +1847,7 @@ func TestNoEndpointsReject(t *testing.T) {
 			}}
 		}),
 	)
-	fp.syncProxyRules()
+	fp.Sync()
 
 	runPacketFlowTests(t, getLine(), ipt, testNodeIPs, []packetFlowTest{
 		{
@@ -2002,7 +2000,7 @@ func TestClusterIPGeneral(t *testing.T) {
 		}),
 	)
 
-	fp.syncProxyRules()
+	fp.Sync()
 
 	runPacketFlowTests(t, getLine(), ipt, testNodeIPs, []packetFlowTest{
 		{
@@ -2134,7 +2132,7 @@ func TestLoadBalancer(t *testing.T) {
 		}),
 	)
 
-	fp.syncProxyRules()
+	fp.Sync()
 
 	runPacketFlowTests(t, getLine(), ipt, testNodeIPs, []packetFlowTest{
 		{
@@ -2391,7 +2389,7 @@ func TestNodePorts(t *testing.T) {
 				}),
 			)
 
-			fp.syncProxyRules()
+			fp.Sync()
 
 			var podIP, externalClientIP, nodeIP, altNodeIP, localhostIP string
 			if tc.family == v1.IPv4Protocol {
@@ -2526,7 +2524,7 @@ func TestHealthCheckNodePort(t *testing.T) {
 		svc.Spec.ExternalTrafficPolicy = v1.ServiceExternalTrafficPolicyLocal
 	})
 	makeServiceMap(fp, svc)
-	fp.syncProxyRules()
+	fp.Sync()
 
 	runPacketFlowTests(t, getLine(), ipt, testNodeIPs, []packetFlowTest{
 		{
@@ -2540,7 +2538,7 @@ func TestHealthCheckNodePort(t *testing.T) {
 	})
 
 	fp.OnServiceDelete(svc)
-	fp.syncProxyRules()
+	fp.Sync()
 
 	runPacketFlowTests(t, getLine(), ipt, testNodeIPs, []packetFlowTest{
 		{
@@ -2592,7 +2590,7 @@ func TestDropInvalidRule(t *testing.T) {
 			fp := NewFakeProxier(ipt)
 			fp.needConntrackDropRule = tc.needDropRule
 			fp.nfAcctCounters = tc.nfAcctCounters
-			fp.syncProxyRules()
+			fp.Sync()
 
 			expected := tc.dropRule + kubeForwardChainRules
 			assertIPTablesChainEqual(t, getLine(), utiliptables.TableFilter, kubeForwardChain, expected, fp.iptablesData.String())
@@ -2605,7 +2603,7 @@ func TestMasqueradeRule(t *testing.T) {
 		t.Run(fmt.Sprintf("randomFully %t", randomFully), func(t *testing.T) {
 			ipt := iptablestest.NewFake().SetHasRandomFully(randomFully)
 			fp := NewFakeProxier(ipt)
-			fp.syncProxyRules()
+			fp.Sync()
 
 			expectedFmt := dedent.Dedent(`
 				-A KUBE-POSTROUTING -m mark ! --mark 0x4000/0x4000 -j RETURN
@@ -2681,7 +2679,7 @@ func TestExternalTrafficPolicyLocal(t *testing.T) {
 		}),
 	)
 
-	fp.syncProxyRules()
+	fp.Sync()
 
 	runPacketFlowTests(t, getLine(), ipt, testNodeIPs, []packetFlowTest{
 		{
@@ -2798,7 +2796,7 @@ func TestExternalTrafficPolicyCluster(t *testing.T) {
 		}),
 	)
 
-	fp.syncProxyRules()
+	fp.Sync()
 
 	runPacketFlowTests(t, getLine(), ipt, testNodeIPs, []packetFlowTest{
 		{
@@ -4073,7 +4071,7 @@ func TestProxierMetricsIPTablesTotalRules(t *testing.T) {
 			}}
 		}),
 	)
-	fp.syncProxyRules()
+	fp.Sync()
 	iptablesData := fp.iptablesData.String()
 
 	nFilterRules := countRulesFromMetric(logger, utiliptables.TableFilter, string(fp.ipFamily))
@@ -4106,7 +4104,7 @@ func TestProxierMetricsIPTablesTotalRules(t *testing.T) {
 		}),
 	)
 
-	fp.syncProxyRules()
+	fp.Sync()
 	iptablesData = fp.iptablesData.String()
 
 	nFilterRules = countRulesFromMetric(logger, utiliptables.TableFilter, string(fp.ipFamily))
@@ -4268,11 +4266,11 @@ func TestInternalTrafficPolicy(t *testing.T) {
 			}
 
 			fp.OnEndpointSliceAdd(endpointSlice)
-			fp.syncProxyRules()
+			fp.Sync()
 			runPacketFlowTests(t, tc.line, ipt, testNodeIPs, tc.flowTests)
 
 			fp.OnEndpointSliceDelete(endpointSlice)
-			fp.syncProxyRules()
+			fp.Sync()
 			runPacketFlowTests(t, tc.line, ipt, testNodeIPs, []packetFlowTest{
 				{
 					name:     "endpoints deleted",
@@ -4595,11 +4593,11 @@ func TestTerminatingEndpointsTrafficPolicyLocal(t *testing.T) {
 			fp.OnServiceAdd(service)
 
 			fp.OnEndpointSliceAdd(testcase.endpointslice)
-			fp.syncProxyRules()
+			fp.Sync()
 			runPacketFlowTests(t, testcase.line, ipt, testNodeIPs, testcase.flowTests)
 
 			fp.OnEndpointSliceDelete(testcase.endpointslice)
-			fp.syncProxyRules()
+			fp.Sync()
 			runPacketFlowTests(t, testcase.line, ipt, testNodeIPs, []packetFlowTest{
 				{
 					name:     "pod to clusterIP after endpoints deleted",
@@ -4929,11 +4927,11 @@ func TestTerminatingEndpointsTrafficPolicyCluster(t *testing.T) {
 			fp.OnServiceAdd(service)
 
 			fp.OnEndpointSliceAdd(testcase.endpointslice)
-			fp.syncProxyRules()
+			fp.Sync()
 			runPacketFlowTests(t, testcase.line, ipt, testNodeIPs, testcase.flowTests)
 
 			fp.OnEndpointSliceDelete(testcase.endpointslice)
-			fp.syncProxyRules()
+			fp.Sync()
 			runPacketFlowTests(t, testcase.line, ipt, testNodeIPs, []packetFlowTest{
 				{
 					name:     "pod to clusterIP after endpoints deleted",
@@ -5062,7 +5060,7 @@ func TestInternalExternalMasquerade(t *testing.T) {
 			}),
 		)
 
-		fp.syncProxyRules()
+		fp.Sync()
 	}
 
 	// We use the same flowTests for all of the testCases. The "output" and "masq"
@@ -5604,7 +5602,7 @@ func TestSyncProxyRulesLargeClusterMode(t *testing.T) {
 		}),
 	)
 
-	fp.syncProxyRules()
+	fp.Sync()
 	expectedEndpoints := 2 * (largeClusterEndpointsThreshold/2 - 1)
 
 	firstEndpoint, numEndpoints, numComments := countEndpointsAndComments(fp.iptablesData.String(), "10.0.0.0")
@@ -5631,7 +5629,7 @@ func TestSyncProxyRulesLargeClusterMode(t *testing.T) {
 			Protocol: ptr.To(v1.ProtocolTCP),
 		}}
 	}))
-	fp.syncProxyRules()
+	fp.Sync()
 
 	firstEndpoint, numEndpoints, numComments = countEndpointsAndComments(fp.iptablesData.String(), "203.0.113.4")
 	assert.Equal(t, "-A KUBE-SEP-RUVVH7YV3PHQBDOS -m tcp -p tcp -j DNAT --to-destination 203.0.113.4:8081", firstEndpoint)
@@ -5683,7 +5681,7 @@ func TestSyncProxyRulesLargeClusterMode(t *testing.T) {
 			Protocol: ptr.To(v1.ProtocolTCP),
 		}}
 	}))
-	fp.syncProxyRules()
+	fp.Sync()
 
 	svc4Endpoint, numEndpoints, _ := countEndpointsAndComments(fp.iptablesData.String(), "10.4.0.1")
 	assert.Equal(t, "-A KUBE-SEP-SU5STNODRYEWJAUF -m tcp -p tcp -j DNAT --to-destination 10.4.0.1:8082", svc4Endpoint, "svc4 endpoint was not created")
@@ -5696,7 +5694,7 @@ func TestSyncProxyRulesLargeClusterMode(t *testing.T) {
 	// but it will not delete them immediately either.
 	fp.lastIPTablesCleanup = time.Now()
 	fp.OnServiceDelete(svc4)
-	fp.syncProxyRules()
+	fp.Sync()
 
 	svc4Endpoint, numEndpoints, _ = countEndpointsAndComments(fp.iptablesData.String(), "10.4.0.1")
 	assert.Equal(t, "", svc4Endpoint, "svc4 endpoint was still created!")
@@ -5708,7 +5706,7 @@ func TestSyncProxyRulesLargeClusterMode(t *testing.T) {
 
 	// But resyncing after a long-enough delay will delete the stale chains
 	fp.lastIPTablesCleanup = time.Now().Add(-fp.syncPeriod).Add(-1)
-	fp.syncProxyRules()
+	fp.Sync()
 
 	svc4Endpoint, numEndpoints, _ = countEndpointsAndComments(fp.iptablesData.String(), "10.4.0.1")
 	assert.Equal(t, "", svc4Endpoint, "svc4 endpoint was still created!")
@@ -5784,7 +5782,7 @@ func TestSyncProxyRulesRepeated(t *testing.T) {
 		}),
 	)
 
-	fp.syncProxyRules()
+	fp.Sync()
 
 	expected := dedent.Dedent(`
 		*filter
@@ -5867,7 +5865,7 @@ func TestSyncProxyRulesRepeated(t *testing.T) {
 			}}
 		}),
 	)
-	fp.syncProxyRules()
+	fp.Sync()
 
 	expected = dedent.Dedent(`
 		*filter
@@ -5921,7 +5919,7 @@ func TestSyncProxyRulesRepeated(t *testing.T) {
 
 	// Delete a service. (Won't update the other services.)
 	fp.OnServiceDelete(svc2)
-	fp.syncProxyRules()
+	fp.Sync()
 
 	expected = dedent.Dedent(`
 		*filter
@@ -5985,7 +5983,7 @@ func TestSyncProxyRulesRepeated(t *testing.T) {
 			}}
 		}),
 	)
-	fp.syncProxyRules()
+	fp.Sync()
 	expected = dedent.Dedent(`
 		*filter
 		:KUBE-NODEPORTS - [0:0]
@@ -6042,7 +6040,7 @@ func TestSyncProxyRulesRepeated(t *testing.T) {
 			}}
 		}),
 	)
-	fp.syncProxyRules()
+	fp.Sync()
 	expected = dedent.Dedent(`
 		*filter
 		:KUBE-NODEPORTS - [0:0]
@@ -6098,7 +6096,7 @@ func TestSyncProxyRulesRepeated(t *testing.T) {
 	eps3update := eps3.DeepCopy()
 	eps3update.Endpoints[0].Addresses[0] = "10.0.3.2"
 	fp.OnEndpointSliceUpdate(eps3, eps3update)
-	fp.syncProxyRules()
+	fp.Sync()
 
 	expected = dedent.Dedent(`
 		*filter
@@ -6154,7 +6152,7 @@ func TestSyncProxyRulesRepeated(t *testing.T) {
 	eps3update2 := eps3update.DeepCopy()
 	eps3update2.Endpoints = append(eps3update2.Endpoints, discovery.Endpoint{Addresses: []string{"10.0.3.3"}})
 	fp.OnEndpointSliceUpdate(eps3update, eps3update2)
-	fp.syncProxyRules()
+	fp.Sync()
 
 	expected = dedent.Dedent(`
 		*filter
@@ -6212,7 +6210,7 @@ func TestSyncProxyRulesRepeated(t *testing.T) {
 	}
 
 	// Sync with no new changes... This will not rewrite any SVC or SEP chains
-	fp.syncProxyRules()
+	fp.Sync()
 
 	expected = dedent.Dedent(`
 		*filter
@@ -6286,7 +6284,7 @@ func TestSyncProxyRulesRepeated(t *testing.T) {
 	}
 
 	fp.OnServiceDelete(svc4)
-	fp.syncProxyRules()
+	fp.Sync()
 
 	if _, err := fp.iptables.ChainExists(utiliptables.TableNAT, utiliptables.Chain("KUBE-SEP-AYCN5HPXMIRJNJXU")); err != nil {
 		t.Errorf("svc4's endpoint chain was successfully deleted despite dangling references!")
@@ -6303,7 +6301,7 @@ func TestSyncProxyRulesRepeated(t *testing.T) {
 	}
 
 	// On retry we should do a full resync, which should succeed (and delete svc4)
-	fp.syncProxyRules()
+	fp.Sync()
 
 	expected = dedent.Dedent(`
 		*filter
@@ -6504,7 +6502,7 @@ func TestNoEndpointsMetric(t *testing.T) {
 			}
 
 			fp.OnEndpointSliceAdd(endpointSlice)
-			fp.syncProxyRules()
+			fp.Sync()
 			syncProxyRulesNoLocalEndpointsTotalInternal, err := testutil.GetGaugeMetricValue(metrics.SyncProxyRulesNoLocalEndpointsTotal.WithLabelValues("internal", string(fp.ipFamily)))
 			if err != nil {
 				t.Errorf("failed to get %s value, err: %v", metrics.SyncProxyRulesNoLocalEndpointsTotal.Name, err)
@@ -6634,7 +6632,7 @@ func TestLoadBalancerIngressRouteTypeProxy(t *testing.T) {
 				}),
 			)
 
-			fp.syncProxyRules()
+			fp.Sync()
 
 			c, _ := ipt.Dump.GetChain(utiliptables.TableNAT, kubeServicesChain)
 			ruleExists := false
@@ -6688,7 +6686,7 @@ func TestBadIPs(t *testing.T) {
 		}),
 	)
 
-	fp.syncProxyRules()
+	fp.Sync()
 
 	expected := dedent.Dedent(`
 		*filter

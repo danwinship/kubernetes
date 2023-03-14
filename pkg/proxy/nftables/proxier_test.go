@@ -48,7 +48,6 @@ import (
 	"k8s.io/kubernetes/pkg/proxy/metrics"
 	proxyutil "k8s.io/kubernetes/pkg/proxy/util"
 	proxyutiltest "k8s.io/kubernetes/pkg/proxy/util/testing"
-	"k8s.io/kubernetes/pkg/util/async"
 	netutils "k8s.io/utils/net"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/knftables"
@@ -142,7 +141,6 @@ func NewFakeProxier(ipFamily v1.IPFamily) (*knftables.Fake, *Proxier) {
 		serviceNodePorts:    newNFTElementStorage("map", serviceNodePortsMap),
 	}
 	p.setInitialized(true)
-	p.syncRunner = async.NewBoundedFrequencyRunner("test-sync-runner", p.syncProxyRules, 0, time.Minute, 1)
 
 	return nft, p
 }
@@ -363,7 +361,7 @@ func TestOverallNFTablesRules(t *testing.T) {
 		}),
 	)
 
-	fp.syncProxyRules()
+	fp.Sync()
 
 	expected := baseRules + dedent.Dedent(`
 		# svc1
@@ -495,7 +493,7 @@ func TestNoEndpointsReject(t *testing.T) {
 			}}
 		}),
 	)
-	fp.syncProxyRules()
+	fp.Sync()
 
 	runPacketFlowTests(t, getLine(), nft, testNodeIPs, []packetFlowTest{
 		{
@@ -647,7 +645,7 @@ func TestClusterIPGeneral(t *testing.T) {
 		}),
 	)
 
-	fp.syncProxyRules()
+	fp.Sync()
 
 	runPacketFlowTests(t, getLine(), nft, testNodeIPs, []packetFlowTest{
 		{
@@ -785,7 +783,7 @@ func TestLoadBalancer(t *testing.T) {
 		}),
 	)
 
-	fp.syncProxyRules()
+	fp.Sync()
 
 	runPacketFlowTests(t, getLine(), nft, testNodeIPs, []packetFlowTest{
 		{
@@ -999,7 +997,7 @@ func TestNodePorts(t *testing.T) {
 				}),
 			)
 
-			fp.syncProxyRules()
+			fp.Sync()
 
 			var podIP, externalClientIP, altNodeIP string
 			if tc.family == v1.IPv4Protocol {
@@ -1124,7 +1122,7 @@ func TestExternalTrafficPolicyLocal(t *testing.T) {
 		}),
 	)
 
-	fp.syncProxyRules()
+	fp.Sync()
 
 	runPacketFlowTests(t, getLine(), nft, testNodeIPs, []packetFlowTest{
 		{
@@ -1240,7 +1238,7 @@ func TestExternalTrafficPolicyCluster(t *testing.T) {
 		}),
 	)
 
-	fp.syncProxyRules()
+	fp.Sync()
 
 	runPacketFlowTests(t, getLine(), nft, testNodeIPs, []packetFlowTest{
 		{
@@ -2592,11 +2590,11 @@ func TestInternalTrafficPolicy(t *testing.T) {
 			}
 
 			fp.OnEndpointSliceAdd(endpointSlice)
-			fp.syncProxyRules()
+			fp.Sync()
 			runPacketFlowTests(t, tc.line, nft, testNodeIPs, tc.flowTests)
 
 			fp.OnEndpointSliceDelete(endpointSlice)
-			fp.syncProxyRules()
+			fp.Sync()
 			runPacketFlowTests(t, tc.line, nft, testNodeIPs, []packetFlowTest{
 				{
 					name:     "endpoints deleted",
@@ -2918,11 +2916,11 @@ func TestTerminatingEndpointsTrafficPolicyLocal(t *testing.T) {
 			fp.OnServiceAdd(service)
 
 			fp.OnEndpointSliceAdd(testcase.endpointslice)
-			fp.syncProxyRules()
+			fp.Sync()
 			runPacketFlowTests(t, testcase.line, nft, testNodeIPs, testcase.flowTests)
 
 			fp.OnEndpointSliceDelete(testcase.endpointslice)
-			fp.syncProxyRules()
+			fp.Sync()
 			runPacketFlowTests(t, testcase.line, nft, testNodeIPs, []packetFlowTest{
 				{
 					name:     "pod to clusterIP after endpoints deleted",
@@ -3251,11 +3249,11 @@ func TestTerminatingEndpointsTrafficPolicyCluster(t *testing.T) {
 			fp.OnServiceAdd(service)
 
 			fp.OnEndpointSliceAdd(testcase.endpointslice)
-			fp.syncProxyRules()
+			fp.Sync()
 			runPacketFlowTests(t, testcase.line, nft, testNodeIPs, testcase.flowTests)
 
 			fp.OnEndpointSliceDelete(testcase.endpointslice)
-			fp.syncProxyRules()
+			fp.Sync()
 			runPacketFlowTests(t, testcase.line, nft, testNodeIPs, []packetFlowTest{
 				{
 					name:     "pod to clusterIP after endpoints deleted",
@@ -3384,7 +3382,7 @@ func TestInternalExternalMasquerade(t *testing.T) {
 			}),
 		)
 
-		fp.syncProxyRules()
+		fp.Sync()
 	}
 
 	// We use the same flowTests for all of the testCases. The "output" and "masq"
@@ -3877,7 +3875,7 @@ func TestSyncProxyRulesRepeated(t *testing.T) {
 		}),
 	)
 
-	fp.syncProxyRules()
+	fp.Sync()
 
 	expected := baseRules + dedent.Dedent(`
 		add element ip kube-proxy cluster-ips { 172.30.0.41 }
@@ -3928,7 +3926,7 @@ func TestSyncProxyRulesRepeated(t *testing.T) {
 			}}
 		}),
 	)
-	fp.syncProxyRules()
+	fp.Sync()
 
 	expected = baseRules + dedent.Dedent(`
 		add element ip kube-proxy cluster-ips { 172.30.0.41 }
@@ -3964,12 +3962,12 @@ func TestSyncProxyRulesRepeated(t *testing.T) {
 	// add+flush 2 chains for service and endpoint, add 2 rules in each = 8 operations
 	// 10 operations total.
 	if nft.LastTransaction.NumOperations() != 10 {
-		t.Errorf("Expected 10 trasaction operations, got %d", nft.LastTransaction.NumOperations())
+		t.Errorf("Expected 10 transaction operations, got %d", nft.LastTransaction.NumOperations())
 	}
 
 	// Delete a service; its chains will be flushed, but not immediately deleted.
 	fp.OnServiceDelete(svc2)
-	fp.syncProxyRules()
+	fp.Sync()
 	expected = baseRules + dedent.Dedent(`
 		add element ip kube-proxy cluster-ips { 172.30.0.41 }
 		add element ip kube-proxy cluster-ips { 172.30.0.43 }
@@ -3998,12 +3996,12 @@ func TestSyncProxyRulesRepeated(t *testing.T) {
 	// flush 2 chains for service and endpoint = 2 operations
 	// 4 operations total.
 	if nft.LastTransaction.NumOperations() != 4 {
-		t.Errorf("Expected 4 trasaction operations, got %d", nft.LastTransaction.NumOperations())
+		t.Errorf("Expected 4 transaction operations, got %d", nft.LastTransaction.NumOperations())
 	}
 
 	// Fake the passage of time and confirm that the stale chains get deleted.
 	ageStaleChains()
-	fp.syncProxyRules()
+	fp.Sync()
 	expected = baseRules + dedent.Dedent(`
 		add element ip kube-proxy cluster-ips { 172.30.0.41 }
 		add element ip kube-proxy cluster-ips { 172.30.0.43 }
@@ -4027,7 +4025,7 @@ func TestSyncProxyRulesRepeated(t *testing.T) {
 	assertNFTablesTransactionEqual(t, getLine(), expected, nft.Dump())
 	// delete stale chains happens in a separate transaction, nothing else changed => last transaction will have 0 operations.
 	if nft.LastTransaction.NumOperations() != 0 {
-		t.Errorf("Expected 0 trasaction operations, got %d", nft.LastTransaction.NumOperations())
+		t.Errorf("Expected 0 transaction operations, got %d", nft.LastTransaction.NumOperations())
 	}
 
 	// Add a service, sync, then add its endpoints.
@@ -4042,7 +4040,7 @@ func TestSyncProxyRulesRepeated(t *testing.T) {
 			}}
 		}),
 	)
-	fp.syncProxyRules()
+	fp.Sync()
 	expected = baseRules + dedent.Dedent(`
 		add element ip kube-proxy cluster-ips { 172.30.0.41 }
 		add element ip kube-proxy cluster-ips { 172.30.0.43 }
@@ -4069,7 +4067,7 @@ func TestSyncProxyRulesRepeated(t *testing.T) {
 	assertNFTablesTransactionEqual(t, getLine(), expected, nft.Dump())
 	// add 1 element to cluster-ips and no-endpoint-services = 2 operations
 	if nft.LastTransaction.NumOperations() != 2 {
-		t.Errorf("Expected 2 trasaction operations, got %d", nft.LastTransaction.NumOperations())
+		t.Errorf("Expected 2 transaction operations, got %d", nft.LastTransaction.NumOperations())
 	}
 
 	populateEndpointSlices(fp,
@@ -4085,7 +4083,7 @@ func TestSyncProxyRulesRepeated(t *testing.T) {
 			}}
 		}),
 	)
-	fp.syncProxyRules()
+	fp.Sync()
 	expected = baseRules + dedent.Dedent(`
 		add element ip kube-proxy cluster-ips { 172.30.0.41 }
 		add element ip kube-proxy cluster-ips { 172.30.0.43 }
@@ -4119,14 +4117,14 @@ func TestSyncProxyRulesRepeated(t *testing.T) {
 	// add 1 element to service-ips, remove 1 element from no-endpoint-services = 2 operations
 	// add+flush 2 chains for service and endpoint, add 2 rules in each = 8 operations
 	if nft.LastTransaction.NumOperations() != 10 {
-		t.Errorf("Expected 10 trasaction operations, got %d", nft.LastTransaction.NumOperations())
+		t.Errorf("Expected 10 transaction operations, got %d", nft.LastTransaction.NumOperations())
 	}
 
 	// Change an endpoint of an existing service.
 	eps3update := eps3.DeepCopy()
 	eps3update.Endpoints[0].Addresses[0] = "10.0.3.2"
 	fp.OnEndpointSliceUpdate(eps3, eps3update)
-	fp.syncProxyRules()
+	fp.Sync()
 
 	// The old endpoint chain (for 10.0.3.1) will not be deleted yet.
 	expected = baseRules + dedent.Dedent(`
@@ -4163,7 +4161,7 @@ func TestSyncProxyRulesRepeated(t *testing.T) {
 	// add+flush 2 chains for service and endpoint, add 2 rules in each = 8 operations
 	// flush old endpoint chain = 1 operation
 	if nft.LastTransaction.NumOperations() != 9 {
-		t.Errorf("Expected 9 trasaction operations, got %d", nft.LastTransaction.NumOperations())
+		t.Errorf("Expected 9 transaction operations, got %d", nft.LastTransaction.NumOperations())
 	}
 
 	// (Ensure the old svc3 chain gets deleted in the next sync.)
@@ -4173,7 +4171,7 @@ func TestSyncProxyRulesRepeated(t *testing.T) {
 	eps3update2 := eps3update.DeepCopy()
 	eps3update2.Endpoints = append(eps3update2.Endpoints, discovery.Endpoint{Addresses: []string{"10.0.3.3"}})
 	fp.OnEndpointSliceUpdate(eps3update, eps3update2)
-	fp.syncProxyRules()
+	fp.Sync()
 
 	expected = baseRules + dedent.Dedent(`
 		add element ip kube-proxy cluster-ips { 172.30.0.41 }
@@ -4210,14 +4208,14 @@ func TestSyncProxyRulesRepeated(t *testing.T) {
 	assertNFTablesTransactionEqual(t, getLine(), expected, nft.Dump())
 	// add+flush 3 chains for 1 service and 2 endpoints, add 2 rules in each = 12 operations
 	if nft.LastTransaction.NumOperations() != 12 {
-		t.Errorf("Expected 12 trasaction operations, got %d", nft.LastTransaction.NumOperations())
+		t.Errorf("Expected 12 transaction operations, got %d", nft.LastTransaction.NumOperations())
 	}
 
 	// Empty a service's endpoints; its chains will be flushed, but not immediately deleted.
 	eps3update3 := eps3update2.DeepCopy()
 	eps3update3.Endpoints = []discovery.Endpoint{}
 	fp.OnEndpointSliceUpdate(eps3update2, eps3update3)
-	fp.syncProxyRules()
+	fp.Sync()
 	expected = baseRules + dedent.Dedent(`
 		add element ip kube-proxy cluster-ips { 172.30.0.41 }
 		add element ip kube-proxy cluster-ips { 172.30.0.43 }
@@ -4248,7 +4246,7 @@ func TestSyncProxyRulesRepeated(t *testing.T) {
 	// remove 1 element from service-ips, add 1 element to no-endpoint-services = 2 operations
 	// flush 3 chains = 3 operations
 	if nft.LastTransaction.NumOperations() != 5 {
-		t.Errorf("Expected 5 trasaction operations, got %d", nft.LastTransaction.NumOperations())
+		t.Errorf("Expected 5 transaction operations, got %d", nft.LastTransaction.NumOperations())
 	}
 
 	expectedStaleChains := sets.NewString("service-4AT6LBPK-ns3/svc3/tcp/p80", "endpoint-SWWHDC7X-ns3/svc3/tcp/p80__10.0.3.2/80", "endpoint-TQ2QKHCZ-ns3/svc3/tcp/p80__10.0.3.3/80")
@@ -4258,7 +4256,7 @@ func TestSyncProxyRulesRepeated(t *testing.T) {
 	}
 	// Restore endpoints to non-empty immediately; its chains will be restored, and deleted from staleChains.
 	fp.OnEndpointSliceUpdate(eps3update3, eps3update2)
-	fp.syncProxyRules()
+	fp.Sync()
 	expected = baseRules + dedent.Dedent(`
 		add element ip kube-proxy cluster-ips { 172.30.0.41 }
 		add element ip kube-proxy cluster-ips { 172.30.0.43 }
@@ -4295,7 +4293,7 @@ func TestSyncProxyRulesRepeated(t *testing.T) {
 	// remove 1 element from no-endpoint-services, add 1 element to service-ips = 2 operations
 	// add+flush 3 chains for 1 service and 2 endpoints, add 2 rules in each = 12 operations
 	if nft.LastTransaction.NumOperations() != 14 {
-		t.Errorf("Expected 14 trasaction operations, got %d", nft.LastTransaction.NumOperations())
+		t.Errorf("Expected 14 transaction operations, got %d", nft.LastTransaction.NumOperations())
 	}
 
 	if len(fp.staleChains) != 0 {
@@ -4306,18 +4304,18 @@ func TestSyncProxyRulesRepeated(t *testing.T) {
 	// - its chains will be flushed, but not immediately deleted in the first sync.
 	// - its chains will be deleted first, then recreated in the second sync.
 	fp.OnEndpointSliceUpdate(eps3update2, eps3update3)
-	fp.syncProxyRules()
+	fp.Sync()
 	ageStaleChains()
 	fp.OnEndpointSliceUpdate(eps3update3, eps3update2)
-	fp.syncProxyRules()
+	fp.Sync()
 	// The second change counteracts the first one, so same expected rules as last time
 	assertNFTablesTransactionEqual(t, getLine(), expected, nft.Dump())
 
 	// Sync with no new changes, so same expected rules as last time
-	fp.syncProxyRules()
+	fp.Sync()
 	assertNFTablesTransactionEqual(t, getLine(), expected, nft.Dump())
 	if nft.LastTransaction.NumOperations() != 0 {
-		t.Errorf("Expected 0 trasaction operations, got %d", nft.LastTransaction.NumOperations())
+		t.Errorf("Expected 0 transaction operations, got %d", nft.LastTransaction.NumOperations())
 	}
 }
 
@@ -4455,7 +4453,7 @@ func TestNoEndpointsMetric(t *testing.T) {
 			}
 
 			fp.OnEndpointSliceAdd(endpointSlice)
-			fp.syncProxyRules()
+			fp.Sync()
 			syncProxyRulesNoLocalEndpointsTotalInternal, err := testutil.GetGaugeMetricValue(metrics.SyncProxyRulesNoLocalEndpointsTotal.WithLabelValues("internal", string(fp.ipFamily)))
 			if err != nil {
 				t.Errorf("failed to get %s value, err: %v", metrics.SyncProxyRulesNoLocalEndpointsTotal.Name, err)
@@ -4584,7 +4582,7 @@ func TestLoadBalancerIngressRouteTypeProxy(t *testing.T) {
 				}),
 			)
 
-			fp.syncProxyRules()
+			fp.Sync()
 
 			element := nft.Table.Maps["service-ips"].FindElement(testCase.svcLBIP, "tcp", "80")
 			ruleExists := element != nil
@@ -4803,7 +4801,7 @@ func TestBadIPs(t *testing.T) {
 		}),
 	)
 
-	fp.syncProxyRules()
+	fp.Sync()
 
 	expected := baseRules + dedent.Dedent(`
 		# svc1

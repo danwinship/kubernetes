@@ -74,7 +74,7 @@ func NewBackend(
 
 	if nftv4 != nil {
 		ipv4Proxier, err = newProxier(ctx, v1.IPv4Protocol, nftv4,
-			syncPeriod, minSyncPeriod, masqueradeAll, masqueradeMark,
+			masqueradeAll, masqueradeMark,
 			localDetectors[v1.IPv4Protocol], hostname, nodeIPs[v1.IPv4Protocol],
 			recorder, healthzServer, nodePortAddresses)
 		if err != nil {
@@ -86,7 +86,7 @@ func NewBackend(
 
 	if nftv6 != nil {
 		ipv6Proxier, err = newProxier(ctx, v1.IPv6Protocol, nftv6,
-			syncPeriod, minSyncPeriod, masqueradeAll, masqueradeMark,
+			masqueradeAll, masqueradeMark,
 			localDetectors[v1.IPv6Protocol], hostname, nodeIPs[v1.IPv6Protocol],
 			recorder, healthzServer, nodePortAddresses)
 		if err != nil {
@@ -96,7 +96,7 @@ func NewBackend(
 		logger.Info("No nftables support for family", "ipFamily", v1.IPv6Protocol)
 	}
 
-	return proxy.NewBackend(ipv4Proxier, ipv6Proxier), nil
+	return proxy.NewBackend(ipv4Proxier, ipv6Proxier, syncPeriod, minSyncPeriod, healthzServer), nil
 }
 
 // Create a knftables.Interface and check if we can use the nftables proxy mode on this host.

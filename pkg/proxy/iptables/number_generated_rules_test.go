@@ -267,7 +267,7 @@ func TestNumberIptablesRules(t *testing.T) {
 			populateEndpointSlices(fp, eps...)
 
 			now := time.Now()
-			fp.syncProxyRules()
+			fp.Sync()
 			t.Logf("time to sync rule: %v", time.Since(now))
 			t.Logf("iptables data size: %d bytes", fp.iptablesData.Len())
 
