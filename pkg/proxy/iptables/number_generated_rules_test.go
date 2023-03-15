@@ -259,15 +259,15 @@ func TestNumberIptablesRules(t *testing.T) {
 	for _, test := range testCases {
 		t.Run(test.name, func(t *testing.T) {
 			ipt := iptablestest.NewFake()
-			fp := NewFakeProxier(ipt)
+			fp, sct, ect := NewFakeProxier(ipt)
 
 			svcs, eps := generateServiceEndpoints(test.services, test.epPerService, test.epsFunc, test.svcFunc)
 
-			makeServiceMap(fp, svcs...)
-			populateEndpointSlices(fp, eps...)
+			makeServiceMap(sct, svcs...)
+			populateEndpointSlices(ect, eps...)
 
 			now := time.Now()
-			fp.Sync()
+			fp.Sync(sct, ect)
 			t.Logf("time to sync rule: %v", time.Since(now))
 			t.Logf("iptables data size: %d bytes", fp.iptablesData.Len())
 

@@ -41,11 +41,15 @@ import (
 type Backend struct {
 	sync.Mutex
 
-	ipv4Proxier Proxier
-	ipv4Runner  *async.BoundedFrequencyRunner
+	ipv4Proxier          Proxier
+	ipv4Runner           *async.BoundedFrequencyRunner
+	ipv4ServiceTracker   *ServiceChangeTracker
+	ipv4EndpointsTracker *EndpointsChangeTracker
 
-	ipv6Proxier Proxier
-	ipv6Runner  *async.BoundedFrequencyRunner
+	ipv6Proxier          Proxier
+	ipv6Runner           *async.BoundedFrequencyRunner
+	ipv6ServiceTracker   *ServiceChangeTracker
+	ipv6EndpointsTracker *EndpointsChangeTracker
 
 	syncPeriod    time.Duration
 	minSyncPeriod time.Duration
@@ -75,11 +79,17 @@ func NewBackend(
 
 	if ipv4Proxier != nil {
 		backend.ipv4Runner = async.NewBoundedFrequencyRunner("ipv4Runner", backend.ipv4SyncNow, minSyncPeriod, time.Hour, 2)
+		backend.ipv4ServiceTracker = ipv4Proxier.MakeServiceChangeTracker()
+		backend.ipv4EndpointsTracker = ipv4Proxier.MakeEndpointsChangeTracker()
+
 		// Queue a sync to occur as soon as the runner's loop is started
 		backend.ipv4Runner.Run()
 	}
 	if ipv6Proxier != nil {
 		backend.ipv6Runner = async.NewBoundedFrequencyRunner("ipv6Runner", backend.ipv6SyncNow, minSyncPeriod, time.Hour, 2)
+		backend.ipv6ServiceTracker = ipv6Proxier.MakeServiceChangeTracker()
+		backend.ipv6EndpointsTracker = ipv6Proxier.MakeEndpointsChangeTracker()
+
 		// Queue a sync to occur as soon as the runner's loop is started
 		backend.ipv6Runner.Run()
 	}
@@ -148,6 +158,9 @@ func (backend *Backend) waitAndRun() {
 
 // ipv4SyncNow immediately synchronizes the IPv4 provider
 func (backend *Backend) ipv4SyncNow() {
+	backend.Lock()
+	defer backend.Unlock()
+
 	// Keep track of how long syncs take.
 	start := time.Now()
 	defer func() {
@@ -155,7 +168,7 @@ func (backend *Backend) ipv4SyncNow() {
 		klog.V(2).InfoS("Syncing proxy rules complete", "elapsed", time.Since(start))
 	}()
 
-	switch backend.ipv4Proxier.Sync() {
+	switch backend.ipv4Proxier.Sync(backend.ipv4ServiceTracker, backend.ipv4EndpointsTracker) {
 	case SyncSuccess:
 		backend.healthzServer.Updated(v1.IPv4Protocol)
 		metrics.SyncProxyRulesLastTimestamp.WithLabelValues(string(v1.IPv4Protocol)).SetToCurrentTime()
@@ -178,6 +191,9 @@ func (backend *Backend) ipv4Sync() {
 
 // ipv6SyncNow immediately synchronizes the IPv6 provider
 func (backend *Backend) ipv6SyncNow() {
+	backend.Lock()
+	defer backend.Unlock()
+
 	// Keep track of how long syncs take.
 	start := time.Now()
 	defer func() {
@@ -185,7 +201,7 @@ func (backend *Backend) ipv6SyncNow() {
 		klog.V(4).InfoS("Syncing proxy rules complete", "elapsed", time.Since(start))
 	}()
 
-	switch backend.ipv6Proxier.Sync() {
+	switch backend.ipv6Proxier.Sync(backend.ipv4ServiceTracker, backend.ipv4EndpointsTracker) {
 	case SyncSuccess:
 		backend.healthzServer.Updated(v1.IPv6Protocol)
 		metrics.SyncProxyRulesLastTimestamp.WithLabelValues(string(v1.IPv6Protocol)).SetToCurrentTime()
@@ -208,28 +224,19 @@ func (backend *Backend) ipv6Sync() {
 
 // OnServiceAdd is called whenever creation of new service object is observed.
 func (backend *Backend) OnServiceAdd(service *v1.Service) {
-	if backend.ipv4Proxier != nil {
-		if backend.ipv4Proxier.OnServiceAdd(service) {
-			backend.ipv4Sync()
-		}
-	}
-	if backend.ipv6Proxier != nil {
-		if backend.ipv6Proxier.OnServiceAdd(service) {
-			backend.ipv6Sync()
-		}
-	}
+	backend.OnServiceUpdate(nil, service)
 }
 
 // OnServiceUpdate is called whenever modification of an existing
 // service object is observed.
 func (backend *Backend) OnServiceUpdate(oldService, service *v1.Service) {
 	if backend.ipv4Proxier != nil {
-		if backend.ipv4Proxier.OnServiceUpdate(oldService, service) {
+		if backend.ipv4ServiceTracker.Update(oldService, service) {
 			backend.ipv4Sync()
 		}
 	}
 	if backend.ipv6Proxier != nil {
-		if backend.ipv6Proxier.OnServiceUpdate(oldService, service) {
+		if backend.ipv6ServiceTracker.Update(oldService, service) {
 			backend.ipv6Sync()
 		}
 	}
@@ -238,16 +245,7 @@ func (backend *Backend) OnServiceUpdate(oldService, service *v1.Service) {
 // OnServiceDelete is called whenever deletion of an existing service
 // object is observed.
 func (backend *Backend) OnServiceDelete(service *v1.Service) {
-	if backend.ipv4Proxier != nil {
-		if backend.ipv4Proxier.OnServiceDelete(service) {
-			backend.ipv4Sync()
-		}
-	}
-	if backend.ipv6Proxier != nil {
-		if backend.ipv6Proxier.OnServiceDelete(service) {
-			backend.ipv6Sync()
-		}
-	}
+	backend.OnServiceUpdate(service, nil)
 }
 
 // OnEndpointSliceAdd is called whenever creation of a new endpoint slice object
@@ -256,13 +254,13 @@ func (backend *Backend) OnEndpointSliceAdd(endpointSlice *discovery.EndpointSlic
 	switch endpointSlice.AddressType {
 	case discovery.AddressTypeIPv4:
 		if backend.ipv4Proxier != nil {
-			if backend.ipv4Proxier.OnEndpointSliceAdd(endpointSlice) {
+			if backend.ipv4EndpointsTracker.EndpointSliceUpdate(endpointSlice, false) {
 				backend.ipv4Sync()
 			}
 		}
 	case discovery.AddressTypeIPv6:
 		if backend.ipv6Proxier != nil {
-			if backend.ipv6Proxier.OnEndpointSliceAdd(endpointSlice) {
+			if backend.ipv6EndpointsTracker.EndpointSliceUpdate(endpointSlice, false) {
 				backend.ipv6Sync()
 			}
 		}
@@ -277,13 +275,13 @@ func (backend *Backend) OnEndpointSliceUpdate(oldEndpointSlice, newEndpointSlice
 	switch newEndpointSlice.AddressType {
 	case discovery.AddressTypeIPv4:
 		if backend.ipv4Proxier != nil {
-			if backend.ipv4Proxier.OnEndpointSliceUpdate(oldEndpointSlice, newEndpointSlice) {
+			if backend.ipv4EndpointsTracker.EndpointSliceUpdate(newEndpointSlice, false) {
 				backend.ipv4Sync()
 			}
 		}
 	case discovery.AddressTypeIPv6:
 		if backend.ipv6Proxier != nil {
-			if backend.ipv6Proxier.OnEndpointSliceUpdate(oldEndpointSlice, newEndpointSlice) {
+			if backend.ipv6EndpointsTracker.EndpointSliceUpdate(newEndpointSlice, false) {
 				backend.ipv6Sync()
 			}
 		}
@@ -298,13 +296,13 @@ func (backend *Backend) OnEndpointSliceDelete(endpointSlice *discovery.EndpointS
 	switch endpointSlice.AddressType {
 	case discovery.AddressTypeIPv4:
 		if backend.ipv4Proxier != nil {
-			if backend.ipv4Proxier.OnEndpointSliceDelete(endpointSlice) {
+			if backend.ipv4EndpointsTracker.EndpointSliceUpdate(endpointSlice, true) {
 				backend.ipv4Sync()
 			}
 		}
 	case discovery.AddressTypeIPv6:
 		if backend.ipv6Proxier != nil {
-			if backend.ipv6Proxier.OnEndpointSliceDelete(endpointSlice) {
+			if backend.ipv6EndpointsTracker.EndpointSliceUpdate(endpointSlice, true) {
 				backend.ipv6Sync()
 			}
 		}

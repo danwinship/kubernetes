@@ -35,7 +35,6 @@ import (
 	netutils "k8s.io/utils/net"
 
 	v1 "k8s.io/api/core/v1"
-	discovery "k8s.io/api/discovery/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/client-go/tools/events"
@@ -94,12 +93,6 @@ const (
 type Proxier struct {
 	// the ipfamily on which this proxy is operating on.
 	ipFamily v1.IPFamily
-	// endpointsChanges and serviceChanges contains all changes to endpoints and
-	// services that happened since last syncProxyRules call. For a single object,
-	// changes are accumulated, i.e. previous is state from before all of them,
-	// current is state after applying all of those.
-	endpointsChanges *proxy.EndpointsChangeTracker
-	serviceChanges   *proxy.ServiceChangeTracker
 
 	mu             sync.Mutex // protects the following fields
 	svcPortMap     proxy.ServicePortMap
@@ -204,9 +197,7 @@ func newProxier(
 	proxier := &Proxier{
 		ipFamily:              ipFamily,
 		svcPortMap:            make(proxy.ServicePortMap),
-		serviceChanges:        proxy.NewServiceChangeTracker(ipFamily, newServiceInfo, nil),
 		endpointsMap:          make(proxy.EndpointsMap),
-		endpointsChanges:      proxy.NewEndpointsChangeTracker(ipFamily, hostname, nil, nil),
 		initialSync:           true,
 		excludeCIDRs:          excludeCIDRs,
 		iptables:              ipt,
@@ -240,6 +231,14 @@ func newProxier(
 	}
 
 	return proxier, nil
+}
+
+func (proxier *Proxier) MakeServiceChangeTracker() *proxy.ServiceChangeTracker {
+	return proxy.NewServiceChangeTracker(proxier.ipFamily, newServiceInfo, nil)
+}
+
+func (proxier *Proxier) MakeEndpointsChangeTracker() *proxy.EndpointsChangeTracker {
+	return proxy.NewEndpointsChangeTracker(proxier.ipFamily, proxier.hostname, nil, nil)
 }
 
 // iptablesJumpChain is tables of iptables chains that ipvs proxier used to install iptables or cleanup iptables.
@@ -479,39 +478,6 @@ func (proxier *Proxier) Run() {
 	proxier.gracefuldeleteManager.Run()
 }
 
-// OnServiceAdd is called whenever creation of new service object is observed.
-func (proxier *Proxier) OnServiceAdd(service *v1.Service) bool {
-	return proxier.OnServiceUpdate(nil, service)
-}
-
-// OnServiceUpdate is called whenever modification of an existing service object is observed.
-func (proxier *Proxier) OnServiceUpdate(oldService, service *v1.Service) bool {
-	return proxier.serviceChanges.Update(oldService, service)
-}
-
-// OnServiceDelete is called whenever deletion of an existing service object is observed.
-func (proxier *Proxier) OnServiceDelete(service *v1.Service) bool {
-	return proxier.OnServiceUpdate(service, nil)
-}
-
-// OnEndpointSliceAdd is called whenever creation of a new endpoint slice object
-// is observed.
-func (proxier *Proxier) OnEndpointSliceAdd(endpointSlice *discovery.EndpointSlice) bool {
-	return proxier.endpointsChanges.EndpointSliceUpdate(endpointSlice, false)
-}
-
-// OnEndpointSliceUpdate is called whenever modification of an existing endpoint
-// slice object is observed.
-func (proxier *Proxier) OnEndpointSliceUpdate(_, endpointSlice *discovery.EndpointSlice) bool {
-	return proxier.endpointsChanges.EndpointSliceUpdate(endpointSlice, false)
-}
-
-// OnEndpointSliceDelete is called whenever deletion of an existing endpoint slice
-// object is observed.
-func (proxier *Proxier) OnEndpointSliceDelete(endpointSlice *discovery.EndpointSlice) bool {
-	return proxier.endpointsChanges.EndpointSliceUpdate(endpointSlice, true)
-}
-
 // OnTopologyChange is called when the node's topology-related labels have changed
 func (proxier *Proxier) OnTopologyChange(topologyLabels map[string]string) {
 	proxier.mu.Lock()
@@ -525,7 +491,7 @@ func (proxier *Proxier) OnTopologyChange(topologyLabels map[string]string) {
 func (proxier *Proxier) OnServiceCIDRsChanged(_ []string) {}
 
 // This is where all of the ipvs calls happen.
-func (proxier *Proxier) Sync() proxy.SyncResult {
+func (proxier *Proxier) Sync(serviceChanges *proxy.ServiceChangeTracker, endpointsChanges *proxy.EndpointsChangeTracker) proxy.SyncResult {
 	proxier.mu.Lock()
 	defer proxier.mu.Unlock()
 
@@ -535,11 +501,14 @@ func (proxier *Proxier) Sync() proxy.SyncResult {
 		proxier.initialSync = false
 	}()
 
-	// We assume that if this was called, we really want to sync them,
-	// even if nothing changed in the meantime. In other words, callers are
-	// responsible for detecting no-op changes and not calling this function.
-	_ = proxier.svcPortMap.Update(proxier.serviceChanges)
-	endpointUpdateResult := proxier.endpointsMap.Update(proxier.endpointsChanges)
+	var serviceUpdateResult proxy.UpdateServiceMapResult
+	if serviceChanges != nil {
+		serviceUpdateResult = proxier.svcPortMap.Update(serviceChanges)
+	}
+	var endpointsUpdateResult proxy.UpdateEndpointsMapResult
+	if endpointsChanges != nil {
+		endpointsUpdateResult = proxier.endpointsMap.Update(endpointsChanges)
+	}
 
 	proxier.logger.V(3).Info("Syncing ipvs proxier rules")
 
@@ -1053,7 +1022,7 @@ func (proxier *Proxier) Sync() proxy.SyncResult {
 		metrics.IPTablesRestoreFailuresTotal.WithLabelValues(string(proxier.ipFamily)).Inc()
 		return proxy.SyncFailure
 	}
-	for name, lastChangeTriggerTimes := range endpointUpdateResult.LastChangeTriggerTimes {
+	for name, lastChangeTriggerTimes := range endpointsUpdateResult.LastChangeTriggerTimes {
 		for _, lastChangeTriggerTime := range lastChangeTriggerTimes {
 			latency := metrics.SinceInSeconds(lastChangeTriggerTime)
 			metrics.NetworkProgrammingLatency.WithLabelValues(string(proxier.ipFamily)).Observe(latency)
@@ -1098,7 +1067,7 @@ func (proxier *Proxier) Sync() proxy.SyncResult {
 	metrics.SyncProxyRulesNoLocalEndpointsTotal.WithLabelValues("internal", string(proxier.ipFamily)).Set(float64(proxier.serviceNoLocalEndpointsInternal.Len()))
 	metrics.SyncProxyRulesNoLocalEndpointsTotal.WithLabelValues("external", string(proxier.ipFamily)).Set(float64(proxier.serviceNoLocalEndpointsExternal.Len()))
 
-	if endpointUpdateResult.ConntrackCleanupRequired {
+	if endpointsUpdateResult.ConntrackCleanupRequired {
 		// Finish housekeeping, clear stale conntrack entries for UDP Services
 		conntrack.CleanStaleEntries(proxier.conntrack, proxier.ipFamily, proxier.svcPortMap, proxier.endpointsMap)
 	}

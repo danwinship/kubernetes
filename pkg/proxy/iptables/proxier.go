@@ -36,7 +36,6 @@ import (
 	"time"
 
 	v1 "k8s.io/api/core/v1"
-	discovery "k8s.io/api/discovery/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -95,13 +94,6 @@ const sysctlNFConntrackTCPBeLiberal = "net/netfilter/nf_conntrack_tcp_be_liberal
 type Proxier struct {
 	// ipFamily defines the IP family which this proxier is tracking.
 	ipFamily v1.IPFamily
-
-	// endpointsChanges and serviceChanges contains all changes to endpoints and
-	// services that happened since iptables was synced. For a single object,
-	// changes are accumulated, i.e. previous is state from before all of them,
-	// current is state after applying all of those.
-	endpointsChanges *proxy.EndpointsChangeTracker
-	serviceChanges   *proxy.ServiceChangeTracker
 
 	mu             sync.Mutex // protects the following fields
 	svcPortMap     proxy.ServicePortMap
@@ -195,9 +187,7 @@ func newProxier(ctx context.Context,
 	proxier := &Proxier{
 		ipFamily:                 ipFamily,
 		svcPortMap:               make(proxy.ServicePortMap),
-		serviceChanges:           proxy.NewServiceChangeTracker(ipFamily, newServiceInfo, nil),
 		endpointsMap:             make(proxy.EndpointsMap),
-		endpointsChanges:         proxy.NewEndpointsChangeTracker(ipFamily, hostname, newEndpointInfo, nil),
 		needFullSync:             true,
 		syncPeriod:               syncPeriod,
 		iptables:                 ipt,
@@ -231,6 +221,14 @@ func newProxier(ctx context.Context,
 		proxier.forceSyncProxyRules, syncPeriod, wait.NeverStop)
 
 	return proxier, nil
+}
+
+func (proxier *Proxier) MakeServiceChangeTracker() *proxy.ServiceChangeTracker {
+	return proxy.NewServiceChangeTracker(proxier.ipFamily, newServiceInfo, nil)
+}
+
+func (proxier *Proxier) MakeEndpointsChangeTracker() *proxy.EndpointsChangeTracker {
+	return proxy.NewEndpointsChangeTracker(proxier.ipFamily, proxier.hostname, newEndpointInfo, nil)
 }
 
 // internal struct for string service information
@@ -419,43 +417,6 @@ func (proxier *Proxier) Run() {
 	// No iptables-specific things to do
 }
 
-// OnServiceAdd is called whenever creation of new service object
-// is observed.
-func (proxier *Proxier) OnServiceAdd(service *v1.Service) bool {
-	return proxier.OnServiceUpdate(nil, service)
-}
-
-// OnServiceUpdate is called whenever modification of an existing
-// service object is observed.
-func (proxier *Proxier) OnServiceUpdate(oldService, service *v1.Service) bool {
-	return proxier.serviceChanges.Update(oldService, service)
-}
-
-// OnServiceDelete is called whenever deletion of an existing service
-// object is observed.
-func (proxier *Proxier) OnServiceDelete(service *v1.Service) bool {
-	return proxier.OnServiceUpdate(service, nil)
-
-}
-
-// OnEndpointSliceAdd is called whenever creation of a new endpoint slice object
-// is observed.
-func (proxier *Proxier) OnEndpointSliceAdd(endpointSlice *discovery.EndpointSlice) bool {
-	return proxier.endpointsChanges.EndpointSliceUpdate(endpointSlice, false)
-}
-
-// OnEndpointSliceUpdate is called whenever modification of an existing endpoint
-// slice object is observed.
-func (proxier *Proxier) OnEndpointSliceUpdate(_, endpointSlice *discovery.EndpointSlice) bool {
-	return proxier.endpointsChanges.EndpointSliceUpdate(endpointSlice, false)
-}
-
-// OnEndpointSliceDelete is called whenever deletion of an existing endpoint slice
-// object is observed.
-func (proxier *Proxier) OnEndpointSliceDelete(endpointSlice *discovery.EndpointSlice) bool {
-	return proxier.endpointsChanges.EndpointSliceUpdate(endpointSlice, true)
-}
-
 // OnTopologyChange is called when the node's topology-related labels have changed
 func (proxier *Proxier) OnTopologyChange(topologyLabels map[string]string) {
 	proxier.mu.Lock()
@@ -559,19 +520,19 @@ func (proxier *Proxier) forceSyncProxyRules() {
 	proxier.needFullSync = true
 	proxier.mu.Unlock()
 
-	proxier.Sync()
+	proxier.Sync(nil, nil)
 }
 
 // This is where all of the iptables-save/restore calls happen.
 // The only other iptables rules are those that are setup in iptablesInit()
 // This assumes proxier.mu is NOT held
-func (proxier *Proxier) Sync() proxy.SyncResult {
+func (proxier *Proxier) Sync(serviceChanges *proxy.ServiceChangeTracker, endpointsChanges *proxy.EndpointsChangeTracker) proxy.SyncResult {
 	proxier.mu.Lock()
 	defer proxier.mu.Unlock()
 
 	// The value of proxier.needFullSync may change before the defer funcs run, so
 	// we need to keep track of whether it was set at the *start* of the sync.
-	tryPartialSync := !proxier.needFullSync
+	tryPartialSync := !proxier.needFullSync && serviceChanges != nil && endpointsChanges != nil
 
 	start := time.Now()
 	defer func() {
@@ -582,8 +543,14 @@ func (proxier *Proxier) Sync() proxy.SyncResult {
 		}
 	}()
 
-	serviceUpdateResult := proxier.svcPortMap.Update(proxier.serviceChanges)
-	endpointUpdateResult := proxier.endpointsMap.Update(proxier.endpointsChanges)
+	var serviceUpdateResult proxy.UpdateServiceMapResult
+	if serviceChanges != nil {
+		serviceUpdateResult = proxier.svcPortMap.Update(serviceChanges)
+	}
+	var endpointsUpdateResult proxy.UpdateEndpointsMapResult
+	if endpointsChanges != nil {
+		endpointsUpdateResult = proxier.endpointsMap.Update(endpointsChanges)
+	}
 
 	proxier.logger.V(2).Info("Syncing iptables rules")
 
@@ -993,7 +960,7 @@ func (proxier *Proxier) Sync() proxy.SyncResult {
 		// then we can omit them from the restore input. However, we have to still
 		// figure out how many chains we _would_ have written, to make the metrics
 		// come out right, so we just compute them and throw them away.
-		if tryPartialSync && !serviceUpdateResult.UpdatedServices.Has(svcName.NamespacedName) && !endpointUpdateResult.UpdatedServices.Has(svcName.NamespacedName) {
+		if tryPartialSync && !serviceUpdateResult.UpdatedServices.Has(svcName.NamespacedName) && !endpointsUpdateResult.UpdatedServices.Has(svcName.NamespacedName) {
 			natChains = skippedNatChains
 			natRules = skippedNatRules
 		}
@@ -1327,7 +1294,7 @@ func (proxier *Proxier) Sync() proxy.SyncResult {
 	success = true
 	proxier.needFullSync = false
 
-	for name, lastChangeTriggerTimes := range endpointUpdateResult.LastChangeTriggerTimes {
+	for name, lastChangeTriggerTimes := range endpointsUpdateResult.LastChangeTriggerTimes {
 		for _, lastChangeTriggerTime := range lastChangeTriggerTimes {
 			latency := metrics.SinceInSeconds(lastChangeTriggerTime)
 			metrics.NetworkProgrammingLatency.WithLabelValues(string(proxier.ipFamily)).Observe(latency)
@@ -1348,7 +1315,7 @@ func (proxier *Proxier) Sync() proxy.SyncResult {
 		proxier.logger.Error(err, "Error syncing healthcheck endpoints")
 	}
 
-	if endpointUpdateResult.ConntrackCleanupRequired {
+	if endpointsUpdateResult.ConntrackCleanupRequired {
 		// Finish housekeeping, clear stale conntrack entries for UDP Services
 		conntrack.CleanStaleEntries(proxier.conntrack, proxier.ipFamily, proxier.svcPortMap, proxier.endpointsMap)
 	}

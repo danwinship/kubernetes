@@ -20,23 +20,17 @@ import (
 	"fmt"
 
 	v1 "k8s.io/api/core/v1"
-	discoveryv1 "k8s.io/api/discovery/v1"
 	"k8s.io/apimachinery/pkg/types"
 )
 
 // Proxier is the interface provided by proxier implementations.
 type Proxier interface {
-	// The OnService*, OnEndpointSlice*, and OnNode* methods have the same semantics
-	// as in config.ServiceHandler, config.EndpointSliceHandler, and
-	// config.NodeHandler, but return a bool indicating whether or not a sync is
-	// needed
-	OnServiceAdd(service *v1.Service) bool
-	OnServiceUpdate(oldService, service *v1.Service) bool
-	OnServiceDelete(service *v1.Service) bool
-
-	OnEndpointSliceAdd(endpointSlice *discoveryv1.EndpointSlice) bool
-	OnEndpointSliceUpdate(oldEndpointSlice, newEndpointSlice *discoveryv1.EndpointSlice) bool
-	OnEndpointSliceDelete(endpointSlice *discoveryv1.EndpointSlice) bool
+	// MakeServiceChangeTracker is called by the Backend at startup to create an
+	// appropriate ServiceChangeTracker for the Proxier
+	MakeServiceChangeTracker() *ServiceChangeTracker
+	// MakeEndpointsChangeTracker is called by the Backend at startup to create an
+	// appropriate EndpointsChangeTracker for the Proxier
+	MakeEndpointsChangeTracker() *EndpointsChangeTracker
 
 	// OnServiceCIDRsChanged is called whenever a change is observed
 	// in any of the ServiceCIDRs, and provides complete list of service cidrs.
@@ -50,7 +44,7 @@ type Proxier interface {
 	Run()
 
 	// Sync immediately synchronizes the Proxier's current state to proxy rules.
-	Sync() SyncResult
+	Sync(*ServiceChangeTracker, *EndpointsChangeTracker) SyncResult
 }
 
 type SyncResult int
