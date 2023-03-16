@@ -2215,25 +2215,38 @@ func TestOpenShiftDNSHack(t *testing.T) {
 	svcIP := "172.30.0.10"
 	svcPort := 53
 	podPort := 5353
-	svcPortName := proxy.ServicePortName{
-		NamespacedName: makeNSN("openshift-dns", "dns-default"),
+	svcName := makeNSN("openshift-dns", "dns-default")
+	svcPortNameUDP := proxy.ServicePortName{
+		NamespacedName: svcName,
 		Port:           "dns",
 		Protocol:       v1.ProtocolUDP,
 	}
+	svcPortNameTCP := proxy.ServicePortName{
+		NamespacedName: svcName,
+		Port:           "dns-tcp",
+		Protocol:       v1.ProtocolTCP,
+	}
 
 	makeServiceMap(fp,
-		makeTestService(svcPortName.Namespace, svcPortName.Name, func(svc *v1.Service) {
+		makeTestService(svcName.Namespace, svcName.Name, func(svc *v1.Service) {
 			svc.Spec.ClusterIP = svcIP
-			svc.Spec.Ports = []v1.ServicePort{{
-				Name:     svcPortName.Port,
-				Port:     int32(svcPort),
-				Protocol: svcPortName.Protocol,
-			}}
+			svc.Spec.Ports = []v1.ServicePort{
+				{
+					Name:     svcPortNameUDP.Port,
+					Port:     int32(svcPort),
+					Protocol: svcPortNameUDP.Protocol,
+				},
+				{
+					Name:     svcPortNameTCP.Port,
+					Port:     int32(svcPort),
+					Protocol: svcPortNameTCP.Protocol,
+				},
+			}
 		}),
 	)
 
 	populateEndpointSlices(fp,
-		makeTestEndpointSlice(svcPortName.Namespace, svcPortName.Name, 1, func(eps *discovery.EndpointSlice) {
+		makeTestEndpointSlice(svcName.Namespace, svcName.Name, 1, func(eps *discovery.EndpointSlice) {
 			eps.AddressType = discovery.AddressTypeIPv4
 			eps.Endpoints = []discovery.Endpoint{{
 				// This endpoint is ignored because it's remote
@@ -2243,11 +2256,18 @@ func TestOpenShiftDNSHack(t *testing.T) {
 				Addresses: []string{"10.180.0.1"},
 				NodeName:  pointer.StringPtr(testHostname),
 			}}
-			eps.Ports = []discovery.EndpointPort{{
-				Name:     pointer.StringPtr(svcPortName.Port),
-				Port:     pointer.Int32(int32(podPort)),
-				Protocol: &svcPortName.Protocol,
-			}}
+			eps.Ports = []discovery.EndpointPort{
+				{
+					Name:     pointer.StringPtr(svcPortNameUDP.Port),
+					Port:     pointer.Int32(int32(podPort)),
+					Protocol: &svcPortNameUDP.Protocol,
+				},
+				{
+					Name:     pointer.StringPtr(svcPortNameTCP.Port),
+					Port:     pointer.Int32(int32(podPort)),
+					Protocol: &svcPortNameTCP.Protocol,
+				},
+			}
 		}),
 	)
 
@@ -2281,16 +2301,23 @@ func TestOpenShiftDNSHack(t *testing.T) {
 		:KUBE-SERVICES - [0:0]
 		:KUBE-MARK-MASQ - [0:0]
 		:KUBE-POSTROUTING - [0:0]
+		:KUBE-SEP-2BB3P6JTCQXWOZ75 - [0:0]
 		:KUBE-SEP-DYOI7QYSVZXR6VUA - [0:0]
+		:KUBE-SVC-6BRQXW4I6ZZ3LHZH - [0:0]
 		:KUBE-SVC-BGNS3J6UB7MMLVDO - [0:0]
 		-A KUBE-SERVICES -m comment --comment "openshift-dns/dns-default:dns cluster IP" -m udp -p udp -d 172.30.0.10 --dport 53 -j KUBE-SVC-BGNS3J6UB7MMLVDO
+		-A KUBE-SERVICES -m comment --comment "openshift-dns/dns-default:dns-tcp cluster IP" -m tcp -p tcp -d 172.30.0.10 --dport 53 -j KUBE-SVC-6BRQXW4I6ZZ3LHZH
 		-A KUBE-SERVICES -m comment --comment "kubernetes service nodeports; NOTE: this must be the last rule in this chain" -m addrtype --dst-type LOCAL -j KUBE-NODEPORTS
 		-A KUBE-MARK-MASQ -j MARK --or-mark 0x4000
 		-A KUBE-POSTROUTING -m mark ! --mark 0x4000/0x4000 -j RETURN
 		-A KUBE-POSTROUTING -j MARK --xor-mark 0x4000
 		-A KUBE-POSTROUTING -m comment --comment "kubernetes service traffic requiring SNAT" -j MASQUERADE
+		-A KUBE-SEP-2BB3P6JTCQXWOZ75 -m comment --comment openshift-dns/dns-default:dns-tcp -s 10.180.0.1 -j KUBE-MARK-MASQ
+		-A KUBE-SEP-2BB3P6JTCQXWOZ75 -m comment --comment openshift-dns/dns-default:dns-tcp -m tcp -p tcp -j DNAT --to-destination 10.180.0.1:5353
 		-A KUBE-SEP-DYOI7QYSVZXR6VUA -m comment --comment openshift-dns/dns-default:dns -s 10.180.0.1 -j KUBE-MARK-MASQ
 		-A KUBE-SEP-DYOI7QYSVZXR6VUA -m comment --comment openshift-dns/dns-default:dns -m udp -p udp -j DNAT --to-destination 10.180.0.1:5353
+		-A KUBE-SVC-6BRQXW4I6ZZ3LHZH -m comment --comment "openshift-dns/dns-default:dns-tcp cluster IP" -m tcp -p tcp -d 172.30.0.10 --dport 53 ! -s 10.0.0.0/8 -j KUBE-MARK-MASQ
+		-A KUBE-SVC-6BRQXW4I6ZZ3LHZH -m comment --comment "openshift-dns/dns-default:dns-tcp -> 10.180.0.1:5353" -j KUBE-SEP-2BB3P6JTCQXWOZ75
 		-A KUBE-SVC-BGNS3J6UB7MMLVDO -m comment --comment "openshift-dns/dns-default:dns cluster IP" -m udp -p udp -d 172.30.0.10 --dport 53 ! -s 10.0.0.0/8 -j KUBE-MARK-MASQ
 		-A KUBE-SVC-BGNS3J6UB7MMLVDO -m comment --comment "openshift-dns/dns-default:dns -> 10.180.0.1:5353" -j KUBE-SEP-DYOI7QYSVZXR6VUA
 		COMMIT
