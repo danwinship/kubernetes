@@ -29,8 +29,7 @@ func NewInt32(items ...int32) Int32 {
 	return Int32(New[int32](items...))
 }
 
-// Int32KeySet creates a Int32 from a keys of a map[int32](? extends interface{}).
-// If the value passed in is not actually a map, this will panic.
+// Int32KeySet creates a Int32 from a keys of a map[int32]T (for any type T).
 func Int32KeySet[T any](theMap map[int32]T) Int32 {
 	return Int32(KeySet(theMap))
 }

@@ -20,7 +20,8 @@ import (
 	"sort"
 )
 
-// Set is a set of the same type elements, implemented via map[comparable]struct{} for minimal memory consumption.
+// Set[T] is a set of elements of a given type T (implemented via map[T]struct{} for
+// minimal memory consumption).
 type Set[T comparable] map[T]Empty
 
 // cast transforms specified set to generic Set[T].
@@ -34,8 +35,7 @@ func New[T comparable](items ...T) Set[T] {
 	return ss
 }
 
-// KeySet creates a Set from a keys of a map[comparable](? extends interface{}).
-// If the value passed in is not actually a map, this will panic.
+// KeySet creates a Set[T] from the keys of a map of any type
 func KeySet[T comparable, V any](theMap map[T]V) Set[T] {
 	ret := Set[T]{}
 	for keyValue := range theMap {

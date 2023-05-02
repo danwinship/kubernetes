@@ -29,8 +29,7 @@ func NewByte(items ...byte) Byte {
 	return Byte(New[byte](items...))
 }
 
-// ByteKeySet creates a Byte from a keys of a map[byte](? extends interface{}).
-// If the value passed in is not actually a map, this will panic.
+// ByteKeySet creates a Byte from a keys of a map[byte]T (for any type T).
 func ByteKeySet[T any](theMap map[byte]T) Byte {
 	return Byte(KeySet(theMap))
 }

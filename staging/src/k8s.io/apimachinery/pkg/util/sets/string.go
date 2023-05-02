@@ -29,8 +29,7 @@ func NewString(items ...string) String {
 	return String(New[string](items...))
 }
 
-// StringKeySet creates a String from a keys of a map[string](? extends interface{}).
-// If the value passed in is not actually a map, this will panic.
+// StringKeySet creates a String from a keys of a map[string]T (for any type T).
 func StringKeySet[T any](theMap map[string]T) String {
 	return String(KeySet(theMap))
 }
