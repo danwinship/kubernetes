@@ -71,14 +71,14 @@ type ServicePort interface {
 	SessionAffinityType() v1.ServiceAffinity
 	// StickyMaxAgeSeconds returns service max connection age
 	StickyMaxAgeSeconds() int
-	// ExternalIPStrings returns service ExternalIPs as a string array.
-	ExternalIPStrings() []string
-	// LoadBalancerVIPStrings returns service LoadBalancerIPs which are VIP mode as a string array.
-	LoadBalancerVIPStrings() []string
+	// ExternalIPs returns service ExternalIPs as an array of net.IP
+	ExternalIPs() []net.IP
+	// LoadBalancerVIPs returns service LoadBalancerIPs which are VIP mode as an array of net.IP
+	LoadBalancerVIPs() []net.IP
 	// Protocol returns service protocol.
 	Protocol() v1.Protocol
-	// LoadBalancerSourceRanges returns service LoadBalancerSourceRanges if present empty array if not
-	LoadBalancerSourceRanges() []string
+	// LoadBalancerSourceRanges returns service LoadBalancerSourceRanges as an array of *net.IPNet
+	LoadBalancerSourceRanges() []*net.IPNet
 	// HealthCheckNodePort returns service health check node port if present.  If return 0, it means not present.
 	HealthCheckNodePort() uint16
 	// NodePort returns a service Node port if present. If return 0, it means not present.

@@ -51,7 +51,6 @@ import (
 	"k8s.io/kubernetes/pkg/util/async"
 	utiliptables "k8s.io/kubernetes/pkg/util/iptables"
 	utilexec "k8s.io/utils/exec"
-	netutils "k8s.io/utils/net"
 )
 
 const (
@@ -1032,7 +1031,7 @@ func (proxier *Proxier) syncProxyRules() {
 		// create a firewall chain.
 		loadBalancerTrafficChain := externalTrafficChain
 		fwChain := svcInfo.firewallChainName
-		usesFWChain := hasEndpoints && len(svcInfo.LoadBalancerVIPStrings()) > 0 && len(svcInfo.LoadBalancerSourceRanges()) > 0
+		usesFWChain := hasEndpoints && len(svcInfo.LoadBalancerVIPs()) > 0 && len(svcInfo.LoadBalancerSourceRanges()) > 0
 		if usesFWChain {
 			activeNATChains[fwChain] = true
 			loadBalancerTrafficChain = fwChain
@@ -1096,7 +1095,7 @@ func (proxier *Proxier) syncProxyRules() {
 		}
 
 		// Capture externalIPs.
-		for _, externalIP := range svcInfo.ExternalIPStrings() {
+		for _, externalIP := range svcInfo.ExternalIPs() {
 			if hasEndpoints {
 				// Send traffic bound for external IPs to the "external
 				// destinations" chain.
@@ -1104,7 +1103,7 @@ func (proxier *Proxier) syncProxyRules() {
 					"-A", string(kubeServicesChain),
 					"-m", "comment", "--comment", fmt.Sprintf(`"%s external IP"`, svcPortNameString),
 					"-m", protocol, "-p", protocol,
-					"-d", externalIP,
+					"-d", externalIP.String(),
 					"--dport", strconv.Itoa(int(svcInfo.Port())),
 					"-j", string(externalTrafficChain))
 			}
@@ -1116,7 +1115,7 @@ func (proxier *Proxier) syncProxyRules() {
 					"-A", string(kubeExternalServicesChain),
 					"-m", "comment", "--comment", externalTrafficFilterComment,
 					"-m", protocol, "-p", protocol,
-					"-d", externalIP,
+					"-d", externalIP.String(),
 					"--dport", strconv.Itoa(int(svcInfo.Port())),
 					"-j", externalTrafficFilterTarget,
 				)
@@ -1124,13 +1123,13 @@ func (proxier *Proxier) syncProxyRules() {
 		}
 
 		// Capture load-balancer ingress.
-		for _, lbip := range svcInfo.LoadBalancerVIPStrings() {
+		for _, lbip := range svcInfo.LoadBalancerVIPs() {
 			if hasEndpoints {
 				natRules.Write(
 					"-A", string(kubeServicesChain),
 					"-m", "comment", "--comment", fmt.Sprintf(`"%s loadbalancer IP"`, svcPortNameString),
 					"-m", protocol, "-p", protocol,
-					"-d", lbip,
+					"-d", lbip.String(),
 					"--dport", strconv.Itoa(int(svcInfo.Port())),
 					"-j", string(loadBalancerTrafficChain))
 
@@ -1140,7 +1139,7 @@ func (proxier *Proxier) syncProxyRules() {
 					"-A", string(kubeProxyFirewallChain),
 					"-m", "comment", "--comment", fmt.Sprintf(`"%s traffic not accepted by %s"`, svcPortNameString, svcInfo.firewallChainName),
 					"-m", protocol, "-p", protocol,
-					"-d", lbip,
+					"-d", lbip.String(),
 					"--dport", strconv.Itoa(int(svcInfo.Port())),
 					"-j", "DROP")
 			}
@@ -1149,12 +1148,12 @@ func (proxier *Proxier) syncProxyRules() {
 			// Either no endpoints at all (REJECT) or no endpoints for
 			// external traffic (DROP anything that didn't get short-circuited
 			// by the EXT chain.)
-			for _, lbip := range svcInfo.LoadBalancerVIPStrings() {
+			for _, lbip := range svcInfo.LoadBalancerVIPs() {
 				filterRules.Write(
 					"-A", string(kubeExternalServicesChain),
 					"-m", "comment", "--comment", externalTrafficFilterComment,
 					"-m", protocol, "-p", protocol,
-					"-d", lbip,
+					"-d", lbip.String(),
 					"--dport", strconv.Itoa(int(svcInfo.Port())),
 					"-j", externalTrafficFilterTarget,
 				)
@@ -1313,11 +1312,8 @@ func (proxier *Proxier) syncProxyRules() {
 			// firewall filter based on each source range
 			allowFromNode := false
 			for _, src := range svcInfo.LoadBalancerSourceRanges() {
-				natRules.Write(args, "-s", src, "-j", string(externalTrafficChain))
-				_, cidr, err := netutils.ParseCIDRSloppy(src)
-				if err != nil {
-					klog.ErrorS(err, "Error parsing CIDR in LoadBalancerSourceRanges, dropping it", "cidr", cidr)
-				} else if cidr.Contains(proxier.nodeIP) {
+				natRules.Write(args, "-s", src.String(), "-j", string(externalTrafficChain))
+				if src.Contains(proxier.nodeIP) {
 					allowFromNode = true
 				}
 			}
@@ -1327,10 +1323,10 @@ func (proxier *Proxier) syncProxyRules() {
 			// will loop back with the source IP set to the VIP.  We
 			// need the following rules to allow requests from this node.
 			if allowFromNode {
-				for _, lbip := range svcInfo.LoadBalancerVIPStrings() {
+				for _, lbip := range svcInfo.LoadBalancerVIPs() {
 					natRules.Write(
 						args,
-						"-s", lbip,
+						"-s", lbip.String(),
 						"-j", string(externalTrafficChain))
 				}
 			}

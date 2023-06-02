@@ -44,11 +44,11 @@ type BaseServicePortInfo struct {
 	port                     uint16
 	protocol                 v1.Protocol
 	nodePort                 uint16
-	loadBalancerVIPs         []string
+	loadBalancerVIPs         []net.IP
 	sessionAffinityType      v1.ServiceAffinity
 	stickyMaxAgeSeconds      int
-	externalIPs              []string
-	loadBalancerSourceRanges []string
+	externalIPs              []net.IP
+	loadBalancerSourceRanges []*net.IPNet
 	healthCheckNodePort      uint16
 	externalPolicyLocal      bool
 	internalPolicyLocal      bool
@@ -89,7 +89,7 @@ func (bsvcPortInfo *BaseServicePortInfo) Protocol() v1.Protocol {
 }
 
 // LoadBalancerSourceRanges is part of ServicePort interface
-func (bsvcPortInfo *BaseServicePortInfo) LoadBalancerSourceRanges() []string {
+func (bsvcPortInfo *BaseServicePortInfo) LoadBalancerSourceRanges() []*net.IPNet {
 	return bsvcPortInfo.loadBalancerSourceRanges
 }
 
@@ -103,13 +103,13 @@ func (bsvcPortInfo *BaseServicePortInfo) NodePort() uint16 {
 	return bsvcPortInfo.nodePort
 }
 
-// ExternalIPStrings is part of ServicePort interface.
-func (bsvcPortInfo *BaseServicePortInfo) ExternalIPStrings() []string {
+// ExternalIPs is part of ServicePort interface.
+func (bsvcPortInfo *BaseServicePortInfo) ExternalIPs() []net.IP {
 	return bsvcPortInfo.externalIPs
 }
 
-// LoadBalancerVIPStrings is part of ServicePort interface.
-func (bsvcPortInfo *BaseServicePortInfo) LoadBalancerVIPStrings() []string {
+// LoadBalancerVIPs is part of ServicePort interface.
+func (bsvcPortInfo *BaseServicePortInfo) LoadBalancerVIPs() []net.IP {
 	return bsvcPortInfo.loadBalancerVIPs
 }
 
@@ -196,15 +196,15 @@ func (sct *ServiceChangeTracker) newBaseServiceInfo(port *v1.ServicePort, servic
 	// Log the IPs not matching the ipFamily
 	if ips, ok := ipFamilyMap[proxyutil.OtherIPFamily(sct.ipFamily)]; ok && len(ips) > 0 {
 		klog.V(4).InfoS("Service change tracker ignored the following external IPs for given service as they don't match IP Family",
-			"ipFamily", sct.ipFamily, "externalIPs", strings.Join(ips, ", "), "service", klog.KObj(service))
+			"ipFamily", sct.ipFamily, "externalIPs", ips, klog.KObj(service))
 	}
 
-	ipFamilyMap = proxyutil.MapCIDRsByIPFamily(loadBalancerSourceRanges)
-	info.loadBalancerSourceRanges = ipFamilyMap[sct.ipFamily]
+	cidrFamilyMap := proxyutil.MapCIDRsByIPFamily(loadBalancerSourceRanges)
+	info.loadBalancerSourceRanges = cidrFamilyMap[sct.ipFamily]
 	// Log the CIDRs not matching the ipFamily
-	if cidrs, ok := ipFamilyMap[proxyutil.OtherIPFamily(sct.ipFamily)]; ok && len(cidrs) > 0 {
+	if cidrs, ok := cidrFamilyMap[proxyutil.OtherIPFamily(sct.ipFamily)]; ok && len(cidrs) > 0 {
 		klog.V(4).InfoS("Service change tracker ignored the following load balancer source ranges for given Service as they don't match IP Family",
-			"ipFamily", sct.ipFamily, "loadBalancerSourceRanges", strings.Join(cidrs, ", "), "service", klog.KObj(service))
+			"ipFamily", sct.ipFamily, "loadBalancerSourceRanges", cidrs, klog.KObj(service))
 	}
 
 	// Obtain Load Balancer Ingress
@@ -223,10 +223,15 @@ func (sct *ServiceChangeTracker) newBaseServiceInfo(port *v1.ServicePort, servic
 			continue
 		}
 
+		ip := net.ParseIP(ing.IP)
+		if ip == nil {
+			continue
+		}
+
 		// kube-proxy does not implement IP family translation, skip addresses with
 		// different IP family
-		if ipFamily := proxyutil.GetIPFamilyFromIP(ing.IP); ipFamily == sct.ipFamily {
-			info.loadBalancerVIPs = append(info.loadBalancerVIPs, ing.IP)
+		if ipFamily := proxyutil.GetIPFamilyFromIP(ip); ipFamily == sct.ipFamily {
+			info.loadBalancerVIPs = append(info.loadBalancerVIPs, ip)
 		} else {
 			invalidIPs = append(invalidIPs, ing.IP)
 		}

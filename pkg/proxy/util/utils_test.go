@@ -250,8 +250,8 @@ func TestMapIPsByIPFamily(t *testing.T) {
 	testCases := []struct {
 		desc string
 		ips  []string
-		ipv4 []string
-		ipv6 []string
+		ipv4 []net.IP
+		ipv6 []net.IP
 	}{
 		{
 			desc: "empty input",
@@ -263,31 +263,31 @@ func TestMapIPsByIPFamily(t *testing.T) {
 			desc: "one IPv6",
 			ips:  []string{"fd00:20::1"},
 			ipv4: nil,
-			ipv6: []string{"fd00:20::1"},
+			ipv6: []net.IP{netutils.ParseIPSloppy("fd00:20::1")},
 		},
 		{
 			desc: "one IPv4",
 			ips:  []string{"192.168.200.2"},
-			ipv4: []string{"192.168.200.2"},
+			ipv4: []net.IP{netutils.ParseIPSloppy("192.168.200.2")},
 			ipv6: nil,
 		},
 		{
 			desc: "dual-stack",
 			ips:  []string{"192.168.200.2", "192.1.34.23", "fd00:20::1", "2001:db9::3"},
-			ipv4: []string{"192.168.200.2", "192.1.34.23"},
-			ipv6: []string{"fd00:20::1", "2001:db9::3"},
+			ipv4: []net.IP{netutils.ParseIPSloppy("192.168.200.2"), netutils.ParseIPSloppy("192.1.34.23")},
+			ipv6: []net.IP{netutils.ParseIPSloppy("fd00:20::1"), netutils.ParseIPSloppy("2001:db9::3")},
 		},
 		{
 			desc: "multiple IPv4",
 			ips:  []string{"192.168.200.2", "192.1.34.23"},
-			ipv4: []string{"192.168.200.2", "192.1.34.23"},
+			ipv4: []net.IP{netutils.ParseIPSloppy("192.168.200.2"), netutils.ParseIPSloppy("192.1.34.23")},
 			ipv6: nil,
 		},
 		{
 			desc: "multiple IPv6",
 			ips:  []string{"fd00:20::1", "2001:db9::3"},
 			ipv4: nil,
-			ipv6: []string{"fd00:20::1", "2001:db9::3"},
+			ipv6: []net.IP{netutils.ParseIPSloppy("fd00:20::1"), netutils.ParseIPSloppy("2001:db9::3")},
 		},
 	}
 
@@ -309,8 +309,8 @@ func TestMapCIDRsByIPFamily(t *testing.T) {
 	testCases := []struct {
 		desc  string
 		cidrs []string
-		ipv4  []string
-		ipv6  []string
+		ipv4  []*net.IPNet
+		ipv6  []*net.IPNet
 	}{
 		{
 			desc:  "empty input",
@@ -322,31 +322,31 @@ func TestMapCIDRsByIPFamily(t *testing.T) {
 			desc:  "one IPv6",
 			cidrs: []string{"fd00:20::1/64"},
 			ipv4:  nil,
-			ipv6:  []string{"fd00:20::1/64"},
+			ipv6:  []*net.IPNet{mustParseIPNet("fd00:20::1/64")},
 		},
 		{
 			desc:  "one IPv4",
 			cidrs: []string{"192.168.200.2/24"},
-			ipv4:  []string{"192.168.200.2/24"},
+			ipv4:  []*net.IPNet{mustParseIPNet("192.168.200.2/24")},
 			ipv6:  nil,
 		},
 		{
 			desc:  "dual-stack",
 			cidrs: []string{"192.168.200.2/24", "192.1.34.23/24", "fd00:20::1/64", "2001:db9::3/64"},
-			ipv4:  []string{"192.168.200.2/24", "192.1.34.23/24"},
-			ipv6:  []string{"fd00:20::1/64", "2001:db9::3/64"},
+			ipv4:  []*net.IPNet{mustParseIPNet("192.168.200.2/24"), mustParseIPNet("192.1.34.23/24")},
+			ipv6:  []*net.IPNet{mustParseIPNet("fd00:20::1/64"), mustParseIPNet("2001:db9::3/64")},
 		},
 		{
 			desc:  "multiple IPv4",
 			cidrs: []string{"192.168.200.2/24", "192.1.34.23/24"},
-			ipv4:  []string{"192.168.200.2/24", "192.1.34.23/24"},
+			ipv4:  []*net.IPNet{mustParseIPNet("192.168.200.2/24"), mustParseIPNet("192.1.34.23/24")},
 			ipv6:  nil,
 		},
 		{
 			desc:  "multiple IPv6",
 			cidrs: []string{"fd00:20::1/64", "2001:db9::3/64"},
 			ipv4:  nil,
-			ipv6:  []string{"fd00:20::1/64", "2001:db9::3/64"},
+			ipv6:  []*net.IPNet{mustParseIPNet("fd00:20::1/64"), mustParseIPNet("2001:db9::3/64")},
 		},
 	}
 
@@ -626,7 +626,7 @@ func mustParseIPAddr(str string) net.Addr {
 	}
 	return a
 }
-func mustParseIPNet(str string) net.Addr {
+func mustParseIPNet(str string) *net.IPNet {
 	_, n, err := netutils.ParseCIDRSloppy(str)
 	if err != nil {
 		panic("mustParseIPNet")
