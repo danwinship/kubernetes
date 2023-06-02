@@ -39,7 +39,7 @@ func CleanStaleEntries(isIPv6 bool, exec utilexec.Interface, svcPortMap proxy.Se
 // need to delete those entries so further traffic doesn't get dropped.
 func deleteStaleServiceConntrackEntries(isIPv6 bool, exec utilexec.Interface, svcPortMap proxy.ServicePortMap, serviceUpdateResult proxy.UpdateServiceMapResult, endpointsUpdateResult proxy.UpdateEndpointsMapResult) {
 	conntrackCleanupServiceIPs := serviceUpdateResult.DeletedUDPClusterIPs
-	conntrackCleanupServiceNodePorts := sets.New[int]()
+	conntrackCleanupServiceNodePorts := sets.New[uint16]()
 
 	// merge newly active services gathered from endpointsUpdateResult
 	// a UDP service that changes from 0 to non-0 endpoints is newly active.

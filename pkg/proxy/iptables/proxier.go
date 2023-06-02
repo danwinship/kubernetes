@@ -1081,7 +1081,7 @@ func (proxier *Proxier) syncProxyRules() {
 				"-m", "comment", "--comment", fmt.Sprintf(`"%s cluster IP"`, svcPortNameString),
 				"-m", protocol, "-p", protocol,
 				"-d", svcInfo.ClusterIP().String(),
-				"--dport", strconv.Itoa(svcInfo.Port()),
+				"--dport", strconv.Itoa(int(svcInfo.Port())),
 				"-j", string(internalTrafficChain))
 		} else {
 			// No endpoints.
@@ -1090,7 +1090,7 @@ func (proxier *Proxier) syncProxyRules() {
 				"-m", "comment", "--comment", internalTrafficFilterComment,
 				"-m", protocol, "-p", protocol,
 				"-d", svcInfo.ClusterIP().String(),
-				"--dport", strconv.Itoa(svcInfo.Port()),
+				"--dport", strconv.Itoa(int(svcInfo.Port())),
 				"-j", internalTrafficFilterTarget,
 			)
 		}
@@ -1105,7 +1105,7 @@ func (proxier *Proxier) syncProxyRules() {
 					"-m", "comment", "--comment", fmt.Sprintf(`"%s external IP"`, svcPortNameString),
 					"-m", protocol, "-p", protocol,
 					"-d", externalIP,
-					"--dport", strconv.Itoa(svcInfo.Port()),
+					"--dport", strconv.Itoa(int(svcInfo.Port())),
 					"-j", string(externalTrafficChain))
 			}
 			if !hasExternalEndpoints {
@@ -1117,7 +1117,7 @@ func (proxier *Proxier) syncProxyRules() {
 					"-m", "comment", "--comment", externalTrafficFilterComment,
 					"-m", protocol, "-p", protocol,
 					"-d", externalIP,
-					"--dport", strconv.Itoa(svcInfo.Port()),
+					"--dport", strconv.Itoa(int(svcInfo.Port())),
 					"-j", externalTrafficFilterTarget,
 				)
 			}
@@ -1131,7 +1131,7 @@ func (proxier *Proxier) syncProxyRules() {
 					"-m", "comment", "--comment", fmt.Sprintf(`"%s loadbalancer IP"`, svcPortNameString),
 					"-m", protocol, "-p", protocol,
 					"-d", lbip,
-					"--dport", strconv.Itoa(svcInfo.Port()),
+					"--dport", strconv.Itoa(int(svcInfo.Port())),
 					"-j", string(loadBalancerTrafficChain))
 
 			}
@@ -1141,7 +1141,7 @@ func (proxier *Proxier) syncProxyRules() {
 					"-m", "comment", "--comment", fmt.Sprintf(`"%s traffic not accepted by %s"`, svcPortNameString, svcInfo.firewallChainName),
 					"-m", protocol, "-p", protocol,
 					"-d", lbip,
-					"--dport", strconv.Itoa(svcInfo.Port()),
+					"--dport", strconv.Itoa(int(svcInfo.Port())),
 					"-j", "DROP")
 			}
 		}
@@ -1155,7 +1155,7 @@ func (proxier *Proxier) syncProxyRules() {
 					"-m", "comment", "--comment", externalTrafficFilterComment,
 					"-m", protocol, "-p", protocol,
 					"-d", lbip,
-					"--dport", strconv.Itoa(svcInfo.Port()),
+					"--dport", strconv.Itoa(int(svcInfo.Port())),
 					"-j", externalTrafficFilterTarget,
 				)
 			}
@@ -1171,7 +1171,7 @@ func (proxier *Proxier) syncProxyRules() {
 					"-A", string(kubeNodePortsChain),
 					"-m", "comment", "--comment", svcPortNameString,
 					"-m", protocol, "-p", protocol,
-					"--dport", strconv.Itoa(svcInfo.NodePort()),
+					"--dport", strconv.Itoa(int(svcInfo.NodePort())),
 					"-j", string(externalTrafficChain))
 			}
 			if !hasExternalEndpoints {
@@ -1183,7 +1183,7 @@ func (proxier *Proxier) syncProxyRules() {
 					"-m", "comment", "--comment", externalTrafficFilterComment,
 					"-m", "addrtype", "--dst-type", "LOCAL",
 					"-m", protocol, "-p", protocol,
-					"--dport", strconv.Itoa(svcInfo.NodePort()),
+					"--dport", strconv.Itoa(int(svcInfo.NodePort())),
 					"-j", externalTrafficFilterTarget,
 				)
 			}
@@ -1197,7 +1197,7 @@ func (proxier *Proxier) syncProxyRules() {
 				"-A", string(kubeNodePortsChain),
 				"-m", "comment", "--comment", fmt.Sprintf(`"%s health check node port"`, svcPortNameString),
 				"-m", "tcp", "-p", "tcp",
-				"--dport", strconv.Itoa(svcInfo.HealthCheckNodePort()),
+				"--dport", strconv.Itoa(int(svcInfo.HealthCheckNodePort())),
 				"-j", "ACCEPT",
 			)
 		}
@@ -1218,7 +1218,7 @@ func (proxier *Proxier) syncProxyRules() {
 				"-m", "comment", "--comment", fmt.Sprintf(`"%s cluster IP"`, svcPortNameString),
 				"-m", protocol, "-p", protocol,
 				"-d", svcInfo.ClusterIP().String(),
-				"--dport", strconv.Itoa(svcInfo.Port()),
+				"--dport", strconv.Itoa(int(svcInfo.Port())),
 			)
 			if proxier.masqueradeAll {
 				natRules.Write(

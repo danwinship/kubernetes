@@ -151,7 +151,7 @@ type Entry struct {
 	// All entries' IP addresses in the same ip set has same the protocol, IPv4 or IPv6.
 	IP string
 	// Port is the entry's Port.
-	Port int
+	Port uint16
 	// Protocol is the entry's Protocol.  The protocols of entries in the same ip set are all
 	// the same.  The accepted protocols are TCP, UDP and SCTP.
 	Protocol string
@@ -166,10 +166,6 @@ type Entry struct {
 
 // Validate checks if a given ipset entry is valid or not.  The set parameter is the ipset that entry belongs to.
 func (e *Entry) Validate(set *IPSet) bool {
-	if e.Port < 0 {
-		klog.ErrorS(validationError, "port number should be >=0", "entry", e, "port", e.Port, "ipset", set)
-		return false
-	}
 	switch e.SetType {
 	case HashIP:
 		//check if IP of Entry is valid.
@@ -232,19 +228,19 @@ func (e *Entry) String() string {
 	case HashIPPort:
 		// Entry{192.168.1.1, udp, 53} -> 192.168.1.1,udp:53
 		// Entry{192.168.1.2, tcp, 8080} -> 192.168.1.2,tcp:8080
-		return fmt.Sprintf("%s,%s:%s", e.IP, e.Protocol, strconv.Itoa(e.Port))
+		return fmt.Sprintf("%s,%s:%d", e.IP, e.Protocol, e.Port)
 	case HashIPPortIP:
 		// Entry{192.168.1.1, udp, 53, 10.0.0.1} -> 192.168.1.1,udp:53,10.0.0.1
 		// Entry{192.168.1.2, tcp, 8080, 192.168.1.2} -> 192.168.1.2,tcp:8080,192.168.1.2
-		return fmt.Sprintf("%s,%s:%s,%s", e.IP, e.Protocol, strconv.Itoa(e.Port), e.IP2)
+		return fmt.Sprintf("%s,%s:%d,%s", e.IP, e.Protocol, e.Port, e.IP2)
 	case HashIPPortNet:
 		// Entry{192.168.1.2, udp, 80, 10.0.1.0/24} -> 192.168.1.2,udp:80,10.0.1.0/24
 		// Entry{192.168.2,25, tcp, 8080, 10.1.0.0/16} -> 192.168.2,25,tcp:8080,10.1.0.0/16
-		return fmt.Sprintf("%s,%s:%s,%s", e.IP, e.Protocol, strconv.Itoa(e.Port), e.Net)
+		return fmt.Sprintf("%s,%s:%d,%s", e.IP, e.Protocol, e.Port, e.Net)
 	case BitmapPort:
 		// Entry{53} -> 53
 		// Entry{8080} -> 8080
-		return strconv.Itoa(e.Port)
+		return fmt.Sprintf("%d", e.Port)
 	}
 	return ""
 }
@@ -497,35 +493,32 @@ func validateProtocol(protocol string) bool {
 
 // parsePortRange parse the begin and end port from a raw string(format: a-b).  beginPort <= endPort
 // in the return value.
-func parsePortRange(portRange string) (beginPort int, endPort int, err error) {
+func parsePortRange(portRange string) (beginPort uint16, endPort uint16, err error) {
 	if len(portRange) == 0 {
 		portRange = DefaultPortRange
 	}
 
 	strs := strings.Split(portRange, "-")
 	if len(strs) != 2 {
-		// port number -1 indicates invalid
-		return -1, -1, fmt.Errorf("port range should be in the format of `a-b`")
+		return 0, 0, fmt.Errorf("port range should be in the format of `a-b`")
 	}
 	for i := range strs {
 		num, err := strconv.Atoi(strs[i])
 		if err != nil {
-			// port number -1 indicates invalid
-			return -1, -1, err
+			return 0, 0, err
 		}
 		if num < 0 {
-			// port number -1 indicates invalid
-			return -1, -1, fmt.Errorf("port number %d should be >=0", num)
+			return 0, 0, fmt.Errorf("port number %d should be >=0", num)
 		}
 		if i == 0 {
-			beginPort = num
+			beginPort = uint16(num)
 			continue
 		}
-		endPort = num
+		endPort = uint16(num)
 		// switch when first port number > second port number
 		if beginPort > endPort {
 			endPort = beginPort
-			beginPort = num
+			beginPort = uint16(num)
 		}
 	}
 	return beginPort, endPort, nil

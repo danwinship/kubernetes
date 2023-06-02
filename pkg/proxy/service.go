@@ -41,15 +41,15 @@ import (
 // defined by the proxier if needed.
 type BaseServicePortInfo struct {
 	clusterIP                net.IP
-	port                     int
+	port                     uint16
 	protocol                 v1.Protocol
-	nodePort                 int
+	nodePort                 uint16
 	loadBalancerVIPs         []string
 	sessionAffinityType      v1.ServiceAffinity
 	stickyMaxAgeSeconds      int
 	externalIPs              []string
 	loadBalancerSourceRanges []string
-	healthCheckNodePort      int
+	healthCheckNodePort      uint16
 	externalPolicyLocal      bool
 	internalPolicyLocal      bool
 	internalTrafficPolicy    *v1.ServiceInternalTrafficPolicy
@@ -69,7 +69,7 @@ func (bsvcPortInfo *BaseServicePortInfo) ClusterIP() net.IP {
 }
 
 // Port is part of ServicePort interface.
-func (bsvcPortInfo *BaseServicePortInfo) Port() int {
+func (bsvcPortInfo *BaseServicePortInfo) Port() uint16 {
 	return bsvcPortInfo.port
 }
 
@@ -94,12 +94,12 @@ func (bsvcPortInfo *BaseServicePortInfo) LoadBalancerSourceRanges() []string {
 }
 
 // HealthCheckNodePort is part of ServicePort interface.
-func (bsvcPortInfo *BaseServicePortInfo) HealthCheckNodePort() int {
+func (bsvcPortInfo *BaseServicePortInfo) HealthCheckNodePort() uint16 {
 	return bsvcPortInfo.healthCheckNodePort
 }
 
 // NodePort is part of the ServicePort interface.
-func (bsvcPortInfo *BaseServicePortInfo) NodePort() int {
+func (bsvcPortInfo *BaseServicePortInfo) NodePort() uint16 {
 	return bsvcPortInfo.nodePort
 }
 
@@ -164,9 +164,9 @@ func (sct *ServiceChangeTracker) newBaseServiceInfo(port *v1.ServicePort, servic
 	clusterIP := proxyutil.GetClusterIPByFamily(sct.ipFamily, service)
 	info := &BaseServicePortInfo{
 		clusterIP:             netutils.ParseIPSloppy(clusterIP),
-		port:                  int(port.Port),
+		port:                  uint16(port.Port),
 		protocol:              port.Protocol,
-		nodePort:              int(port.NodePort),
+		nodePort:              uint16(port.NodePort),
 		sessionAffinityType:   service.Spec.SessionAffinity,
 		stickyMaxAgeSeconds:   stickyMaxAgeSeconds,
 		externalPolicyLocal:   externalPolicyLocal,
@@ -241,7 +241,7 @@ func (sct *ServiceChangeTracker) newBaseServiceInfo(port *v1.ServicePort, servic
 		if p == 0 {
 			klog.ErrorS(nil, "Service has no healthcheck nodeport", "service", klog.KObj(service))
 		} else {
-			info.healthCheckNodePort = int(p)
+			info.healthCheckNodePort = uint16(p)
 		}
 	}
 

@@ -152,7 +152,7 @@ func TestClearUDPConntrackForPort(t *testing.T) {
 
 	testCases := []struct {
 		name   string
-		port   int
+		port   uint16
 		isIPv6 bool
 	}{
 		{"IPv4, no error", 8080, false},
@@ -249,7 +249,7 @@ func TestClearUDPConntrackForPortNAT(t *testing.T) {
 	}
 	testCases := []struct {
 		name string
-		port int
+		port uint16
 		dest string
 	}{
 		{

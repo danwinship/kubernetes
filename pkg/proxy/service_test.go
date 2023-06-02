@@ -35,7 +35,7 @@ import (
 
 const testHostname = "test-hostname"
 
-func makeTestServiceInfo(clusterIP string, port int, protocol string, healthcheckNodePort int, svcInfoFuncs ...func(*BaseServicePortInfo)) *BaseServicePortInfo {
+func makeTestServiceInfo(clusterIP string, port uint16, protocol string, healthcheckNodePort uint16, svcInfoFuncs ...func(*BaseServicePortInfo)) *BaseServicePortInfo {
 	bsvcPortInfo := &BaseServicePortInfo{
 		clusterIP: netutils.ParseIPSloppy(clusterIP),
 		port:      port,

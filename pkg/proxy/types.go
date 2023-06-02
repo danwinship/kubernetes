@@ -66,7 +66,7 @@ type ServicePort interface {
 	// ClusterIP returns service cluster IP in net.IP format.
 	ClusterIP() net.IP
 	// Port returns service port if present. If return 0 means not present.
-	Port() int
+	Port() uint16
 	// SessionAffinityType returns service session affinity type
 	SessionAffinityType() v1.ServiceAffinity
 	// StickyMaxAgeSeconds returns service max connection age
@@ -80,9 +80,9 @@ type ServicePort interface {
 	// LoadBalancerSourceRanges returns service LoadBalancerSourceRanges if present empty array if not
 	LoadBalancerSourceRanges() []string
 	// HealthCheckNodePort returns service health check node port if present.  If return 0, it means not present.
-	HealthCheckNodePort() int
+	HealthCheckNodePort() uint16
 	// NodePort returns a service Node port if present. If return 0, it means not present.
-	NodePort() int
+	NodePort() uint16
 	// ExternalPolicyLocal returns if a service has only node local endpoints for external traffic.
 	ExternalPolicyLocal() bool
 	// InternalPolicyLocal returns if a service has only node local endpoints for internal traffic.
