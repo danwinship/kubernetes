@@ -52,10 +52,6 @@ func (s Set[T]) Insert(items ...T) Set[T] {
 	return s
 }
 
-func Insert[T comparable](set Set[T], items ...T) Set[T] {
-	return set.Insert(items...)
-}
-
 // Delete removes all items from the set.
 func (s Set[T]) Delete(items ...T) Set[T] {
 	for _, item := range items {
