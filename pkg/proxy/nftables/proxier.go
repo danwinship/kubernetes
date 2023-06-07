@@ -136,7 +136,6 @@ type Proxier struct {
 	localDetector  proxyutil.LocalTrafficDetector
 	hostname       string
 	nodeIP         net.IP
-	recorder       events.EventRecorder
 
 	serviceHealthServer healthcheck.ServiceHealthServer
 	healthzServer       *healthcheck.ProxierHealthServer
@@ -204,7 +203,6 @@ func newProxier(ctx context.Context,
 		localDetector:       localDetector,
 		hostname:            hostname,
 		nodeIP:              nodeIP,
-		recorder:            recorder,
 		serviceHealthServer: serviceHealthServer,
 		healthzServer:       healthzServer,
 		nodePortAddresses:   nodePortAddresses,
