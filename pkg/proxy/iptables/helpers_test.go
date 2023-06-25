@@ -1146,9 +1146,8 @@ func newIPTablesTracer(t *testing.T, ipt *iptablestest.FakeIPTables, nodeIP stri
 }
 
 // ruleMatches checks if the given iptables rule matches (at least probabilistically) a
-// packet with the given sourceIP, destIP, and destPort. (Note that protocol is currently
-// ignored.)
-func (tracer *iptablesTracer) ruleMatches(rule *iptablestest.Rule, sourceIP, destIP, destPort string) bool {
+// packet with the given sourceIP, protocol, destIP, and destPort.
+func (tracer *iptablesTracer) ruleMatches(rule *iptablestest.Rule, sourceIP, protocol, destIP, destPort string) bool {
 	// The sub-rules within an iptables rule are ANDed together, so the rule only
 	// matches if all of them match. So go through the subrules, and if any of them
 	// DON'T match, then fail.
@@ -1164,6 +1163,10 @@ func (tracer *iptablesTracer) ruleMatches(rule *iptablestest.Rule, sourceIP, des
 		if !rule.SourceType.Matches(addrtype) {
 			return false
 		}
+	}
+
+	if rule.Protocol != nil && !rule.Protocol.Matches(protocol) {
+		return false
 	}
 
 	if rule.DestinationAddress != nil && !addressMatches(tracer.t, rule.DestinationAddress, destIP) {
@@ -1193,7 +1196,7 @@ func (tracer *iptablesTracer) ruleMatches(rule *iptablestest.Rule, sourceIP, des
 
 // runChain runs the given packet through the rules in the given table and chain, updating
 // tracer's internal state accordingly. It returns true if it hits a terminal action.
-func (tracer *iptablesTracer) runChain(table utiliptables.Table, chain utiliptables.Chain, sourceIP, destIP, destPort string) bool {
+func (tracer *iptablesTracer) runChain(table utiliptables.Table, chain utiliptables.Chain, sourceIP, protocol, destIP, destPort string) bool {
 	c, _ := tracer.ipt.Dump.GetChain(table, chain)
 	if c == nil {
 		return false
@@ -1204,7 +1207,7 @@ func (tracer *iptablesTracer) runChain(table utiliptables.Table, chain utiliptab
 			continue
 		}
 
-		if !tracer.ruleMatches(rule, sourceIP, destIP, destPort) {
+		if !tracer.ruleMatches(rule, sourceIP, protocol, destIP, destPort) {
 			continue
 		}
 		// record the matched rule for debugging purposes
@@ -1227,7 +1230,7 @@ func (tracer *iptablesTracer) runChain(table utiliptables.Table, chain utiliptab
 
 		default:
 			// We got a "-j KUBE-SOMETHING", so process that chain
-			terminated := tracer.runChain(table, utiliptables.Chain(rule.Jump.Value), sourceIP, destIP, destPort)
+			terminated := tracer.runChain(table, utiliptables.Chain(rule.Jump.Value), sourceIP, protocol, destIP, destPort)
 
 			// If the subchain hit a terminal rule AND the rule that sent us
 			// to that chain was non-probabilistic, then this chain terminates
@@ -1243,18 +1246,19 @@ func (tracer *iptablesTracer) runChain(table utiliptables.Table, chain utiliptab
 	return false
 }
 
-// tracePacket determines what would happen to a packet with the given sourceIP, destIP,
-// and destPort, given the indicated iptables ruleData. nodeIP is the local node IP (for
-// rules matching "LOCAL").
+// tracePacket determines what would happen to a packet with the given sourceIP, protocol,
+// destIP, and destPort, given the indicated iptables ruleData. nodeIP is the local node
+// IP (for rules matching "LOCAL"). (The protocol value should be lowercase as in iptables
+// rules, not uppercase as in corev1.)
 //
 // The return values are: an array of matched rules (for debugging), the final packet
 // destinations (a comma-separated list of IPs, or one of the special targets "ACCEPT",
 // "DROP", or "REJECT"), and whether the packet would be masqueraded.
-func tracePacket(t *testing.T, ipt *iptablestest.FakeIPTables, sourceIP, destIP, destPort, nodeIP string) ([]string, string, bool) {
+func tracePacket(t *testing.T, ipt *iptablestest.FakeIPTables, sourceIP, protocol, destIP, destPort, nodeIP string) ([]string, string, bool) {
 	tracer := newIPTablesTracer(t, ipt, nodeIP)
 
 	// nat:PREROUTING goes first
-	tracer.runChain(utiliptables.TableNAT, utiliptables.ChainPrerouting, sourceIP, destIP, destPort)
+	tracer.runChain(utiliptables.TableNAT, utiliptables.ChainPrerouting, sourceIP, protocol, destIP, destPort)
 
 	// After the PREROUTING rules run, pending DNATs are processed (which would affect
 	// the destination IP that later rules match against).
@@ -1266,10 +1270,10 @@ func tracePacket(t *testing.T, ipt *iptablestest.FakeIPTables, sourceIP, destIP,
 	// inbound, outbound, or intra-host packet, which we don't know. So we just run
 	// the interesting tables manually. (Theoretically this could cause conflicts in
 	// the future in which case we'd have to do something more complicated.)
-	tracer.runChain(utiliptables.TableFilter, kubeServicesChain, sourceIP, destIP, destPort)
-	tracer.runChain(utiliptables.TableFilter, kubeExternalServicesChain, sourceIP, destIP, destPort)
-	tracer.runChain(utiliptables.TableFilter, kubeNodePortsChain, sourceIP, destIP, destPort)
-	tracer.runChain(utiliptables.TableFilter, kubeProxyFirewallChain, sourceIP, destIP, destPort)
+	tracer.runChain(utiliptables.TableFilter, kubeServicesChain, sourceIP, protocol, destIP, destPort)
+	tracer.runChain(utiliptables.TableFilter, kubeExternalServicesChain, sourceIP, protocol, destIP, destPort)
+	tracer.runChain(utiliptables.TableFilter, kubeNodePortsChain, sourceIP, protocol, destIP, destPort)
+	tracer.runChain(utiliptables.TableFilter, kubeProxyFirewallChain, sourceIP, protocol, destIP, destPort)
 
 	// Finally, the nat:POSTROUTING rules run, but the only interesting thing that
 	// happens there is that the masquerade mark gets turned into actual masquerading.
@@ -1280,6 +1284,7 @@ func tracePacket(t *testing.T, ipt *iptablestest.FakeIPTables, sourceIP, destIP,
 type packetFlowTest struct {
 	name     string
 	sourceIP string
+	protocol v1.Protocol
 	destIP   string
 	destPort int
 	output   string
@@ -1289,7 +1294,11 @@ type packetFlowTest struct {
 func runPacketFlowTests(t *testing.T, lineStr string, ipt *iptablestest.FakeIPTables, nodeIP string, testCases []packetFlowTest) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			matches, output, masq := tracePacket(t, ipt, tc.sourceIP, tc.destIP, fmt.Sprintf("%d", tc.destPort), nodeIP)
+			protocol := strings.ToLower(string(tc.protocol))
+			if protocol == "" {
+				protocol = "tcp"
+			}
+			matches, output, masq := tracePacket(t, ipt, tc.sourceIP, protocol, tc.destIP, fmt.Sprintf("%d", tc.destPort), nodeIP)
 			var errors []string
 			if output != tc.output {
 				errors = append(errors, fmt.Sprintf("wrong output: expected %q got %q", tc.output, output))
@@ -1298,8 +1307,8 @@ func runPacketFlowTests(t *testing.T, lineStr string, ipt *iptablestest.FakeIPTa
 				errors = append(errors, fmt.Sprintf("wrong masq: expected %v got %v", tc.masq, masq))
 			}
 			if errors != nil {
-				t.Errorf("Test %q of a packet from %s to %s:%d%s got result:\n%s\n\nBy matching:\n%s\n\n",
-					tc.name, tc.sourceIP, tc.destIP, tc.destPort, lineStr, strings.Join(errors, "\n"), strings.Join(matches, "\n"))
+				t.Errorf("Test %q of a %s packet from %s to %s:%d%s got result:\n%s\n\nBy matching:\n%s\n\n",
+					tc.name, protocol, tc.sourceIP, tc.destIP, tc.destPort, lineStr, strings.Join(errors, "\n"), strings.Join(matches, "\n"))
 			}
 		})
 	}

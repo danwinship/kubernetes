@@ -451,6 +451,7 @@ func TestClusterIPEndpointsMore(t *testing.T) {
 		{
 			name:     "cluster IP accepted",
 			sourceIP: "10.180.0.2",
+			protocol: v1.ProtocolSCTP,
 			destIP:   "172.30.0.41",
 			destPort: 80,
 			output:   "10.180.0.1:80",
@@ -459,6 +460,7 @@ func TestClusterIPEndpointsMore(t *testing.T) {
 		{
 			name:     "hairpin to cluster IP",
 			sourceIP: "10.180.0.1",
+			protocol: v1.ProtocolSCTP,
 			destIP:   "172.30.0.41",
 			destPort: 80,
 			output:   "10.180.0.1:80",
