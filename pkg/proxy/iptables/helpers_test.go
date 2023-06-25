@@ -1030,22 +1030,22 @@ func TestSortIPTablesRules(t *testing.T) {
 	}
 }
 
-// getLine returns the line number of the caller, if possible.  This is useful in
-// tests with a large number of cases - when something goes wrong you can find
-// which case more easily.
-func getLine() int {
-	_, _, line, ok := runtime.Caller(1)
-	if ok {
-		return line
+// getLine returns a string containing the file and line number of the caller, if
+// possible. This is useful in tests with a large number of cases - when something goes
+// wrong you can find which case more easily.
+func getLine() string {
+	_, file, line, ok := runtime.Caller(1)
+	if !ok {
+		return ""
 	}
-	return 0
+	return fmt.Sprintf(" (from %s:%d)", file, line)
 }
 
 // assertIPTablesRulesEqual asserts that the generated rules in result match the rules in
 // expected, ignoring irrelevant ordering differences. By default this also checks the
 // rules for consistency (eg, no jumps to chains that aren't defined), but that can be
 // disabled by passing false for checkConsistency if you are passing a partial set of rules.
-func assertIPTablesRulesEqual(t *testing.T, line int, checkConsistency bool, expected, result string) {
+func assertIPTablesRulesEqual(t *testing.T, lineStr string, checkConsistency bool, expected, result string) {
 	expected = strings.TrimLeft(expected, " \t\n")
 
 	result, err := sortIPTablesRules(strings.TrimLeft(result, " \t\n"))
@@ -1053,10 +1053,6 @@ func assertIPTablesRulesEqual(t *testing.T, line int, checkConsistency bool, exp
 		t.Fatalf("%s", err)
 	}
 
-	lineStr := ""
-	if line != 0 {
-		lineStr = fmt.Sprintf(" (from line %d)", line)
-	}
 	if diff := cmp.Diff(expected, result); diff != "" {
 		t.Errorf("rules do not match%s:\ndiff:\n%s\nfull result:\n```\n%s```", lineStr, diff, result)
 	}
@@ -1071,7 +1067,7 @@ func assertIPTablesRulesEqual(t *testing.T, line int, checkConsistency bool, exp
 
 // assertIPTablesRulesNotEqual asserts that the generated rules in result DON'T match the
 // rules in expected, ignoring irrelevant ordering differences.
-func assertIPTablesRulesNotEqual(t *testing.T, line int, expected, result string) {
+func assertIPTablesRulesNotEqual(t *testing.T, lineStr string, expected, result string) {
 	expected = strings.TrimLeft(expected, " \t\n")
 
 	result, err := sortIPTablesRules(strings.TrimLeft(result, " \t\n"))
@@ -1079,10 +1075,6 @@ func assertIPTablesRulesNotEqual(t *testing.T, line int, expected, result string
 		t.Fatalf("%s", err)
 	}
 
-	lineStr := ""
-	if line != 0 {
-		lineStr = fmt.Sprintf(" (from line %d)", line)
-	}
 	if cmp.Equal(expected, result) {
 		t.Errorf("rules do not differ%s:\nfull result:\n```\n%s```", lineStr, result)
 	}
@@ -1294,11 +1286,7 @@ type packetFlowTest struct {
 	masq     bool
 }
 
-func runPacketFlowTests(t *testing.T, line int, ipt *iptablestest.FakeIPTables, nodeIP string, testCases []packetFlowTest) {
-	lineStr := ""
-	if line != 0 {
-		lineStr = fmt.Sprintf(" (from line %d)", line)
-	}
+func runPacketFlowTests(t *testing.T, lineStr string, ipt *iptablestest.FakeIPTables, nodeIP string, testCases []packetFlowTest) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			matches, output, masq := tracePacket(t, ipt, tc.sourceIP, tc.destIP, fmt.Sprintf("%d", tc.destPort), nodeIP)

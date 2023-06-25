@@ -2097,7 +2097,7 @@ func TestOnlyLocalNodePorts(t *testing.T) {
 	onlyLocalNodePorts(t, fp, ipt, expected, getLine())
 }
 
-func onlyLocalNodePorts(t *testing.T, fp *Proxier, ipt *iptablestest.FakeIPTables, expected string, line int) {
+func onlyLocalNodePorts(t *testing.T, fp *Proxier, ipt *iptablestest.FakeIPTables, expected, line string) {
 	svcIP := "172.30.0.41"
 	svcPort := 80
 	svcNodePort := 3001
@@ -2253,7 +2253,7 @@ func TestInternalTrafficPolicyE2E(t *testing.T) {
 
 	testCases := []struct {
 		name                      string
-		line                      int
+		line                      string
 		internalTrafficPolicy     *v1.ServiceInternalTrafficPolicy
 		endpoints                 []endpoint
 		expectEndpointRule        bool
@@ -2491,7 +2491,7 @@ func TestTerminatingEndpointsTrafficPolicyLocal(t *testing.T) {
 
 	testcases := []struct {
 		name              string
-		line              int
+		line              string
 		endpointslice     *discovery.EndpointSlice
 		expectedIPTables  string
 		noUsableEndpoints bool
@@ -3017,7 +3017,7 @@ func TestTerminatingEndpointsTrafficPolicyCluster(t *testing.T) {
 
 	testcases := []struct {
 		name              string
-		line              int
+		line              string
 		endpointslice     *discovery.EndpointSlice
 		expectedIPTables  string
 		noUsableEndpoints bool
@@ -3925,7 +3925,7 @@ func TestInternalExternalMasquerade(t *testing.T) {
 
 	testCases := []struct {
 		name          string
-		line          int
+		line          string
 		masqueradeAll bool
 		localDetector bool
 		overrides     map[string]packetFlowTestOverride
