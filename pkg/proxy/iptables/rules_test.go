@@ -1159,14 +1159,17 @@ func TestExternalTrafficPolicyLocal(t *testing.T) {
 	})
 }
 
-// TestNonLocalExternalIPs tests if we add the masquerade rule into svcChain in order to
-// SNAT packets to external IPs if externalTrafficPolicy is cluster and the traffic is NOT Local.
-func TestNonLocalExternalIPs(t *testing.T) {
+// TestExternalTrafficPolicyCluster tests that non-local traffic to an externally-facing
+// IP gets masqueraded when using Cluster traffic policy.
+func TestExternalTrafficPolicyCluster(t *testing.T) {
 	ipt := iptablestest.NewFake()
 	fp := NewFakeProxier(ipt)
+
 	svcIP := "172.30.0.41"
 	svcPort := 80
+	svcNodePort := 3001
 	svcExternalIPs := "192.168.99.11"
+	svcLBIP := "1.2.3.4"
 	svcPortName := proxy.ServicePortName{
 		NamespacedName: makeNSN("ns1", "svc1"),
 		Port:           "p80",
@@ -1174,16 +1177,22 @@ func TestNonLocalExternalIPs(t *testing.T) {
 
 	makeServiceMap(fp,
 		makeTestService(svcPortName.Namespace, svcPortName.Name, func(svc *v1.Service) {
+			svc.Spec.Type = v1.ServiceTypeLoadBalancer
 			svc.Spec.ClusterIP = svcIP
-			svc.Spec.ExternalIPs = []string{svcExternalIPs}
 			svc.Spec.Ports = []v1.ServicePort{{
-				Name:       svcPortName.Port,
-				Port:       int32(svcPort),
-				Protocol:   v1.ProtocolTCP,
-				TargetPort: intstr.FromInt(svcPort),
+				Name:     svcPortName.Port,
+				Port:     int32(svcPort),
+				Protocol: v1.ProtocolTCP,
+				NodePort: int32(svcNodePort),
 			}}
+			svc.Spec.ExternalIPs = []string{svcExternalIPs}
+			svc.Status.LoadBalancer.Ingress = []v1.LoadBalancerIngress{{
+				IP: svcLBIP,
+			}}
+			svc.Spec.ExternalTrafficPolicy = v1.ServiceExternalTrafficPolicyCluster
 		}),
 	)
+
 	epIP1 := "10.180.0.1"
 	epIP2 := "10.180.2.1"
 	populateEndpointSlices(fp,
@@ -1228,8 +1237,10 @@ func TestNonLocalExternalIPs(t *testing.T) {
 		:KUBE-SEP-SXIVWICOYRO3J4NJ - [0:0]
 		:KUBE-SEP-ZX7GRIZKSNUQ3LAJ - [0:0]
 		:KUBE-SVC-XPGD46QRK7WJZT7O - [0:0]
+		-A KUBE-NODEPORTS -m comment --comment ns1/svc1:p80 -m tcp -p tcp --dport 3001 -j KUBE-EXT-XPGD46QRK7WJZT7O
 		-A KUBE-SERVICES -m comment --comment "ns1/svc1:p80 cluster IP" -m tcp -p tcp -d 172.30.0.41 --dport 80 -j KUBE-SVC-XPGD46QRK7WJZT7O
 		-A KUBE-SERVICES -m comment --comment "ns1/svc1:p80 external IP" -m tcp -p tcp -d 192.168.99.11 --dport 80 -j KUBE-EXT-XPGD46QRK7WJZT7O
+		-A KUBE-SERVICES -m comment --comment "ns1/svc1:p80 loadbalancer IP" -m tcp -p tcp -d 1.2.3.4 --dport 80 -j KUBE-EXT-XPGD46QRK7WJZT7O
 		-A KUBE-SERVICES -m comment --comment "kubernetes service nodeports; NOTE: this must be the last rule in this chain" -m addrtype --dst-type LOCAL -j KUBE-NODEPORTS
 		-A KUBE-EXT-XPGD46QRK7WJZT7O -m comment --comment "masquerade traffic for ns1/svc1:p80 external destinations" -j KUBE-MARK-MASQ
 		-A KUBE-EXT-XPGD46QRK7WJZT7O -j KUBE-SVC-XPGD46QRK7WJZT7O
@@ -1250,7 +1261,7 @@ func TestNonLocalExternalIPs(t *testing.T) {
 
 	runPacketFlowTests(t, getLine(), ipt, testNodeIP, []packetFlowTest{
 		{
-			name:     "pod to cluster IP",
+			name:     "pod to cluster IP hits both endpoints, unmasqueraded",
 			sourceIP: "10.0.0.2",
 			destIP:   svcIP,
 			destPort: svcPort,
@@ -1258,10 +1269,26 @@ func TestNonLocalExternalIPs(t *testing.T) {
 			masq:     false,
 		},
 		{
-			name:     "external to external IP",
+			name:     "external to external IP hits both endpoints, masqueraded",
 			sourceIP: testExternalClient,
 			destIP:   svcExternalIPs,
 			destPort: svcPort,
+			output:   fmt.Sprintf("%s:%d, %s:%d", epIP1, svcPort, epIP2, svcPort),
+			masq:     true,
+		},
+		{
+			name:     "external to LB IP hits both endpoints, masqueraded",
+			sourceIP: testExternalClient,
+			destIP:   svcLBIP,
+			destPort: svcPort,
+			output:   fmt.Sprintf("%s:%d, %s:%d", epIP1, svcPort, epIP2, svcPort),
+			masq:     true,
+		},
+		{
+			name:     "external to NodePort hits both endpoints, masqueraded",
+			sourceIP: testExternalClient,
+			destIP:   testNodeIP,
+			destPort: svcNodePort,
 			output:   fmt.Sprintf("%s:%d, %s:%d", epIP1, svcPort, epIP2, svcPort),
 			masq:     true,
 		},
