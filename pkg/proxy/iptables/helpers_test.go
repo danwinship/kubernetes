@@ -87,8 +87,8 @@ func NewFakeProxier(ipt utiliptables.Interface) *Proxier {
 	itf1 := net.Interface{Index: 1, MTU: 0, Name: "eth0", HardwareAddr: nil, Flags: 0}
 	addrs1 := []net.Addr{
 		&net.IPNet{IP: netutils.ParseIPSloppy(testNodeIP), Mask: net.CIDRMask(24, 32)},
-		// (This IP never actually gets used; it's only here to test that it gets
-		// filtered out correctly in the IPv4 nodeport tests.)
+		&net.IPNet{IP: netutils.ParseIPSloppy("192.168.1.2"), Mask: net.CIDRMask(24, 32)},
+		&net.IPNet{IP: netutils.ParseIPSloppy("192.168.99.11"), Mask: net.CIDRMask(24, 32)},
 		&net.IPNet{IP: netutils.ParseIPSloppy("2001:db8::1"), Mask: net.CIDRMask(64, 128)},
 	}
 	networkInterfacer.AddInterfaceAddr(&itf1, addrs1)
