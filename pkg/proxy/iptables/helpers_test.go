@@ -73,7 +73,7 @@ func NewFakeProxier(ipt utiliptables.Interface) *Proxier {
 	podCIDR := "10.0.0.0/8"
 	if ipt.IsIPv6() {
 		ipfamily = v1.IPv6Protocol
-		podCIDR = "fd00::/64"
+		podCIDR = "fd00:10::/32"
 	}
 	detectLocal, _ := proxyutiliptables.NewDetectLocalByCIDR(podCIDR)
 

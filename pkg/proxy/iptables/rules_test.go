@@ -18,6 +18,7 @@ package iptables
 
 import (
 	"fmt"
+	"net"
 	"testing"
 
 	"github.com/lithammer/dedent"
@@ -773,122 +774,6 @@ func TestLoadBalancer(t *testing.T) {
 	})
 }
 
-func TestNodePort(t *testing.T) {
-	ipt := iptablestest.NewFake()
-	fp := NewFakeProxier(ipt)
-	svcIP := "172.30.0.41"
-	svcPort := 80
-	svcNodePort := 3001
-	svcPortName := proxy.ServicePortName{
-		NamespacedName: makeNSN("ns1", "svc1"),
-		Port:           "p80",
-		Protocol:       v1.ProtocolTCP,
-	}
-
-	makeServiceMap(fp,
-		makeTestService(svcPortName.Namespace, svcPortName.Name, func(svc *v1.Service) {
-			svc.Spec.Type = "NodePort"
-			svc.Spec.ClusterIP = svcIP
-			svc.Spec.Ports = []v1.ServicePort{{
-				Name:     svcPortName.Port,
-				Port:     int32(svcPort),
-				Protocol: v1.ProtocolTCP,
-				NodePort: int32(svcNodePort),
-			}}
-		}),
-	)
-
-	epIP := "10.180.0.1"
-	populateEndpointSlices(fp,
-		makeTestEndpointSlice(svcPortName.Namespace, svcPortName.Name, 1, func(eps *discovery.EndpointSlice) {
-			eps.AddressType = discovery.AddressTypeIPv4
-			eps.Endpoints = []discovery.Endpoint{{
-				Addresses: []string{epIP},
-			}}
-			eps.Ports = []discovery.EndpointPort{{
-				Name:     pointer.String(svcPortName.Port),
-				Port:     pointer.Int32(int32(svcPort)),
-				Protocol: &tcpProtocol,
-			}}
-		}),
-	)
-
-	fp.syncProxyRules()
-
-	expected := dedent.Dedent(`
-		*filter
-		:KUBE-NODEPORTS - [0:0]
-		:KUBE-SERVICES - [0:0]
-		:KUBE-EXTERNAL-SERVICES - [0:0]
-		:KUBE-FIREWALL - [0:0]
-		:KUBE-FORWARD - [0:0]
-		:KUBE-PROXY-FIREWALL - [0:0]
-		-A KUBE-FIREWALL -m comment --comment "block incoming localnet connections" -d 127.0.0.0/8 ! -s 127.0.0.0/8 -m conntrack ! --ctstate RELATED,ESTABLISHED,DNAT -j DROP
-		-A KUBE-FORWARD -m conntrack --ctstate INVALID -j DROP
-		-A KUBE-FORWARD -m comment --comment "kubernetes forwarding rules" -m mark --mark 0x4000/0x4000 -j ACCEPT
-		-A KUBE-FORWARD -m comment --comment "kubernetes forwarding conntrack rule" -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT
-		COMMIT
-		*nat
-		:KUBE-NODEPORTS - [0:0]
-		:KUBE-SERVICES - [0:0]
-		:KUBE-EXT-XPGD46QRK7WJZT7O - [0:0]
-		:KUBE-MARK-MASQ - [0:0]
-		:KUBE-POSTROUTING - [0:0]
-		:KUBE-SEP-SXIVWICOYRO3J4NJ - [0:0]
-		:KUBE-SVC-XPGD46QRK7WJZT7O - [0:0]
-		-A KUBE-NODEPORTS -m comment --comment ns1/svc1:p80 -m tcp -p tcp --dport 3001 -j KUBE-EXT-XPGD46QRK7WJZT7O
-		-A KUBE-SERVICES -m comment --comment "ns1/svc1:p80 cluster IP" -m tcp -p tcp -d 172.30.0.41 --dport 80 -j KUBE-SVC-XPGD46QRK7WJZT7O
-		-A KUBE-SERVICES -m comment --comment "kubernetes service nodeports; NOTE: this must be the last rule in this chain" -m addrtype --dst-type LOCAL -j KUBE-NODEPORTS
-		-A KUBE-EXT-XPGD46QRK7WJZT7O -m comment --comment "masquerade traffic for ns1/svc1:p80 external destinations" -j KUBE-MARK-MASQ
-		-A KUBE-EXT-XPGD46QRK7WJZT7O -j KUBE-SVC-XPGD46QRK7WJZT7O
-		-A KUBE-MARK-MASQ -j MARK --or-mark 0x4000
-		-A KUBE-POSTROUTING -m mark ! --mark 0x4000/0x4000 -j RETURN
-		-A KUBE-POSTROUTING -j MARK --xor-mark 0x4000
-		-A KUBE-POSTROUTING -m comment --comment "kubernetes service traffic requiring SNAT" -j MASQUERADE
-		-A KUBE-SEP-SXIVWICOYRO3J4NJ -m comment --comment ns1/svc1:p80 -s 10.180.0.1 -j KUBE-MARK-MASQ
-		-A KUBE-SEP-SXIVWICOYRO3J4NJ -m comment --comment ns1/svc1:p80 -m tcp -p tcp -j DNAT --to-destination 10.180.0.1:80
-		-A KUBE-SVC-XPGD46QRK7WJZT7O -m comment --comment "ns1/svc1:p80 cluster IP" -m tcp -p tcp -d 172.30.0.41 --dport 80 ! -s 10.0.0.0/8 -j KUBE-MARK-MASQ
-		-A KUBE-SVC-XPGD46QRK7WJZT7O -m comment --comment "ns1/svc1:p80 -> 10.180.0.1:80" -j KUBE-SEP-SXIVWICOYRO3J4NJ
-		COMMIT
-		`)
-	assertIPTablesRulesEqual(t, getLine(), true, expected, fp.iptablesData.String())
-
-	runPacketFlowTests(t, getLine(), ipt, testNodeIP, []packetFlowTest{
-		{
-			name:     "pod to cluster IP",
-			sourceIP: "10.0.0.2",
-			destIP:   svcIP,
-			destPort: svcPort,
-			output:   fmt.Sprintf("%s:%d", epIP, svcPort),
-			masq:     false,
-		},
-		{
-			name:     "external to nodePort",
-			sourceIP: testExternalClient,
-			destIP:   testNodeIP,
-			destPort: svcNodePort,
-			output:   fmt.Sprintf("%s:%d", epIP, svcPort),
-			masq:     true,
-		},
-		{
-			name:     "node to nodePort",
-			sourceIP: testNodeIP,
-			destIP:   testNodeIP,
-			destPort: svcNodePort,
-			output:   fmt.Sprintf("%s:%d", epIP, svcPort),
-			masq:     true,
-		},
-		{
-			name:     "localhost to nodePort gets masqueraded",
-			sourceIP: "127.0.0.1",
-			destIP:   "127.0.0.1",
-			destPort: svcNodePort,
-			output:   fmt.Sprintf("%s:%d", epIP, svcPort),
-			masq:     true,
-		},
-	})
-}
-
 func TestHealthCheckNodePort(t *testing.T) {
 	ipt := iptablestest.NewFake()
 	fp := NewFakeProxier(ipt)
@@ -1295,9 +1180,9 @@ func TestExternalTrafficPolicyCluster(t *testing.T) {
 	})
 }
 
-// TestNodePortsChain tests rules related to the KUBE-NODEPORTS chain, under various
-// combinations of the --nodeport-addresses and --localhost-nodeports flags.
-func TestNodePortsChain(t *testing.T) {
+// TestNodePorts tests NodePort services under various combinations of the
+// --nodeport-addresses and --localhost-nodeports flags.
+func TestNodePorts(t *testing.T) {
 	testCases := []struct {
 		name string
 
@@ -1312,6 +1197,10 @@ func TestNodePortsChain(t *testing.T) {
 		// expectJumps are the expected jump rules from KUBE-SERVICES to
 		// KUBE-NODEPORTS in the "nat" table.
 		expectJumps []string
+
+		// expectAltNodeIP is true if we expect NodePort traffic on the alternate
+		// node IP to be accepted
+		expectAltNodeIP bool
 	}{
 		{
 			name: "ipv4, localhost-nodeports enabled",
@@ -1324,6 +1213,7 @@ func TestNodePortsChain(t *testing.T) {
 			expectJumps: []string{
 				`-A KUBE-SERVICES -m comment --comment "kubernetes service nodeports; NOTE: this must be the last rule in this chain" -m addrtype --dst-type LOCAL -j KUBE-NODEPORTS`,
 			},
+			expectAltNodeIP: true,
 		},
 		{
 			name: "ipv4, localhost-nodeports disabled",
@@ -1336,6 +1226,7 @@ func TestNodePortsChain(t *testing.T) {
 			expectJumps: []string{
 				`-A KUBE-SERVICES -m comment --comment "kubernetes service nodeports; NOTE: this must be the last rule in this chain" -m addrtype --dst-type LOCAL ! -d 127.0.0.0/8 -j KUBE-NODEPORTS`,
 			},
+			expectAltNodeIP: true,
 		},
 		{
 			name: "ipv4, localhost-nodeports disabled, localhost in nodeport-addresses",
@@ -1348,6 +1239,7 @@ func TestNodePortsChain(t *testing.T) {
 			expectJumps: []string{
 				`-A KUBE-SERVICES -m comment --comment "kubernetes service nodeports; NOTE: this must be the last rule in this chain" -d 192.168.0.2 -j KUBE-NODEPORTS`,
 			},
+			expectAltNodeIP: false,
 		},
 		{
 			name: "ipv4, localhost-nodeports enabled, multiple nodeport-addresses",
@@ -1361,6 +1253,7 @@ func TestNodePortsChain(t *testing.T) {
 				`-A KUBE-SERVICES -m comment --comment "kubernetes service nodeports; NOTE: this must be the last rule in this chain" -d 192.168.0.2 -j KUBE-NODEPORTS`,
 				`-A KUBE-SERVICES -m comment --comment "kubernetes service nodeports; NOTE: this must be the last rule in this chain" -d 192.168.1.2 -j KUBE-NODEPORTS`,
 			},
+			expectAltNodeIP: true,
 		},
 		{
 			name: "ipv6, localhost-nodeports enabled",
@@ -1373,6 +1266,7 @@ func TestNodePortsChain(t *testing.T) {
 			expectJumps: []string{
 				`-A KUBE-SERVICES -m comment --comment "kubernetes service nodeports; NOTE: this must be the last rule in this chain" -m addrtype --dst-type LOCAL ! -d ::1/128 -j KUBE-NODEPORTS`,
 			},
+			expectAltNodeIP: false,
 		},
 		{
 			name: "ipv6, localhost-nodeports disabled",
@@ -1385,6 +1279,7 @@ func TestNodePortsChain(t *testing.T) {
 			expectJumps: []string{
 				`-A KUBE-SERVICES -m comment --comment "kubernetes service nodeports; NOTE: this must be the last rule in this chain" -m addrtype --dst-type LOCAL ! -d ::1/128 -j KUBE-NODEPORTS`,
 			},
+			expectAltNodeIP: false,
 		},
 		{
 			name: "ipv6, localhost-nodeports disabled, multiple nodeport-addresses",
@@ -1397,6 +1292,7 @@ func TestNodePortsChain(t *testing.T) {
 			expectJumps: []string{
 				`-A KUBE-SERVICES -m comment --comment "kubernetes service nodeports; NOTE: this must be the last rule in this chain" -d 2001:db8::1 -j KUBE-NODEPORTS`,
 			},
+			expectAltNodeIP: false,
 		},
 	}
 
@@ -1429,7 +1325,7 @@ func TestNodePortsChain(t *testing.T) {
 						Name:     "p80",
 						Port:     80,
 						Protocol: v1.ProtocolTCP,
-						NodePort: 30001,
+						NodePort: 3001,
 					}}
 				}),
 			)
@@ -1455,8 +1351,8 @@ func TestNodePortsChain(t *testing.T) {
 			fp.syncProxyRules()
 
 			firewallChain, err := ipt.Dump.GetChain(utiliptables.TableFilter, kubeletFirewallChain)
-			// This is always created by the "jump chain" code even if we
-			// aren't using it.
+			// The chain itself is always created by the "jump chain" code
+			// even if we aren't using it.
 			if err != nil {
 				t.Fatalf("no KUBE-FIREWALL chain: %v", err)
 			}
@@ -1493,6 +1389,93 @@ func TestNodePortsChain(t *testing.T) {
 				if rule.Jump != nil && rule.Jump.Value == string(kubeNodePortsChain) {
 					t.Fatalf("found extra KUBE-NODEPORTS jump rule %q", rule.Raw)
 				}
+			}
+
+			var podIP, externalIP, nodeIP, altNodeIP, localhostIP string
+			if tc.family == v1.IPv4Protocol {
+				podIP = "10.0.0.2"
+				externalIP = testExternalClient
+				nodeIP = testNodeIP
+				altNodeIP = "192.168.1.2"
+				localhostIP = "127.0.0.1"
+			} else {
+				podIP = "fd00:10::2"
+				externalIP = "2600:5200::1"
+				nodeIP = "2001:db8::1"
+				altNodeIP = "2001:db8::2"
+				localhostIP = "::1"
+			}
+			output := net.JoinHostPort(epIP1, "80") + ", " + net.JoinHostPort(epIP2, "80")
+
+			runPacketFlowTests(t, getLine(), ipt, nodeIP, []packetFlowTest{
+				{
+					name:     "pod to cluster IP",
+					sourceIP: podIP,
+					destIP:   svcIP,
+					destPort: 80,
+					output:   output,
+					masq:     false,
+				},
+				{
+					name:     "external to nodePort",
+					sourceIP: externalIP,
+					destIP:   nodeIP,
+					destPort: 3001,
+					output:   output,
+					masq:     true,
+				},
+				{
+					name:     "node to nodePort",
+					sourceIP: nodeIP,
+					destIP:   nodeIP,
+					destPort: 3001,
+					output:   output,
+					masq:     true,
+				},
+			})
+			if tc.family == v1.IPv4Protocol && tc.localhostNodePorts {
+				runPacketFlowTests(t, getLine(), ipt, testNodeIP, []packetFlowTest{
+					{
+						name:     "localhost to nodePort gets masqueraded",
+						sourceIP: localhostIP,
+						destIP:   localhostIP,
+						destPort: 3001,
+						output:   output,
+						masq:     true,
+					},
+				})
+			} else {
+				runPacketFlowTests(t, getLine(), ipt, testNodeIP, []packetFlowTest{
+					{
+						name:     "localhost to nodePort is ignored",
+						sourceIP: localhostIP,
+						destIP:   localhostIP,
+						destPort: 3001,
+						output:   "",
+					},
+				})
+			}
+			if tc.expectAltNodeIP {
+				runPacketFlowTests(t, getLine(), ipt, testNodeIP, []packetFlowTest{
+					{
+						name:     "alternate nodeIP accepts NodePorts",
+						sourceIP: externalIP,
+						destIP:   altNodeIP,
+						destPort: 3001,
+						output:   output,
+						masq:     true,
+					},
+				})
+			} else {
+				runPacketFlowTests(t, getLine(), ipt, testNodeIP, []packetFlowTest{
+					{
+						name:     "alternate nodeIP ignores NodePorts",
+						sourceIP: externalIP,
+						destIP:   altNodeIP,
+						destPort: 3001,
+						output:   "",
+					},
+				})
 			}
 		})
 	}
