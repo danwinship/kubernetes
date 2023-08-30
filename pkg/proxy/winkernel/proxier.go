@@ -325,8 +325,8 @@ func (info *endpointsInfo) GetIP() string {
 }
 
 // GetPort returns just the Port part of the endpoint.
-func (info *endpointsInfo) GetPort() (int, error) {
-	return int(info.port), nil
+func (info *endpointsInfo) GetPort() int {
+	return int(info.port)
 }
 
 // Equal is part of proxy.Endpoint interface.
@@ -450,16 +450,9 @@ func (proxier *Proxier) onServiceMapChange(svcPortName *proxy.ServicePortName) {
 
 // returns a new proxy.Endpoint which abstracts a endpointsInfo
 func (proxier *Proxier) newEndpointInfo(baseInfo *proxy.BaseEndpointInfo, _ *proxy.ServicePortName) proxy.Endpoint {
-
-	portNumber, err := baseInfo.GetPort()
-
-	if err != nil {
-		portNumber = 0
-	}
-
 	info := &endpointsInfo{
 		ip:         baseInfo.GetIP(),
-		port:       uint16(portNumber),
+		port:       uint16(baseInfo.GetPort()),
 		isLocal:    baseInfo.GetIsLocal(),
 		macAddress: conjureMac("02-11", netutils.ParseIPSloppy(baseInfo.GetIP())),
 		refCount:   new(uint16),

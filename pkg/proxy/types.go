@@ -127,10 +127,10 @@ type Endpoint interface {
 	// GetZoneHints returns the zone hint for the endpoint. This is based on
 	// endpoint.hints.forZones[0].name in the EndpointSlice API.
 	GetZoneHints() sets.Set[string]
-	// GetIP returns IP part of the endpoint.
+	// IP returns IP part of the endpoint.
 	GetIP() string
-	// GetPort returns the Port part of the endpoint.
-	GetPort() (int, error)
+	// Port returns the Port part of the endpoint.
+	GetPort() int
 	// GetNodeName returns the node name for the endpoint
 	GetNodeName() string
 	// GetZone returns the zone for the endpoint

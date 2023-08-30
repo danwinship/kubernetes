@@ -1048,17 +1048,15 @@ func (proxier *Proxier) syncProxyRules() {
 			if !ep.IsLocal {
 				continue
 			}
-			epIP := ep.GetIP()
-			epPort, err := ep.GetPort()
 			// Error parsing this endpoint has been logged. Skip to next endpoint.
-			if epIP == "" || err != nil {
+			if ep.IP == "" || ep.Port == 0 {
 				continue
 			}
 			entry := &utilipset.Entry{
-				IP:       epIP,
-				Port:     epPort,
+				IP:       ep.IP,
+				Port:     ep.Port,
 				Protocol: protocol,
-				IP2:      epIP,
+				IP2:      ep.IP,
 				SetType:  utilipset.HashIPPortIP,
 			}
 			if valid := proxier.ipsetList[kubeLoopBackIPSet].validateEntry(entry); !valid {

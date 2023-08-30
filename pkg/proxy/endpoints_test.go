@@ -54,7 +54,7 @@ func TestGetLocalEndpointIPs(t *testing.T) {
 		// Case[1]: unnamed port
 		endpointsMap: EndpointsMap{
 			makeServicePortName("ns1", "ep1", "", v1.ProtocolTCP): []Endpoint{
-				&BaseEndpointInfo{Endpoint: "1.1.1.1:11", IsLocal: false, Ready: true, Serving: true, Terminating: false},
+				&BaseEndpointInfo{Endpoint: "1.1.1.1:11", IP: "1.1.1.1", Port: 11, IsLocal: false, Ready: true, Serving: true, Terminating: false},
 			},
 		},
 		expected: map[types.NamespacedName]sets.Set[string]{},
@@ -62,7 +62,7 @@ func TestGetLocalEndpointIPs(t *testing.T) {
 		// Case[2]: unnamed port local
 		endpointsMap: EndpointsMap{
 			makeServicePortName("ns1", "ep1", "", v1.ProtocolTCP): []Endpoint{
-				&BaseEndpointInfo{Endpoint: "1.1.1.1:11", IsLocal: true, Ready: true, Serving: true, Terminating: false},
+				&BaseEndpointInfo{Endpoint: "1.1.1.1:11", IP: "1.1.1.1", Port: 11, IsLocal: true, Ready: true, Serving: true, Terminating: false},
 			},
 		},
 		expected: map[types.NamespacedName]sets.Set[string]{
@@ -72,12 +72,12 @@ func TestGetLocalEndpointIPs(t *testing.T) {
 		// Case[3]: named local and non-local ports for the same IP.
 		endpointsMap: EndpointsMap{
 			makeServicePortName("ns1", "ep1", "p11", v1.ProtocolTCP): []Endpoint{
-				&BaseEndpointInfo{Endpoint: "1.1.1.1:11", IsLocal: false, Ready: true, Serving: true, Terminating: false},
-				&BaseEndpointInfo{Endpoint: "1.1.1.2:11", IsLocal: true, Ready: true, Serving: true, Terminating: false},
+				&BaseEndpointInfo{Endpoint: "1.1.1.1:11", IP: "1.1.1.1", Port: 11, IsLocal: false, Ready: true, Serving: true, Terminating: false},
+				&BaseEndpointInfo{Endpoint: "1.1.1.2:11", IP: "1.1.1.2", Port: 11, IsLocal: true, Ready: true, Serving: true, Terminating: false},
 			},
 			makeServicePortName("ns1", "ep1", "p12", v1.ProtocolTCP): []Endpoint{
-				&BaseEndpointInfo{Endpoint: "1.1.1.1:12", IsLocal: false, Ready: true, Serving: true, Terminating: false},
-				&BaseEndpointInfo{Endpoint: "1.1.1.2:12", IsLocal: true, Ready: true, Serving: true, Terminating: false},
+				&BaseEndpointInfo{Endpoint: "1.1.1.1:12", IP: "1.1.1.1", Port: 12, IsLocal: false, Ready: true, Serving: true, Terminating: false},
+				&BaseEndpointInfo{Endpoint: "1.1.1.2:12", IP: "1.1.1.2", Port: 12, IsLocal: true, Ready: true, Serving: true, Terminating: false},
 			},
 		},
 		expected: map[types.NamespacedName]sets.Set[string]{
@@ -87,21 +87,21 @@ func TestGetLocalEndpointIPs(t *testing.T) {
 		// Case[4]: named local and non-local ports for different IPs.
 		endpointsMap: EndpointsMap{
 			makeServicePortName("ns1", "ep1", "p11", v1.ProtocolTCP): []Endpoint{
-				&BaseEndpointInfo{Endpoint: "1.1.1.1:11", IsLocal: false, Ready: true, Serving: true, Terminating: false},
+				&BaseEndpointInfo{Endpoint: "1.1.1.1:11", IP: "1.1.1.1", Port: 11, IsLocal: false, Ready: true, Serving: true, Terminating: false},
 			},
 			makeServicePortName("ns2", "ep2", "p22", v1.ProtocolTCP): []Endpoint{
-				&BaseEndpointInfo{Endpoint: "2.2.2.2:22", IsLocal: true, Ready: true, Serving: true, Terminating: false},
-				&BaseEndpointInfo{Endpoint: "2.2.2.22:22", IsLocal: true, Ready: true, Serving: true, Terminating: false},
+				&BaseEndpointInfo{Endpoint: "2.2.2.2:22", IP: "2.2.2.2", Port: 22, IsLocal: true, Ready: true, Serving: true, Terminating: false},
+				&BaseEndpointInfo{Endpoint: "2.2.2.22:22", IP: "2.2.2.22", Port: 22, IsLocal: true, Ready: true, Serving: true, Terminating: false},
 			},
 			makeServicePortName("ns2", "ep2", "p23", v1.ProtocolTCP): []Endpoint{
-				&BaseEndpointInfo{Endpoint: "2.2.2.3:23", IsLocal: true, Ready: true, Serving: true, Terminating: false},
+				&BaseEndpointInfo{Endpoint: "2.2.2.3:23", IP: "2.2.2.3", Port: 23, IsLocal: true, Ready: true, Serving: true, Terminating: false},
 			},
 			makeServicePortName("ns4", "ep4", "p44", v1.ProtocolTCP): []Endpoint{
-				&BaseEndpointInfo{Endpoint: "4.4.4.4:44", IsLocal: true, Ready: true, Serving: true, Terminating: false},
-				&BaseEndpointInfo{Endpoint: "4.4.4.5:44", IsLocal: false, Ready: true, Serving: true, Terminating: false},
+				&BaseEndpointInfo{Endpoint: "4.4.4.4:44", IP: "4.4.4.4", Port: 44, IsLocal: true, Ready: true, Serving: true, Terminating: false},
+				&BaseEndpointInfo{Endpoint: "4.4.4.5:44", IP: "4.4.4.5", Port: 44, IsLocal: false, Ready: true, Serving: true, Terminating: false},
 			},
 			makeServicePortName("ns4", "ep4", "p45", v1.ProtocolTCP): []Endpoint{
-				&BaseEndpointInfo{Endpoint: "4.4.4.6:45", IsLocal: true, Ready: true, Serving: true, Terminating: false},
+				&BaseEndpointInfo{Endpoint: "4.4.4.6:45", IP: "4.4.4.6", Port: 45, IsLocal: true, Ready: true, Serving: true, Terminating: false},
 			},
 		},
 		expected: map[types.NamespacedName]sets.Set[string]{
@@ -112,21 +112,21 @@ func TestGetLocalEndpointIPs(t *testing.T) {
 		// Case[5]: named local and non-local ports for different IPs, some not ready.
 		endpointsMap: EndpointsMap{
 			makeServicePortName("ns1", "ep1", "p11", v1.ProtocolTCP): []Endpoint{
-				&BaseEndpointInfo{Endpoint: "1.1.1.1:11", IsLocal: false, Ready: true, Serving: true, Terminating: false},
+				&BaseEndpointInfo{Endpoint: "1.1.1.1:11", IP: "1.1.1.1", Port: 11, IsLocal: false, Ready: true, Serving: true, Terminating: false},
 			},
 			makeServicePortName("ns2", "ep2", "p22", v1.ProtocolTCP): []Endpoint{
-				&BaseEndpointInfo{Endpoint: "2.2.2.2:22", IsLocal: true, Ready: true, Serving: true, Terminating: false},
-				&BaseEndpointInfo{Endpoint: "2.2.2.22:22", IsLocal: true, Ready: true, Serving: true, Terminating: false},
+				&BaseEndpointInfo{Endpoint: "2.2.2.2:22", IP: "2.2.2.2", Port: 22, IsLocal: true, Ready: true, Serving: true, Terminating: false},
+				&BaseEndpointInfo{Endpoint: "2.2.2.22:22", IP: "2.2.2.22", Port: 22, IsLocal: true, Ready: true, Serving: true, Terminating: false},
 			},
 			makeServicePortName("ns2", "ep2", "p23", v1.ProtocolTCP): []Endpoint{
-				&BaseEndpointInfo{Endpoint: "2.2.2.3:23", IsLocal: true, Ready: false, Serving: true, Terminating: true},
+				&BaseEndpointInfo{Endpoint: "2.2.2.3:23", IP: "2.2.2.3", Port: 23, IsLocal: true, Ready: false, Serving: true, Terminating: true},
 			},
 			makeServicePortName("ns4", "ep4", "p44", v1.ProtocolTCP): []Endpoint{
-				&BaseEndpointInfo{Endpoint: "4.4.4.4:44", IsLocal: true, Ready: true, Serving: true, Terminating: false},
-				&BaseEndpointInfo{Endpoint: "4.4.4.5:44", IsLocal: false, Ready: true, Serving: true, Terminating: false},
+				&BaseEndpointInfo{Endpoint: "4.4.4.4:44", IP: "4.4.4.4", Port: 44, IsLocal: true, Ready: true, Serving: true, Terminating: false},
+				&BaseEndpointInfo{Endpoint: "4.4.4.5:44", IP: "4.4.4.5", Port: 44, IsLocal: false, Ready: true, Serving: true, Terminating: false},
 			},
 			makeServicePortName("ns4", "ep4", "p45", v1.ProtocolTCP): []Endpoint{
-				&BaseEndpointInfo{Endpoint: "4.4.4.6:45", IsLocal: true, Ready: true, Serving: true, Terminating: false},
+				&BaseEndpointInfo{Endpoint: "4.4.4.6:45", IP: "4.4.4.6", Port: 45, IsLocal: true, Ready: true, Serving: true, Terminating: false},
 			},
 		},
 		expected: map[types.NamespacedName]sets.Set[string]{
@@ -137,21 +137,21 @@ func TestGetLocalEndpointIPs(t *testing.T) {
 		// Case[6]: all endpoints are terminating,, so getLocalReadyEndpointIPs should return 0 ready endpoints
 		endpointsMap: EndpointsMap{
 			makeServicePortName("ns1", "ep1", "p11", v1.ProtocolTCP): []Endpoint{
-				&BaseEndpointInfo{Endpoint: "1.1.1.1:11", IsLocal: false, Ready: false, Serving: true, Terminating: true},
+				&BaseEndpointInfo{Endpoint: "1.1.1.1:11", IP: "1.1.1.1", Port: 11, IsLocal: false, Ready: false, Serving: true, Terminating: true},
 			},
 			makeServicePortName("ns2", "ep2", "p22", v1.ProtocolTCP): []Endpoint{
-				&BaseEndpointInfo{Endpoint: "2.2.2.2:22", IsLocal: true, Ready: false, Serving: true, Terminating: true},
-				&BaseEndpointInfo{Endpoint: "2.2.2.22:22", IsLocal: true, Ready: false, Serving: true, Terminating: true},
+				&BaseEndpointInfo{Endpoint: "2.2.2.2:22", IP: "2.2.2.2", Port: 22, IsLocal: true, Ready: false, Serving: true, Terminating: true},
+				&BaseEndpointInfo{Endpoint: "2.2.2.22:22", IP: "2.2.2.22", Port: 22, IsLocal: true, Ready: false, Serving: true, Terminating: true},
 			},
 			makeServicePortName("ns2", "ep2", "p23", v1.ProtocolTCP): []Endpoint{
-				&BaseEndpointInfo{Endpoint: "2.2.2.3:23", IsLocal: true, Ready: false, Serving: true, Terminating: true},
+				&BaseEndpointInfo{Endpoint: "2.2.2.3:23", IP: "2.2.2.3", Port: 23, IsLocal: true, Ready: false, Serving: true, Terminating: true},
 			},
 			makeServicePortName("ns4", "ep4", "p44", v1.ProtocolTCP): []Endpoint{
-				&BaseEndpointInfo{Endpoint: "4.4.4.4:44", IsLocal: true, Ready: false, Serving: true, Terminating: true},
-				&BaseEndpointInfo{Endpoint: "4.4.4.5:44", IsLocal: false, Ready: false, Serving: true, Terminating: true},
+				&BaseEndpointInfo{Endpoint: "4.4.4.4:44", IP: "4.4.4.4", Port: 44, IsLocal: true, Ready: false, Serving: true, Terminating: true},
+				&BaseEndpointInfo{Endpoint: "4.4.4.5:44", IP: "4.4.4.5", Port: 44, IsLocal: false, Ready: false, Serving: true, Terminating: true},
 			},
 			makeServicePortName("ns4", "ep4", "p45", v1.ProtocolTCP): []Endpoint{
-				&BaseEndpointInfo{Endpoint: "4.4.4.6:45", IsLocal: true, Ready: false, Serving: true, Terminating: true},
+				&BaseEndpointInfo{Endpoint: "4.4.4.6:45", IP: "4.4.4.6", Port: 45, IsLocal: true, Ready: false, Serving: true, Terminating: true},
 			},
 		},
 		expected: make(map[types.NamespacedName]sets.Set[string], 0),
@@ -555,12 +555,12 @@ func TestUpdateEndpointsMap(t *testing.T) {
 		},
 		previousEndpointsMap: map[ServicePortName][]*BaseEndpointInfo{
 			makeServicePortName("ns1", "ep1", "", v1.ProtocolUDP): {
-				{Endpoint: "1.1.1.1:11", IsLocal: false, Ready: true, Serving: true, Terminating: false},
+				{Endpoint: "1.1.1.1:11", IP: "1.1.1.1", Port: 11, IsLocal: false, Ready: true, Serving: true, Terminating: false},
 			},
 		},
 		expectedResult: map[ServicePortName][]*BaseEndpointInfo{
 			makeServicePortName("ns1", "ep1", "", v1.ProtocolUDP): {
-				{Endpoint: "1.1.1.1:11", IsLocal: false, Ready: true, Serving: true, Terminating: false},
+				{Endpoint: "1.1.1.1:11", IP: "1.1.1.1", Port: 11, IsLocal: false, Ready: true, Serving: true, Terminating: false},
 			},
 		},
 		expectedDeletedUDPEndpoints:    []ServiceEndpoint{},
@@ -577,12 +577,12 @@ func TestUpdateEndpointsMap(t *testing.T) {
 		},
 		previousEndpointsMap: map[ServicePortName][]*BaseEndpointInfo{
 			makeServicePortName("ns1", "ep1", "p11", v1.ProtocolUDP): {
-				{Endpoint: "1.1.1.1:11", IsLocal: true, Ready: true, Serving: true, Terminating: false},
+				{Endpoint: "1.1.1.1:11", IP: "1.1.1.1", Port: 11, IsLocal: true, Ready: true, Serving: true, Terminating: false},
 			},
 		},
 		expectedResult: map[ServicePortName][]*BaseEndpointInfo{
 			makeServicePortName("ns1", "ep1", "p11", v1.ProtocolUDP): {
-				{Endpoint: "1.1.1.1:11", IsLocal: true, Ready: true, Serving: true, Terminating: false},
+				{Endpoint: "1.1.1.1:11", IP: "1.1.1.1", Port: 11, IsLocal: true, Ready: true, Serving: true, Terminating: false},
 			},
 		},
 		expectedDeletedUDPEndpoints:    []ServiceEndpoint{},
@@ -603,18 +603,18 @@ func TestUpdateEndpointsMap(t *testing.T) {
 		},
 		previousEndpointsMap: map[ServicePortName][]*BaseEndpointInfo{
 			makeServicePortName("ns1", "ep1", "p11", v1.ProtocolUDP): {
-				{Endpoint: "1.1.1.1:11", IsLocal: false, Ready: true, Serving: true, Terminating: false},
+				{Endpoint: "1.1.1.1:11", IP: "1.1.1.1", Port: 11, IsLocal: false, Ready: true, Serving: true, Terminating: false},
 			},
 			makeServicePortName("ns1", "ep1", "p12", v1.ProtocolUDP): {
-				{Endpoint: "1.1.1.2:12", IsLocal: false, Ready: true, Serving: true, Terminating: false},
+				{Endpoint: "1.1.1.2:12", IP: "1.1.1.2", Port: 12, IsLocal: false, Ready: true, Serving: true, Terminating: false},
 			},
 		},
 		expectedResult: map[ServicePortName][]*BaseEndpointInfo{
 			makeServicePortName("ns1", "ep1", "p11", v1.ProtocolUDP): {
-				{Endpoint: "1.1.1.1:11", IsLocal: false, Ready: true, Serving: true, Terminating: false},
+				{Endpoint: "1.1.1.1:11", IP: "1.1.1.1", Port: 11, IsLocal: false, Ready: true, Serving: true, Terminating: false},
 			},
 			makeServicePortName("ns1", "ep1", "p12", v1.ProtocolUDP): {
-				{Endpoint: "1.1.1.2:12", IsLocal: false, Ready: true, Serving: true, Terminating: false},
+				{Endpoint: "1.1.1.2:12", IP: "1.1.1.2", Port: 12, IsLocal: false, Ready: true, Serving: true, Terminating: false},
 			},
 		},
 		expectedDeletedUDPEndpoints:    []ServiceEndpoint{},
@@ -633,24 +633,24 @@ func TestUpdateEndpointsMap(t *testing.T) {
 		},
 		previousEndpointsMap: map[ServicePortName][]*BaseEndpointInfo{
 			makeServicePortName("ns1", "ep1", "p11", v1.ProtocolUDP): {
-				{Endpoint: "1.1.1.1:11", IsLocal: true, Ready: true, Serving: true, Terminating: false},
+				{Endpoint: "1.1.1.1:11", IP: "1.1.1.1", Port: 11, IsLocal: true, Ready: true, Serving: true, Terminating: false},
 			},
 			makeServicePortName("ns1", "ep1", "p12", v1.ProtocolUDP): {
-				{Endpoint: "1.1.1.1:12", IsLocal: true, Ready: true, Serving: true, Terminating: false},
+				{Endpoint: "1.1.1.1:12", IP: "1.1.1.1", Port: 12, IsLocal: true, Ready: true, Serving: true, Terminating: false},
 			},
 			makeServicePortName("ns1", "ep1", "p13", v1.ProtocolUDP): {
-				{Endpoint: "1.1.1.3:13", IsLocal: false, Ready: true, Serving: true, Terminating: false},
+				{Endpoint: "1.1.1.3:13", IP: "1.1.1.3", Port: 13, IsLocal: false, Ready: true, Serving: true, Terminating: false},
 			},
 		},
 		expectedResult: map[ServicePortName][]*BaseEndpointInfo{
 			makeServicePortName("ns1", "ep1", "p11", v1.ProtocolUDP): {
-				{Endpoint: "1.1.1.1:11", IsLocal: true, Ready: true, Serving: true, Terminating: false},
+				{Endpoint: "1.1.1.1:11", IP: "1.1.1.1", Port: 11, IsLocal: true, Ready: true, Serving: true, Terminating: false},
 			},
 			makeServicePortName("ns1", "ep1", "p12", v1.ProtocolUDP): {
-				{Endpoint: "1.1.1.1:12", IsLocal: true, Ready: true, Serving: true, Terminating: false},
+				{Endpoint: "1.1.1.1:12", IP: "1.1.1.1", Port: 12, IsLocal: true, Ready: true, Serving: true, Terminating: false},
 			},
 			makeServicePortName("ns1", "ep1", "p13", v1.ProtocolUDP): {
-				{Endpoint: "1.1.1.3:13", IsLocal: false, Ready: true, Serving: true, Terminating: false},
+				{Endpoint: "1.1.1.3:13", IP: "1.1.1.3", Port: 13, IsLocal: false, Ready: true, Serving: true, Terminating: false},
 			},
 		},
 		expectedDeletedUDPEndpoints:    []ServiceEndpoint{},
@@ -673,54 +673,54 @@ func TestUpdateEndpointsMap(t *testing.T) {
 		},
 		previousEndpointsMap: map[ServicePortName][]*BaseEndpointInfo{
 			makeServicePortName("ns1", "ep1", "p11", v1.ProtocolUDP): {
-				{Endpoint: "1.1.1.1:11", IsLocal: false, Ready: true, Serving: true, Terminating: false},
-				{Endpoint: "1.1.1.2:11", IsLocal: true, Ready: true, Serving: true, Terminating: false},
+				{Endpoint: "1.1.1.1:11", IP: "1.1.1.1", Port: 11, IsLocal: false, Ready: true, Serving: true, Terminating: false},
+				{Endpoint: "1.1.1.2:11", IP: "1.1.1.2", Port: 11, IsLocal: true, Ready: true, Serving: true, Terminating: false},
 			},
 			makeServicePortName("ns1", "ep1", "p12", v1.ProtocolUDP): {
-				{Endpoint: "1.1.1.1:12", IsLocal: false, Ready: true, Serving: true, Terminating: false},
-				{Endpoint: "1.1.1.2:12", IsLocal: true, Ready: true, Serving: true, Terminating: false},
+				{Endpoint: "1.1.1.1:12", IP: "1.1.1.1", Port: 12, IsLocal: false, Ready: true, Serving: true, Terminating: false},
+				{Endpoint: "1.1.1.2:12", IP: "1.1.1.2", Port: 12, IsLocal: true, Ready: true, Serving: true, Terminating: false},
 			},
 			makeServicePortName("ns1", "ep1", "p13", v1.ProtocolUDP): {
-				{Endpoint: "1.1.1.3:13", IsLocal: false, Ready: true, Serving: true, Terminating: false},
-				{Endpoint: "1.1.1.4:13", IsLocal: true, Ready: true, Serving: true, Terminating: false},
+				{Endpoint: "1.1.1.3:13", IP: "1.1.1.3", Port: 13, IsLocal: false, Ready: true, Serving: true, Terminating: false},
+				{Endpoint: "1.1.1.4:13", IP: "1.1.1.4", Port: 13, IsLocal: true, Ready: true, Serving: true, Terminating: false},
 			},
 			makeServicePortName("ns1", "ep1", "p14", v1.ProtocolUDP): {
-				{Endpoint: "1.1.1.3:14", IsLocal: false, Ready: true, Serving: true, Terminating: false},
-				{Endpoint: "1.1.1.4:14", IsLocal: true, Ready: true, Serving: true, Terminating: false},
+				{Endpoint: "1.1.1.3:14", IP: "1.1.1.3", Port: 14, IsLocal: false, Ready: true, Serving: true, Terminating: false},
+				{Endpoint: "1.1.1.4:14", IP: "1.1.1.4", Port: 14, IsLocal: true, Ready: true, Serving: true, Terminating: false},
 			},
 			makeServicePortName("ns2", "ep2", "p21", v1.ProtocolUDP): {
-				{Endpoint: "2.2.2.1:21", IsLocal: false, Ready: true, Serving: true, Terminating: false},
-				{Endpoint: "2.2.2.2:21", IsLocal: true, Ready: true, Serving: true, Terminating: false},
+				{Endpoint: "2.2.2.1:21", IP: "2.2.2.1", Port: 21, IsLocal: false, Ready: true, Serving: true, Terminating: false},
+				{Endpoint: "2.2.2.2:21", IP: "2.2.2.2", Port: 21, IsLocal: true, Ready: true, Serving: true, Terminating: false},
 			},
 			makeServicePortName("ns2", "ep2", "p22", v1.ProtocolUDP): {
-				{Endpoint: "2.2.2.1:22", IsLocal: false, Ready: true, Serving: true, Terminating: false},
-				{Endpoint: "2.2.2.2:22", IsLocal: true, Ready: true, Serving: true, Terminating: false},
+				{Endpoint: "2.2.2.1:22", IP: "2.2.2.1", Port: 22, IsLocal: false, Ready: true, Serving: true, Terminating: false},
+				{Endpoint: "2.2.2.2:22", IP: "2.2.2.2", Port: 22, IsLocal: true, Ready: true, Serving: true, Terminating: false},
 			},
 		},
 		expectedResult: map[ServicePortName][]*BaseEndpointInfo{
 			makeServicePortName("ns1", "ep1", "p11", v1.ProtocolUDP): {
-				{Endpoint: "1.1.1.1:11", IsLocal: false, Ready: true, Serving: true, Terminating: false},
-				{Endpoint: "1.1.1.2:11", IsLocal: true, Ready: true, Serving: true, Terminating: false},
+				{Endpoint: "1.1.1.1:11", IP: "1.1.1.1", Port: 11, IsLocal: false, Ready: true, Serving: true, Terminating: false},
+				{Endpoint: "1.1.1.2:11", IP: "1.1.1.2", Port: 11, IsLocal: true, Ready: true, Serving: true, Terminating: false},
 			},
 			makeServicePortName("ns1", "ep1", "p12", v1.ProtocolUDP): {
-				{Endpoint: "1.1.1.1:12", IsLocal: false, Ready: true, Serving: true, Terminating: false},
-				{Endpoint: "1.1.1.2:12", IsLocal: true, Ready: true, Serving: true, Terminating: false},
+				{Endpoint: "1.1.1.1:12", IP: "1.1.1.1", Port: 12, IsLocal: false, Ready: true, Serving: true, Terminating: false},
+				{Endpoint: "1.1.1.2:12", IP: "1.1.1.2", Port: 12, IsLocal: true, Ready: true, Serving: true, Terminating: false},
 			},
 			makeServicePortName("ns1", "ep1", "p13", v1.ProtocolUDP): {
-				{Endpoint: "1.1.1.3:13", IsLocal: false, Ready: true, Serving: true, Terminating: false},
-				{Endpoint: "1.1.1.4:13", IsLocal: true, Ready: true, Serving: true, Terminating: false},
+				{Endpoint: "1.1.1.3:13", IP: "1.1.1.3", Port: 13, IsLocal: false, Ready: true, Serving: true, Terminating: false},
+				{Endpoint: "1.1.1.4:13", IP: "1.1.1.4", Port: 13, IsLocal: true, Ready: true, Serving: true, Terminating: false},
 			},
 			makeServicePortName("ns1", "ep1", "p14", v1.ProtocolUDP): {
-				{Endpoint: "1.1.1.3:14", IsLocal: false, Ready: true, Serving: true, Terminating: false},
-				{Endpoint: "1.1.1.4:14", IsLocal: true, Ready: true, Serving: true, Terminating: false},
+				{Endpoint: "1.1.1.3:14", IP: "1.1.1.3", Port: 14, IsLocal: false, Ready: true, Serving: true, Terminating: false},
+				{Endpoint: "1.1.1.4:14", IP: "1.1.1.4", Port: 14, IsLocal: true, Ready: true, Serving: true, Terminating: false},
 			},
 			makeServicePortName("ns2", "ep2", "p21", v1.ProtocolUDP): {
-				{Endpoint: "2.2.2.1:21", IsLocal: false, Ready: true, Serving: true, Terminating: false},
-				{Endpoint: "2.2.2.2:21", IsLocal: true, Ready: true, Serving: true, Terminating: false},
+				{Endpoint: "2.2.2.1:21", IP: "2.2.2.1", Port: 21, IsLocal: false, Ready: true, Serving: true, Terminating: false},
+				{Endpoint: "2.2.2.2:21", IP: "2.2.2.2", Port: 21, IsLocal: true, Ready: true, Serving: true, Terminating: false},
 			},
 			makeServicePortName("ns2", "ep2", "p22", v1.ProtocolUDP): {
-				{Endpoint: "2.2.2.1:22", IsLocal: false, Ready: true, Serving: true, Terminating: false},
-				{Endpoint: "2.2.2.2:22", IsLocal: true, Ready: true, Serving: true, Terminating: false},
+				{Endpoint: "2.2.2.1:22", IP: "2.2.2.1", Port: 22, IsLocal: false, Ready: true, Serving: true, Terminating: false},
+				{Endpoint: "2.2.2.2:22", IP: "2.2.2.2", Port: 22, IsLocal: true, Ready: true, Serving: true, Terminating: false},
 			},
 		},
 		expectedDeletedUDPEndpoints:    []ServiceEndpoint{},
@@ -741,7 +741,7 @@ func TestUpdateEndpointsMap(t *testing.T) {
 		previousEndpointsMap: map[ServicePortName][]*BaseEndpointInfo{},
 		expectedResult: map[ServicePortName][]*BaseEndpointInfo{
 			makeServicePortName("ns1", "ep1", "", v1.ProtocolUDP): {
-				{Endpoint: "1.1.1.1:11", IsLocal: true, Ready: true, Serving: true, Terminating: false},
+				{Endpoint: "1.1.1.1:11", IP: "1.1.1.1", Port: 11, IsLocal: true, Ready: true, Serving: true, Terminating: false},
 			},
 		},
 		expectedDeletedUDPEndpoints: []ServiceEndpoint{},
@@ -762,7 +762,7 @@ func TestUpdateEndpointsMap(t *testing.T) {
 		},
 		previousEndpointsMap: map[ServicePortName][]*BaseEndpointInfo{
 			makeServicePortName("ns1", "ep1", "", v1.ProtocolUDP): {
-				{Endpoint: "1.1.1.1:11", IsLocal: true, Ready: true, Serving: true, Terminating: false},
+				{Endpoint: "1.1.1.1:11", IP: "1.1.1.1", Port: 11, IsLocal: true, Ready: true, Serving: true, Terminating: false},
 			},
 		},
 		expectedResult: map[ServicePortName][]*BaseEndpointInfo{},
@@ -783,17 +783,17 @@ func TestUpdateEndpointsMap(t *testing.T) {
 		},
 		previousEndpointsMap: map[ServicePortName][]*BaseEndpointInfo{
 			makeServicePortName("ns1", "ep1", "p11", v1.ProtocolUDP): {
-				{Endpoint: "1.1.1.1:11", IsLocal: false, Ready: true, Serving: true, Terminating: false},
+				{Endpoint: "1.1.1.1:11", IP: "1.1.1.1", Port: 11, IsLocal: false, Ready: true, Serving: true, Terminating: false},
 			},
 		},
 		expectedResult: map[ServicePortName][]*BaseEndpointInfo{
 			makeServicePortName("ns1", "ep1", "p11", v1.ProtocolUDP): {
-				{Endpoint: "1.1.1.1:11", IsLocal: false, Ready: true, Serving: true, Terminating: false},
-				{Endpoint: "1.1.1.2:11", IsLocal: true, Ready: true, Serving: true, Terminating: false},
+				{Endpoint: "1.1.1.1:11", IP: "1.1.1.1", Port: 11, IsLocal: false, Ready: true, Serving: true, Terminating: false},
+				{Endpoint: "1.1.1.2:11", IP: "1.1.1.2", Port: 11, IsLocal: true, Ready: true, Serving: true, Terminating: false},
 			},
 			makeServicePortName("ns1", "ep1", "p12", v1.ProtocolUDP): {
-				{Endpoint: "1.1.1.1:12", IsLocal: false, Ready: true, Serving: true, Terminating: false},
-				{Endpoint: "1.1.1.2:12", IsLocal: true, Ready: true, Serving: true, Terminating: false},
+				{Endpoint: "1.1.1.1:12", IP: "1.1.1.1", Port: 12, IsLocal: false, Ready: true, Serving: true, Terminating: false},
+				{Endpoint: "1.1.1.2:12", IP: "1.1.1.2", Port: 12, IsLocal: true, Ready: true, Serving: true, Terminating: false},
 			},
 		},
 		expectedDeletedUDPEndpoints: []ServiceEndpoint{},
@@ -814,17 +814,17 @@ func TestUpdateEndpointsMap(t *testing.T) {
 		},
 		previousEndpointsMap: map[ServicePortName][]*BaseEndpointInfo{
 			makeServicePortName("ns1", "ep1", "p11", v1.ProtocolUDP): {
-				{Endpoint: "1.1.1.1:11", IsLocal: false, Ready: true, Serving: true, Terminating: false},
-				{Endpoint: "1.1.1.2:11", IsLocal: true, Ready: true, Serving: true, Terminating: false},
+				{Endpoint: "1.1.1.1:11", IP: "1.1.1.1", Port: 11, IsLocal: false, Ready: true, Serving: true, Terminating: false},
+				{Endpoint: "1.1.1.2:11", IP: "1.1.1.2", Port: 11, IsLocal: true, Ready: true, Serving: true, Terminating: false},
 			},
 			makeServicePortName("ns1", "ep1", "p12", v1.ProtocolUDP): {
-				{Endpoint: "1.1.1.1:12", IsLocal: false, Ready: true, Serving: true, Terminating: false},
-				{Endpoint: "1.1.1.2:12", IsLocal: true, Ready: true, Serving: true, Terminating: false},
+				{Endpoint: "1.1.1.1:12", IP: "1.1.1.1", Port: 12, IsLocal: false, Ready: true, Serving: true, Terminating: false},
+				{Endpoint: "1.1.1.2:12", IP: "1.1.1.2", Port: 12, IsLocal: true, Ready: true, Serving: true, Terminating: false},
 			},
 		},
 		expectedResult: map[ServicePortName][]*BaseEndpointInfo{
 			makeServicePortName("ns1", "ep1", "p11", v1.ProtocolUDP): {
-				{Endpoint: "1.1.1.1:11", IsLocal: false, Ready: true, Serving: true, Terminating: false},
+				{Endpoint: "1.1.1.1:11", IP: "1.1.1.1", Port: 11, IsLocal: false, Ready: true, Serving: true, Terminating: false},
 			},
 		},
 		expectedDeletedUDPEndpoints: []ServiceEndpoint{{
@@ -852,15 +852,15 @@ func TestUpdateEndpointsMap(t *testing.T) {
 		},
 		previousEndpointsMap: map[ServicePortName][]*BaseEndpointInfo{
 			makeServicePortName("ns1", "ep1", "p11", v1.ProtocolUDP): {
-				{Endpoint: "1.1.1.1:11", IsLocal: false, Ready: true, Serving: true, Terminating: false},
+				{Endpoint: "1.1.1.1:11", IP: "1.1.1.1", Port: 11, IsLocal: false, Ready: true, Serving: true, Terminating: false},
 			},
 		},
 		expectedResult: map[ServicePortName][]*BaseEndpointInfo{
 			makeServicePortName("ns1", "ep1", "p11", v1.ProtocolUDP): {
-				{Endpoint: "1.1.1.1:11", IsLocal: false, Ready: true, Serving: true, Terminating: false},
+				{Endpoint: "1.1.1.1:11", IP: "1.1.1.1", Port: 11, IsLocal: false, Ready: true, Serving: true, Terminating: false},
 			},
 			makeServicePortName("ns1", "ep1", "p12", v1.ProtocolUDP): {
-				{Endpoint: "1.1.1.2:12", IsLocal: true, Ready: true, Serving: true, Terminating: false},
+				{Endpoint: "1.1.1.2:12", IP: "1.1.1.2", Port: 12, IsLocal: true, Ready: true, Serving: true, Terminating: false},
 			},
 		},
 		expectedDeletedUDPEndpoints: []ServiceEndpoint{},
@@ -883,15 +883,15 @@ func TestUpdateEndpointsMap(t *testing.T) {
 		},
 		previousEndpointsMap: map[ServicePortName][]*BaseEndpointInfo{
 			makeServicePortName("ns1", "ep1", "p11", v1.ProtocolUDP): {
-				{Endpoint: "1.1.1.1:11", IsLocal: false, Ready: true, Serving: true, Terminating: false},
+				{Endpoint: "1.1.1.1:11", IP: "1.1.1.1", Port: 11, IsLocal: false, Ready: true, Serving: true, Terminating: false},
 			},
 			makeServicePortName("ns1", "ep1", "p12", v1.ProtocolUDP): {
-				{Endpoint: "1.1.1.2:12", IsLocal: false, Ready: true, Serving: true, Terminating: false},
+				{Endpoint: "1.1.1.2:12", IP: "1.1.1.2", Port: 12, IsLocal: false, Ready: true, Serving: true, Terminating: false},
 			},
 		},
 		expectedResult: map[ServicePortName][]*BaseEndpointInfo{
 			makeServicePortName("ns1", "ep1", "p11", v1.ProtocolUDP): {
-				{Endpoint: "1.1.1.1:11", IsLocal: false, Ready: true, Serving: true, Terminating: false},
+				{Endpoint: "1.1.1.1:11", IP: "1.1.1.1", Port: 11, IsLocal: false, Ready: true, Serving: true, Terminating: false},
 			},
 		},
 		expectedDeletedUDPEndpoints: []ServiceEndpoint{{
@@ -911,12 +911,12 @@ func TestUpdateEndpointsMap(t *testing.T) {
 		},
 		previousEndpointsMap: map[ServicePortName][]*BaseEndpointInfo{
 			makeServicePortName("ns1", "ep1", "p11", v1.ProtocolUDP): {
-				{Endpoint: "1.1.1.1:11", IsLocal: false, Ready: true, Serving: true, Terminating: false},
+				{Endpoint: "1.1.1.1:11", IP: "1.1.1.1", Port: 11, IsLocal: false, Ready: true, Serving: true, Terminating: false},
 			},
 		},
 		expectedResult: map[ServicePortName][]*BaseEndpointInfo{
 			makeServicePortName("ns1", "ep1", "p11-2", v1.ProtocolUDP): {
-				{Endpoint: "1.1.1.1:11", IsLocal: false, Ready: true, Serving: true, Terminating: false},
+				{Endpoint: "1.1.1.1:11", IP: "1.1.1.1", Port: 11, IsLocal: false, Ready: true, Serving: true, Terminating: false},
 			},
 		},
 		expectedDeletedUDPEndpoints: []ServiceEndpoint{{
@@ -938,12 +938,12 @@ func TestUpdateEndpointsMap(t *testing.T) {
 		},
 		previousEndpointsMap: map[ServicePortName][]*BaseEndpointInfo{
 			makeServicePortName("ns1", "ep1", "p11", v1.ProtocolUDP): {
-				{Endpoint: "1.1.1.1:11", IsLocal: false, Ready: true, Serving: true, Terminating: false},
+				{Endpoint: "1.1.1.1:11", IP: "1.1.1.1", Port: 11, IsLocal: false, Ready: true, Serving: true, Terminating: false},
 			},
 		},
 		expectedResult: map[ServicePortName][]*BaseEndpointInfo{
 			makeServicePortName("ns1", "ep1", "p11", v1.ProtocolUDP): {
-				{Endpoint: "1.1.1.1:22", IsLocal: false, Ready: true, Serving: true, Terminating: false},
+				{Endpoint: "1.1.1.1:22", IP: "1.1.1.1", Port: 22, IsLocal: false, Ready: true, Serving: true, Terminating: false},
 			},
 		},
 		expectedDeletedUDPEndpoints: []ServiceEndpoint{{
@@ -983,39 +983,39 @@ func TestUpdateEndpointsMap(t *testing.T) {
 		},
 		previousEndpointsMap: map[ServicePortName][]*BaseEndpointInfo{
 			makeServicePortName("ns1", "ep1", "p11", v1.ProtocolUDP): {
-				{Endpoint: "1.1.1.1:11", IsLocal: false, Ready: true, Serving: true, Terminating: false},
+				{Endpoint: "1.1.1.1:11", IP: "1.1.1.1", Port: 11, IsLocal: false, Ready: true, Serving: true, Terminating: false},
 			},
 			makeServicePortName("ns2", "ep2", "p22", v1.ProtocolUDP): {
-				{Endpoint: "2.2.2.22:22", IsLocal: true, Ready: true, Serving: true, Terminating: false},
-				{Endpoint: "2.2.2.2:22", IsLocal: true, Ready: true, Serving: true, Terminating: false},
+				{Endpoint: "2.2.2.22:22", IP: "2.2.2.22", Port: 22, IsLocal: true, Ready: true, Serving: true, Terminating: false},
+				{Endpoint: "2.2.2.2:22", IP: "2.2.2.2", Port: 22, IsLocal: true, Ready: true, Serving: true, Terminating: false},
 			},
 			makeServicePortName("ns2", "ep2", "p23", v1.ProtocolUDP): {
-				{Endpoint: "2.2.2.3:23", IsLocal: true, Ready: true, Serving: true, Terminating: false},
+				{Endpoint: "2.2.2.3:23", IP: "2.2.2.3", Port: 23, IsLocal: true, Ready: true, Serving: true, Terminating: false},
 			},
 			makeServicePortName("ns4", "ep4", "p44", v1.ProtocolUDP): {
-				{Endpoint: "4.4.4.4:44", IsLocal: true, Ready: true, Serving: true, Terminating: false},
-				{Endpoint: "4.4.4.5:44", IsLocal: true, Ready: true, Serving: true, Terminating: false},
+				{Endpoint: "4.4.4.4:44", IP: "4.4.4.4", Port: 44, IsLocal: true, Ready: true, Serving: true, Terminating: false},
+				{Endpoint: "4.4.4.5:44", IP: "4.4.4.5", Port: 44, IsLocal: true, Ready: true, Serving: true, Terminating: false},
 			},
 			makeServicePortName("ns4", "ep4", "p45", v1.ProtocolUDP): {
-				{Endpoint: "4.4.4.6:45", IsLocal: true, Ready: true, Serving: true, Terminating: false},
+				{Endpoint: "4.4.4.6:45", IP: "4.4.4.6", Port: 45, IsLocal: true, Ready: true, Serving: true, Terminating: false},
 			},
 		},
 		expectedResult: map[ServicePortName][]*BaseEndpointInfo{
 			makeServicePortName("ns1", "ep1", "p11", v1.ProtocolUDP): {
-				{Endpoint: "1.1.1.11:11", IsLocal: false, Ready: true, Serving: true, Terminating: false},
-				{Endpoint: "1.1.1.1:11", IsLocal: false, Ready: true, Serving: true, Terminating: false},
+				{Endpoint: "1.1.1.11:11", IP: "1.1.1.11", Port: 11, IsLocal: false, Ready: true, Serving: true, Terminating: false},
+				{Endpoint: "1.1.1.1:11", IP: "1.1.1.1", Port: 11, IsLocal: false, Ready: true, Serving: true, Terminating: false},
 			},
 			makeServicePortName("ns1", "ep1", "p12", v1.ProtocolUDP): {
-				{Endpoint: "1.1.1.2:12", IsLocal: false, Ready: true, Serving: true, Terminating: false},
+				{Endpoint: "1.1.1.2:12", IP: "1.1.1.2", Port: 12, IsLocal: false, Ready: true, Serving: true, Terminating: false},
 			},
 			makeServicePortName("ns1", "ep1", "p122", v1.ProtocolUDP): {
-				{Endpoint: "1.1.1.2:122", IsLocal: false, Ready: true, Serving: true, Terminating: false},
+				{Endpoint: "1.1.1.2:122", IP: "1.1.1.2", Port: 122, IsLocal: false, Ready: true, Serving: true, Terminating: false},
 			},
 			makeServicePortName("ns3", "ep3", "p33", v1.ProtocolUDP): {
-				{Endpoint: "3.3.3.3:33", IsLocal: false, Ready: true, Serving: true, Terminating: false},
+				{Endpoint: "3.3.3.3:33", IP: "3.3.3.3", Port: 33, IsLocal: false, Ready: true, Serving: true, Terminating: false},
 			},
 			makeServicePortName("ns4", "ep4", "p44", v1.ProtocolUDP): {
-				{Endpoint: "4.4.4.4:44", IsLocal: true, Ready: true, Serving: true, Terminating: false},
+				{Endpoint: "4.4.4.4:44", IP: "4.4.4.4", Port: 44, IsLocal: true, Ready: true, Serving: true, Terminating: false},
 			},
 		},
 		expectedDeletedUDPEndpoints: []ServiceEndpoint{{
@@ -1054,7 +1054,7 @@ func TestUpdateEndpointsMap(t *testing.T) {
 		previousEndpointsMap: map[ServicePortName][]*BaseEndpointInfo{},
 		expectedResult: map[ServicePortName][]*BaseEndpointInfo{
 			makeServicePortName("ns1", "ep1", "", v1.ProtocolUDP): {
-				{Endpoint: "1.1.1.1:11", IsLocal: false, Ready: true, Serving: true, Terminating: false},
+				{Endpoint: "1.1.1.1:11", IP: "1.1.1.1", Port: 11, IsLocal: false, Ready: true, Serving: true, Terminating: false},
 			},
 		},
 		expectedDeletedUDPEndpoints: []ServiceEndpoint{},
@@ -1073,12 +1073,12 @@ func TestUpdateEndpointsMap(t *testing.T) {
 		},
 		previousEndpointsMap: map[ServicePortName][]*BaseEndpointInfo{
 			makeServicePortName("ns1", "ep1", "", v1.ProtocolUDP): {
-				{Endpoint: "1.1.1.1:11", IsLocal: false, Ready: true, Serving: true, Terminating: false},
+				{Endpoint: "1.1.1.1:11", IP: "1.1.1.1", Port: 11, IsLocal: false, Ready: true, Serving: true, Terminating: false},
 			},
 		},
 		expectedResult: map[ServicePortName][]*BaseEndpointInfo{
 			makeServicePortName("ns1", "ep1", "", v1.ProtocolUDP): {
-				{Endpoint: "1.1.1.1:11", IsLocal: false, Ready: false, Serving: true, Terminating: true},
+				{Endpoint: "1.1.1.1:11", IP: "1.1.1.1", Port: 11, IsLocal: false, Ready: false, Serving: true, Terminating: true},
 			},
 		},
 		expectedDeletedUDPEndpoints:    []ServiceEndpoint{},
@@ -1095,7 +1095,7 @@ func TestUpdateEndpointsMap(t *testing.T) {
 		},
 		previousEndpointsMap: map[ServicePortName][]*BaseEndpointInfo{
 			makeServicePortName("ns1", "ep1", "", v1.ProtocolUDP): {
-				{Endpoint: "1.1.1.1:11", IsLocal: false, Ready: false, Serving: true, Terminating: true},
+				{Endpoint: "1.1.1.1:11", IP: "1.1.1.1", Port: 11, IsLocal: false, Ready: false, Serving: true, Terminating: true},
 			},
 		},
 		expectedResult: map[ServicePortName][]*BaseEndpointInfo{},
@@ -1358,14 +1358,14 @@ func TestEndpointSliceUpdate(t *testing.T) {
 			expectedReturnVal:     true,
 			expectedCurrentChange: map[ServicePortName][]*BaseEndpointInfo{
 				makeServicePortName("ns1", "svc1", "port-0", v1.ProtocolTCP): {
-					&BaseEndpointInfo{Endpoint: "10.0.1.1:80", IsLocal: false, Ready: true, Serving: true, Terminating: false},
-					&BaseEndpointInfo{Endpoint: "10.0.1.2:80", IsLocal: true, Ready: true, Serving: true, Terminating: false},
-					&BaseEndpointInfo{Endpoint: "10.0.1.3:80", IsLocal: false, Ready: true, Serving: true, Terminating: false},
+					&BaseEndpointInfo{Endpoint: "10.0.1.1:80", IP: "10.0.1.1", Port: 80, IsLocal: false, Ready: true, Serving: true, Terminating: false},
+					&BaseEndpointInfo{Endpoint: "10.0.1.2:80", IP: "10.0.1.2", Port: 80, IsLocal: true, Ready: true, Serving: true, Terminating: false},
+					&BaseEndpointInfo{Endpoint: "10.0.1.3:80", IP: "10.0.1.3", Port: 80, IsLocal: false, Ready: true, Serving: true, Terminating: false},
 				},
 				makeServicePortName("ns1", "svc1", "port-1", v1.ProtocolTCP): {
-					&BaseEndpointInfo{Endpoint: "10.0.1.1:443", IsLocal: false, Ready: true, Serving: true, Terminating: false},
-					&BaseEndpointInfo{Endpoint: "10.0.1.2:443", IsLocal: true, Ready: true, Serving: true, Terminating: false},
-					&BaseEndpointInfo{Endpoint: "10.0.1.3:443", IsLocal: false, Ready: true, Serving: true, Terminating: false},
+					&BaseEndpointInfo{Endpoint: "10.0.1.1:443", IP: "10.0.1.1", Port: 443, IsLocal: false, Ready: true, Serving: true, Terminating: false},
+					&BaseEndpointInfo{Endpoint: "10.0.1.2:443", IP: "10.0.1.2", Port: 443, IsLocal: true, Ready: true, Serving: true, Terminating: false},
+					&BaseEndpointInfo{Endpoint: "10.0.1.3:443", IP: "10.0.1.3", Port: 443, IsLocal: false, Ready: true, Serving: true, Terminating: false},
 				},
 			},
 			expectedChangedEndpoints: sets.New[string]("ns1/svc1"),
@@ -1409,22 +1409,22 @@ func TestEndpointSliceUpdate(t *testing.T) {
 			expectedReturnVal:     true,
 			expectedCurrentChange: map[ServicePortName][]*BaseEndpointInfo{
 				makeServicePortName("ns1", "svc1", "port-0", v1.ProtocolTCP): {
-					&BaseEndpointInfo{Endpoint: "10.0.1.1:80", IsLocal: true, Ready: true, Serving: true, Terminating: false},
-					&BaseEndpointInfo{Endpoint: "10.0.1.2:80", IsLocal: true, Ready: true, Serving: true, Terminating: false},
-					&BaseEndpointInfo{Endpoint: "10.0.1.3:80", IsLocal: true, Ready: true, Serving: true, Terminating: false},
-					&BaseEndpointInfo{Endpoint: "10.0.1.4:80", IsLocal: true, Ready: true, Serving: true, Terminating: false},
-					&BaseEndpointInfo{Endpoint: "10.0.1.5:80", IsLocal: true, Ready: true, Serving: true, Terminating: false},
-					&BaseEndpointInfo{Endpoint: "10.0.2.1:80", IsLocal: false, Ready: true, Serving: true, Terminating: false},
-					&BaseEndpointInfo{Endpoint: "10.0.2.2:80", IsLocal: true, Ready: true, Serving: true, Terminating: false},
+					&BaseEndpointInfo{Endpoint: "10.0.1.1:80", IP: "10.0.1.1", Port: 80, IsLocal: true, Ready: true, Serving: true, Terminating: false},
+					&BaseEndpointInfo{Endpoint: "10.0.1.2:80", IP: "10.0.1.2", Port: 80, IsLocal: true, Ready: true, Serving: true, Terminating: false},
+					&BaseEndpointInfo{Endpoint: "10.0.1.3:80", IP: "10.0.1.3", Port: 80, IsLocal: true, Ready: true, Serving: true, Terminating: false},
+					&BaseEndpointInfo{Endpoint: "10.0.1.4:80", IP: "10.0.1.4", Port: 80, IsLocal: true, Ready: true, Serving: true, Terminating: false},
+					&BaseEndpointInfo{Endpoint: "10.0.1.5:80", IP: "10.0.1.5", Port: 80, IsLocal: true, Ready: true, Serving: true, Terminating: false},
+					&BaseEndpointInfo{Endpoint: "10.0.2.1:80", IP: "10.0.2.1", Port: 80, IsLocal: false, Ready: true, Serving: true, Terminating: false},
+					&BaseEndpointInfo{Endpoint: "10.0.2.2:80", IP: "10.0.2.2", Port: 80, IsLocal: true, Ready: true, Serving: true, Terminating: false},
 				},
 				makeServicePortName("ns1", "svc1", "port-1", v1.ProtocolTCP): {
-					&BaseEndpointInfo{Endpoint: "10.0.1.1:443", IsLocal: true, Ready: true, Serving: true, Terminating: false},
-					&BaseEndpointInfo{Endpoint: "10.0.1.2:443", IsLocal: true, Ready: true, Serving: true, Terminating: false},
-					&BaseEndpointInfo{Endpoint: "10.0.1.3:443", IsLocal: true, Ready: true, Serving: true, Terminating: false},
-					&BaseEndpointInfo{Endpoint: "10.0.1.4:443", IsLocal: true, Ready: true, Serving: true, Terminating: false},
-					&BaseEndpointInfo{Endpoint: "10.0.1.5:443", IsLocal: true, Ready: true, Serving: true, Terminating: false},
-					&BaseEndpointInfo{Endpoint: "10.0.2.1:443", IsLocal: false, Ready: true, Serving: true, Terminating: false},
-					&BaseEndpointInfo{Endpoint: "10.0.2.2:443", IsLocal: true, Ready: true, Serving: true, Terminating: false},
+					&BaseEndpointInfo{Endpoint: "10.0.1.1:443", IP: "10.0.1.1", Port: 443, IsLocal: true, Ready: true, Serving: true, Terminating: false},
+					&BaseEndpointInfo{Endpoint: "10.0.1.2:443", IP: "10.0.1.2", Port: 443, IsLocal: true, Ready: true, Serving: true, Terminating: false},
+					&BaseEndpointInfo{Endpoint: "10.0.1.3:443", IP: "10.0.1.3", Port: 443, IsLocal: true, Ready: true, Serving: true, Terminating: false},
+					&BaseEndpointInfo{Endpoint: "10.0.1.4:443", IP: "10.0.1.4", Port: 443, IsLocal: true, Ready: true, Serving: true, Terminating: false},
+					&BaseEndpointInfo{Endpoint: "10.0.1.5:443", IP: "10.0.1.5", Port: 443, IsLocal: true, Ready: true, Serving: true, Terminating: false},
+					&BaseEndpointInfo{Endpoint: "10.0.2.1:443", IP: "10.0.2.1", Port: 443, IsLocal: false, Ready: true, Serving: true, Terminating: false},
+					&BaseEndpointInfo{Endpoint: "10.0.2.2:443", IP: "10.0.2.2", Port: 443, IsLocal: true, Ready: true, Serving: true, Terminating: false},
 				},
 			},
 			expectedChangedEndpoints: sets.New[string]("ns1/svc1"),
@@ -1442,20 +1442,20 @@ func TestEndpointSliceUpdate(t *testing.T) {
 			expectedReturnVal:     true,
 			expectedCurrentChange: map[ServicePortName][]*BaseEndpointInfo{
 				makeServicePortName("ns1", "svc1", "port-0", v1.ProtocolTCP): {
-					&BaseEndpointInfo{Endpoint: "10.0.1.1:80", IsLocal: true, Ready: true, Serving: true, Terminating: false},
-					&BaseEndpointInfo{Endpoint: "10.0.1.2:80", IsLocal: true, Ready: true, Serving: true, Terminating: false},
-					&BaseEndpointInfo{Endpoint: "10.0.1.3:80", IsLocal: true, Ready: true, Serving: true, Terminating: false},
-					&BaseEndpointInfo{Endpoint: "10.0.1.4:80", IsLocal: true, Ready: true, Serving: true, Terminating: false},
-					&BaseEndpointInfo{Endpoint: "10.0.1.5:80", IsLocal: true, Ready: true, Serving: true, Terminating: false},
-					&BaseEndpointInfo{Endpoint: "10.0.2.1:80", IsLocal: false, Ready: true, Serving: true, Terminating: false},
-					&BaseEndpointInfo{Endpoint: "10.0.2.2:80", IsLocal: true, Ready: true, Serving: true, Terminating: false},
+					&BaseEndpointInfo{Endpoint: "10.0.1.1:80", IP: "10.0.1.1", Port: 80, IsLocal: true, Ready: true, Serving: true, Terminating: false},
+					&BaseEndpointInfo{Endpoint: "10.0.1.2:80", IP: "10.0.1.2", Port: 80, IsLocal: true, Ready: true, Serving: true, Terminating: false},
+					&BaseEndpointInfo{Endpoint: "10.0.1.3:80", IP: "10.0.1.3", Port: 80, IsLocal: true, Ready: true, Serving: true, Terminating: false},
+					&BaseEndpointInfo{Endpoint: "10.0.1.4:80", IP: "10.0.1.4", Port: 80, IsLocal: true, Ready: true, Serving: true, Terminating: false},
+					&BaseEndpointInfo{Endpoint: "10.0.1.5:80", IP: "10.0.1.5", Port: 80, IsLocal: true, Ready: true, Serving: true, Terminating: false},
+					&BaseEndpointInfo{Endpoint: "10.0.2.1:80", IP: "10.0.2.1", Port: 80, IsLocal: false, Ready: true, Serving: true, Terminating: false},
+					&BaseEndpointInfo{Endpoint: "10.0.2.2:80", IP: "10.0.2.2", Port: 80, IsLocal: true, Ready: true, Serving: true, Terminating: false},
 				},
 				makeServicePortName("ns1", "svc1", "port-1", v1.ProtocolTCP): {
-					&BaseEndpointInfo{Endpoint: "10.0.1.1:443", IsLocal: false, Ready: true, Serving: true, Terminating: false},
-					&BaseEndpointInfo{Endpoint: "10.0.1.2:443", IsLocal: true, Ready: true, Serving: true, Terminating: false},
-					&BaseEndpointInfo{Endpoint: "10.0.1.3:443", IsLocal: false, Ready: true, Serving: true, Terminating: false},
-					&BaseEndpointInfo{Endpoint: "10.0.2.1:443", IsLocal: false, Ready: true, Serving: true, Terminating: false},
-					&BaseEndpointInfo{Endpoint: "10.0.2.2:443", IsLocal: true, Ready: true, Serving: true, Terminating: false},
+					&BaseEndpointInfo{Endpoint: "10.0.1.1:443", IP: "10.0.1.1", Port: 443, IsLocal: false, Ready: true, Serving: true, Terminating: false},
+					&BaseEndpointInfo{Endpoint: "10.0.1.2:443", IP: "10.0.1.2", Port: 443, IsLocal: true, Ready: true, Serving: true, Terminating: false},
+					&BaseEndpointInfo{Endpoint: "10.0.1.3:443", IP: "10.0.1.3", Port: 443, IsLocal: false, Ready: true, Serving: true, Terminating: false},
+					&BaseEndpointInfo{Endpoint: "10.0.2.1:443", IP: "10.0.2.1", Port: 443, IsLocal: false, Ready: true, Serving: true, Terminating: false},
+					&BaseEndpointInfo{Endpoint: "10.0.2.2:443", IP: "10.0.2.2", Port: 443, IsLocal: true, Ready: true, Serving: true, Terminating: false},
 				},
 			},
 			expectedChangedEndpoints: sets.New[string]("ns1/svc1"),
@@ -1473,12 +1473,12 @@ func TestEndpointSliceUpdate(t *testing.T) {
 			expectedReturnVal:     true,
 			expectedCurrentChange: map[ServicePortName][]*BaseEndpointInfo{
 				makeServicePortName("ns1", "svc1", "port-0", v1.ProtocolTCP): {
-					&BaseEndpointInfo{Endpoint: "10.0.2.1:80", IsLocal: false, Ready: true, Serving: true, Terminating: false},
-					&BaseEndpointInfo{Endpoint: "10.0.2.2:80", IsLocal: true, Ready: true, Serving: true, Terminating: false},
+					&BaseEndpointInfo{Endpoint: "10.0.2.1:80", IP: "10.0.2.1", Port: 80, IsLocal: false, Ready: true, Serving: true, Terminating: false},
+					&BaseEndpointInfo{Endpoint: "10.0.2.2:80", IP: "10.0.2.2", Port: 80, IsLocal: true, Ready: true, Serving: true, Terminating: false},
 				},
 				makeServicePortName("ns1", "svc1", "port-1", v1.ProtocolTCP): {
-					&BaseEndpointInfo{Endpoint: "10.0.2.1:443", IsLocal: false, Ready: true, Serving: true, Terminating: false},
-					&BaseEndpointInfo{Endpoint: "10.0.2.2:443", IsLocal: true, Ready: true, Serving: true, Terminating: false},
+					&BaseEndpointInfo{Endpoint: "10.0.2.1:443", IP: "10.0.2.1", Port: 443, IsLocal: false, Ready: true, Serving: true, Terminating: false},
+					&BaseEndpointInfo{Endpoint: "10.0.2.2:443", IP: "10.0.2.2", Port: 443, IsLocal: true, Ready: true, Serving: true, Terminating: false},
 				},
 			},
 			expectedChangedEndpoints: sets.New[string]("ns1/svc1"),
@@ -1509,14 +1509,14 @@ func TestEndpointSliceUpdate(t *testing.T) {
 			expectedReturnVal:     true,
 			expectedCurrentChange: map[ServicePortName][]*BaseEndpointInfo{
 				makeServicePortName("ns1", "svc1", "port-0", v1.ProtocolTCP): {
-					&BaseEndpointInfo{Endpoint: "10.0.1.1:80", IsLocal: true, Ready: false, Serving: false, Terminating: false},
-					&BaseEndpointInfo{Endpoint: "10.0.1.2:80", IsLocal: true, Ready: false, Serving: false, Terminating: false},
-					&BaseEndpointInfo{Endpoint: "10.0.1.3:80", IsLocal: true, Ready: false, Serving: false, Terminating: false},
+					&BaseEndpointInfo{Endpoint: "10.0.1.1:80", IP: "10.0.1.1", Port: 80, IsLocal: true, Ready: false, Serving: false, Terminating: false},
+					&BaseEndpointInfo{Endpoint: "10.0.1.2:80", IP: "10.0.1.2", Port: 80, IsLocal: true, Ready: false, Serving: false, Terminating: false},
+					&BaseEndpointInfo{Endpoint: "10.0.1.3:80", IP: "10.0.1.3", Port: 80, IsLocal: true, Ready: false, Serving: false, Terminating: false},
 				},
 				makeServicePortName("ns1", "svc1", "port-1", v1.ProtocolTCP): {
-					&BaseEndpointInfo{Endpoint: "10.0.1.1:443", IsLocal: true, Ready: false, Serving: false, Terminating: false},
-					&BaseEndpointInfo{Endpoint: "10.0.1.2:443", IsLocal: true, Ready: false, Serving: false, Terminating: false},
-					&BaseEndpointInfo{Endpoint: "10.0.1.3:443", IsLocal: true, Ready: false, Serving: false, Terminating: false},
+					&BaseEndpointInfo{Endpoint: "10.0.1.1:443", IP: "10.0.1.1", Port: 443, IsLocal: true, Ready: false, Serving: false, Terminating: false},
+					&BaseEndpointInfo{Endpoint: "10.0.1.2:443", IP: "10.0.1.2", Port: 443, IsLocal: true, Ready: false, Serving: false, Terminating: false},
+					&BaseEndpointInfo{Endpoint: "10.0.1.3:443", IP: "10.0.1.3", Port: 443, IsLocal: true, Ready: false, Serving: false, Terminating: false},
 				},
 			},
 			expectedChangedEndpoints: sets.New[string]("ns1/svc1"),
@@ -1533,12 +1533,12 @@ func TestEndpointSliceUpdate(t *testing.T) {
 			expectedReturnVal:     true,
 			expectedCurrentChange: map[ServicePortName][]*BaseEndpointInfo{
 				makeServicePortName("ns1", "svc1", "port-0", v1.ProtocolTCP): {
-					&BaseEndpointInfo{Endpoint: "10.0.1.1:80", IsLocal: true, Ready: true, Serving: true, Terminating: false},
-					&BaseEndpointInfo{Endpoint: "10.0.1.2:80", IsLocal: true, Ready: true, Serving: true, Terminating: false},
+					&BaseEndpointInfo{Endpoint: "10.0.1.1:80", IP: "10.0.1.1", Port: 80, IsLocal: true, Ready: true, Serving: true, Terminating: false},
+					&BaseEndpointInfo{Endpoint: "10.0.1.2:80", IP: "10.0.1.2", Port: 80, IsLocal: true, Ready: true, Serving: true, Terminating: false},
 				},
 				makeServicePortName("ns1", "svc1", "port-1", v1.ProtocolTCP): {
-					&BaseEndpointInfo{Endpoint: "10.0.1.1:443", IsLocal: true, Ready: true, Serving: true, Terminating: false},
-					&BaseEndpointInfo{Endpoint: "10.0.1.2:443", IsLocal: true, Ready: true, Serving: true, Terminating: false},
+					&BaseEndpointInfo{Endpoint: "10.0.1.1:443", IP: "10.0.1.1", Port: 443, IsLocal: true, Ready: true, Serving: true, Terminating: false},
+					&BaseEndpointInfo{Endpoint: "10.0.1.2:443", IP: "10.0.1.2", Port: 443, IsLocal: true, Ready: true, Serving: true, Terminating: false},
 				},
 			},
 			expectedChangedEndpoints: sets.New[string]("ns1/svc1"),
@@ -1556,18 +1556,18 @@ func TestEndpointSliceUpdate(t *testing.T) {
 			expectedReturnVal:     true,
 			expectedCurrentChange: map[ServicePortName][]*BaseEndpointInfo{
 				makeServicePortName("ns1", "svc1", "port-0", v1.ProtocolTCP): {
-					&BaseEndpointInfo{Endpoint: "10.0.1.1:80", IsLocal: true, Ready: true, Serving: true, Terminating: false},
-					&BaseEndpointInfo{Endpoint: "10.0.1.2:80", IsLocal: true, Ready: true, Serving: true, Terminating: false},
-					&BaseEndpointInfo{Endpoint: "10.0.1.3:80", IsLocal: true, Ready: false, Serving: false, Terminating: false},
-					&BaseEndpointInfo{Endpoint: "10.0.2.1:80", IsLocal: true, Ready: true, Serving: true, Terminating: false},
-					&BaseEndpointInfo{Endpoint: "10.0.2.2:80", IsLocal: true, Ready: false, Serving: false, Terminating: false},
+					&BaseEndpointInfo{Endpoint: "10.0.1.1:80", IP: "10.0.1.1", Port: 80, IsLocal: true, Ready: true, Serving: true, Terminating: false},
+					&BaseEndpointInfo{Endpoint: "10.0.1.2:80", IP: "10.0.1.2", Port: 80, IsLocal: true, Ready: true, Serving: true, Terminating: false},
+					&BaseEndpointInfo{Endpoint: "10.0.1.3:80", IP: "10.0.1.3", Port: 80, IsLocal: true, Ready: false, Serving: false, Terminating: false},
+					&BaseEndpointInfo{Endpoint: "10.0.2.1:80", IP: "10.0.2.1", Port: 80, IsLocal: true, Ready: true, Serving: true, Terminating: false},
+					&BaseEndpointInfo{Endpoint: "10.0.2.2:80", IP: "10.0.2.2", Port: 80, IsLocal: true, Ready: false, Serving: false, Terminating: false},
 				},
 				makeServicePortName("ns1", "svc1", "port-1", v1.ProtocolTCP): {
-					&BaseEndpointInfo{Endpoint: "10.0.1.1:443", IsLocal: true, Ready: true, Serving: true, Terminating: false},
-					&BaseEndpointInfo{Endpoint: "10.0.1.2:443", IsLocal: true, Ready: true, Serving: true, Terminating: false},
-					&BaseEndpointInfo{Endpoint: "10.0.1.3:443", IsLocal: true, Ready: false, Serving: false, Terminating: false},
-					&BaseEndpointInfo{Endpoint: "10.0.2.1:443", IsLocal: true, Ready: true, Serving: true, Terminating: false},
-					&BaseEndpointInfo{Endpoint: "10.0.2.2:443", IsLocal: true, Ready: false, Serving: false, Terminating: false},
+					&BaseEndpointInfo{Endpoint: "10.0.1.1:443", IP: "10.0.1.1", Port: 443, IsLocal: true, Ready: true, Serving: true, Terminating: false},
+					&BaseEndpointInfo{Endpoint: "10.0.1.2:443", IP: "10.0.1.2", Port: 443, IsLocal: true, Ready: true, Serving: true, Terminating: false},
+					&BaseEndpointInfo{Endpoint: "10.0.1.3:443", IP: "10.0.1.3", Port: 443, IsLocal: true, Ready: false, Serving: false, Terminating: false},
+					&BaseEndpointInfo{Endpoint: "10.0.2.1:443", IP: "10.0.2.1", Port: 443, IsLocal: true, Ready: true, Serving: true, Terminating: false},
+					&BaseEndpointInfo{Endpoint: "10.0.2.2:443", IP: "10.0.2.2", Port: 443, IsLocal: true, Ready: false, Serving: false, Terminating: false},
 				},
 			},
 			expectedChangedEndpoints: sets.New[string]("ns1/svc1"),
@@ -1585,18 +1585,18 @@ func TestEndpointSliceUpdate(t *testing.T) {
 			expectedReturnVal:     true,
 			expectedCurrentChange: map[ServicePortName][]*BaseEndpointInfo{
 				makeServicePortName("ns1", "svc1", "port-0", v1.ProtocolTCP): {
-					&BaseEndpointInfo{Endpoint: "10.0.1.1:80", IsLocal: true, Ready: true, Serving: true, Terminating: false},
-					&BaseEndpointInfo{Endpoint: "10.0.1.2:80", IsLocal: true, Ready: false, Serving: true, Terminating: true},
-					&BaseEndpointInfo{Endpoint: "10.0.1.3:80", IsLocal: true, Ready: false, Serving: false, Terminating: false},
-					&BaseEndpointInfo{Endpoint: "10.0.2.1:80", IsLocal: true, Ready: true, Serving: true, Terminating: false},
-					&BaseEndpointInfo{Endpoint: "10.0.2.2:80", IsLocal: true, Ready: false, Serving: false, Terminating: true},
+					&BaseEndpointInfo{Endpoint: "10.0.1.1:80", IP: "10.0.1.1", Port: 80, IsLocal: true, Ready: true, Serving: true, Terminating: false},
+					&BaseEndpointInfo{Endpoint: "10.0.1.2:80", IP: "10.0.1.2", Port: 80, IsLocal: true, Ready: false, Serving: true, Terminating: true},
+					&BaseEndpointInfo{Endpoint: "10.0.1.3:80", IP: "10.0.1.3", Port: 80, IsLocal: true, Ready: false, Serving: false, Terminating: false},
+					&BaseEndpointInfo{Endpoint: "10.0.2.1:80", IP: "10.0.2.1", Port: 80, IsLocal: true, Ready: true, Serving: true, Terminating: false},
+					&BaseEndpointInfo{Endpoint: "10.0.2.2:80", IP: "10.0.2.2", Port: 80, IsLocal: true, Ready: false, Serving: false, Terminating: true},
 				},
 				makeServicePortName("ns1", "svc1", "port-1", v1.ProtocolTCP): {
-					&BaseEndpointInfo{Endpoint: "10.0.1.1:443", IsLocal: true, Ready: true, Serving: true, Terminating: false},
-					&BaseEndpointInfo{Endpoint: "10.0.1.2:443", IsLocal: true, Ready: false, Serving: true, Terminating: true},
-					&BaseEndpointInfo{Endpoint: "10.0.1.3:443", IsLocal: true, Ready: false, Serving: false, Terminating: false},
-					&BaseEndpointInfo{Endpoint: "10.0.2.1:443", IsLocal: true, Ready: true, Serving: true, Terminating: false},
-					&BaseEndpointInfo{Endpoint: "10.0.2.2:443", IsLocal: true, Ready: false, Serving: false, Terminating: true},
+					&BaseEndpointInfo{Endpoint: "10.0.1.1:443", IP: "10.0.1.1", Port: 443, IsLocal: true, Ready: true, Serving: true, Terminating: false},
+					&BaseEndpointInfo{Endpoint: "10.0.1.2:443", IP: "10.0.1.2", Port: 443, IsLocal: true, Ready: false, Serving: true, Terminating: true},
+					&BaseEndpointInfo{Endpoint: "10.0.1.3:443", IP: "10.0.1.3", Port: 443, IsLocal: true, Ready: false, Serving: false, Terminating: false},
+					&BaseEndpointInfo{Endpoint: "10.0.2.1:443", IP: "10.0.2.1", Port: 443, IsLocal: true, Ready: true, Serving: true, Terminating: false},
+					&BaseEndpointInfo{Endpoint: "10.0.2.2:443", IP: "10.0.2.2", Port: 443, IsLocal: true, Ready: false, Serving: false, Terminating: true},
 				},
 			},
 			expectedChangedEndpoints: sets.New[string]("ns1/svc1"),
@@ -1655,9 +1655,9 @@ func TestCheckoutChanges(t *testing.T) {
 				previous: EndpointsMap{},
 				current: EndpointsMap{
 					svcPortName0: []Endpoint{
-						&BaseEndpointInfo{Endpoint: "10.0.1.1:80", NodeName: "host1", Ready: true, Serving: true, Terminating: false},
-						&BaseEndpointInfo{Endpoint: "10.0.1.2:80", NodeName: "host1", Ready: false, Serving: true, Terminating: true},
-						&BaseEndpointInfo{Endpoint: "10.0.1.3:80", NodeName: "host1", Ready: false, Serving: false, Terminating: false},
+						&BaseEndpointInfo{Endpoint: "10.0.1.1:80", IP: "10.0.1.1", Port: 80, NodeName: "host1", Ready: true, Serving: true, Terminating: false},
+						&BaseEndpointInfo{Endpoint: "10.0.1.2:80", IP: "10.0.1.2", Port: 80, NodeName: "host1", Ready: false, Serving: true, Terminating: true},
+						&BaseEndpointInfo{Endpoint: "10.0.1.3:80", IP: "10.0.1.3", Port: 80, NodeName: "host1", Ready: false, Serving: false, Terminating: false},
 					},
 				},
 			}},
@@ -1671,21 +1671,21 @@ func TestCheckoutChanges(t *testing.T) {
 			expectedChanges: []*endpointsChange{{
 				previous: EndpointsMap{
 					svcPortName0: []Endpoint{
-						&BaseEndpointInfo{Endpoint: "10.0.1.1:80", NodeName: "host1", Ready: true, Serving: true, Terminating: false},
-						&BaseEndpointInfo{Endpoint: "10.0.1.2:80", NodeName: "host1", Ready: true, Serving: true, Terminating: false},
-						&BaseEndpointInfo{Endpoint: "10.0.1.3:80", NodeName: "host1", Ready: false, Serving: false, Terminating: false},
+						&BaseEndpointInfo{Endpoint: "10.0.1.1:80", IP: "10.0.1.1", Port: 80, NodeName: "host1", Ready: true, Serving: true, Terminating: false},
+						&BaseEndpointInfo{Endpoint: "10.0.1.2:80", IP: "10.0.1.2", Port: 80, NodeName: "host1", Ready: true, Serving: true, Terminating: false},
+						&BaseEndpointInfo{Endpoint: "10.0.1.3:80", IP: "10.0.1.3", Port: 80, NodeName: "host1", Ready: false, Serving: false, Terminating: false},
 					},
 					svcPortName1: []Endpoint{
-						&BaseEndpointInfo{Endpoint: "10.0.1.1:443", NodeName: "host1", Ready: true, Serving: true, Terminating: false},
-						&BaseEndpointInfo{Endpoint: "10.0.1.2:443", NodeName: "host1", Ready: true, Serving: true, Terminating: false},
-						&BaseEndpointInfo{Endpoint: "10.0.1.3:443", NodeName: "host1", Ready: false, Serving: false, Terminating: false},
+						&BaseEndpointInfo{Endpoint: "10.0.1.1:443", IP: "10.0.1.1", Port: 443, NodeName: "host1", Ready: true, Serving: true, Terminating: false},
+						&BaseEndpointInfo{Endpoint: "10.0.1.2:443", IP: "10.0.1.2", Port: 443, NodeName: "host1", Ready: true, Serving: true, Terminating: false},
+						&BaseEndpointInfo{Endpoint: "10.0.1.3:443", IP: "10.0.1.3", Port: 443, NodeName: "host1", Ready: false, Serving: false, Terminating: false},
 					},
 				},
 				current: EndpointsMap{
 					svcPortName0: []Endpoint{
-						&BaseEndpointInfo{Endpoint: "10.0.1.1:80", NodeName: "host1", Ready: true, Serving: true, Terminating: false},
-						&BaseEndpointInfo{Endpoint: "10.0.1.2:80", NodeName: "host1", Ready: true, Serving: true, Terminating: false},
-						&BaseEndpointInfo{Endpoint: "10.0.1.3:80", NodeName: "host1", Ready: false, Serving: false, Terminating: false},
+						&BaseEndpointInfo{Endpoint: "10.0.1.1:80", IP: "10.0.1.1", Port: 80, NodeName: "host1", Ready: true, Serving: true, Terminating: false},
+						&BaseEndpointInfo{Endpoint: "10.0.1.2:80", IP: "10.0.1.2", Port: 80, NodeName: "host1", Ready: true, Serving: true, Terminating: false},
+						&BaseEndpointInfo{Endpoint: "10.0.1.3:80", IP: "10.0.1.3", Port: 80, NodeName: "host1", Ready: false, Serving: false, Terminating: false},
 					},
 				},
 			}},
