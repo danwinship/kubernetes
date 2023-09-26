@@ -319,13 +319,13 @@ func (info *endpointsInfo) GetZoneHints() sets.Set[string] {
 	return sets.Set[string]{}
 }
 
-// IP returns just the IP part of the endpoint, it's a part of proxy.Endpoint interface.
-func (info *endpointsInfo) IP() string {
+// GetIP returns just the IP part of the endpoint, it's a part of proxy.Endpoint interface.
+func (info *endpointsInfo) GetIP() string {
 	return info.ip
 }
 
-// Port returns just the Port part of the endpoint.
-func (info *endpointsInfo) Port() (int, error) {
+// GetPort returns just the Port part of the endpoint.
+func (info *endpointsInfo) GetPort() (int, error) {
 	return int(info.port), nil
 }
 
@@ -451,17 +451,17 @@ func (proxier *Proxier) onServiceMapChange(svcPortName *proxy.ServicePortName) {
 // returns a new proxy.Endpoint which abstracts a endpointsInfo
 func (proxier *Proxier) newEndpointInfo(baseInfo *proxy.BaseEndpointInfo, _ *proxy.ServicePortName) proxy.Endpoint {
 
-	portNumber, err := baseInfo.Port()
+	portNumber, err := baseInfo.GetPort()
 
 	if err != nil {
 		portNumber = 0
 	}
 
 	info := &endpointsInfo{
-		ip:         baseInfo.IP(),
+		ip:         baseInfo.GetIP(),
 		port:       uint16(portNumber),
 		isLocal:    baseInfo.GetIsLocal(),
-		macAddress: conjureMac("02-11", netutils.ParseIPSloppy(baseInfo.IP())),
+		macAddress: conjureMac("02-11", netutils.ParseIPSloppy(baseInfo.GetIP())),
 		refCount:   new(uint16),
 		hnsID:      "",
 		hns:        proxier.hns,
@@ -510,7 +510,7 @@ func (ep *endpointsInfo) Cleanup() {
 			if err == nil {
 				ep.hnsID = ""
 			} else {
-				klog.ErrorS(err, "Endpoint deletion failed", "ip", ep.IP())
+				klog.ErrorS(err, "Endpoint deletion failed", "ip", ep.GetIP())
 			}
 		}
 
@@ -1294,12 +1294,12 @@ func (proxier *Proxier) syncProxyRules() {
 				// First check if an endpoint resource exists for this IP, on the current host
 				// A Local endpoint could exist here already
 				// A remote endpoint was already created and proxy was restarted
-				newHnsEndpoint = queriedEndpoints[ep.IP()]
+				newHnsEndpoint = queriedEndpoints[ep.GetIP()]
 			}
 
 			if newHnsEndpoint == nil {
 				if ep.GetIsLocal() {
-					klog.ErrorS(err, "Local endpoint not found: on network", "ip", ep.IP(), "hnsNetworkName", hnsNetworkName)
+					klog.ErrorS(err, "Local endpoint not found: on network", "ip", ep.GetIP(), "hnsNetworkName", hnsNetworkName)
 					continue
 				}
 
@@ -1313,9 +1313,9 @@ func (proxier *Proxier) syncProxyRules() {
 						return
 					}
 					proxier.network = *updatedNetwork
-					providerAddress := proxier.network.findRemoteSubnetProviderAddress(ep.IP())
+					providerAddress := proxier.network.findRemoteSubnetProviderAddress(ep.GetIP())
 					if len(providerAddress) == 0 {
-						klog.InfoS("Could not find provider address, assuming it is a public IP", "IP", ep.IP())
+						klog.InfoS("Could not find provider address, assuming it is a public IP", "IP", ep.GetIP())
 						providerAddress = proxier.nodeIP.String()
 					}
 
@@ -1360,11 +1360,11 @@ func (proxier *Proxier) syncProxyRules() {
 			// b) Endpoints are IP addresses of a remote node => Choose NodeIP as the SourceVIP
 			// c) Everything else (Local POD's, Remote POD's, Node IP of current node) ==> Choose the configured SourceVIP
 			if strings.EqualFold(proxier.network.networkType, NETWORK_TYPE_OVERLAY) && !ep.GetIsLocal() {
-				providerAddress := proxier.network.findRemoteSubnetProviderAddress(ep.IP())
+				providerAddress := proxier.network.findRemoteSubnetProviderAddress(ep.GetIP())
 
-				isNodeIP := (ep.IP() == providerAddress)
+				isNodeIP := (ep.GetIP() == providerAddress)
 				isPublicIP := (len(providerAddress) == 0)
-				klog.InfoS("Endpoint on overlay network", "ip", ep.IP(), "hnsNetworkName", hnsNetworkName, "isNodeIP", isNodeIP, "isPublicIP", isPublicIP)
+				klog.InfoS("Endpoint on overlay network", "ip", ep.GetIP(), "hnsNetworkName", hnsNetworkName, "isNodeIP", isNodeIP, "isPublicIP", isPublicIP)
 
 				containsNodeIP = containsNodeIP || isNodeIP
 				containsPublicIP = containsPublicIP || isPublicIP

@@ -1048,8 +1048,8 @@ func (proxier *Proxier) syncProxyRules() {
 			if !ep.IsLocal {
 				continue
 			}
-			epIP := ep.IP()
-			epPort, err := ep.Port()
+			epIP := ep.GetIP()
+			epPort, err := ep.GetPort()
 			// Error parsing this endpoint has been logged. Skip to next endpoint.
 			if epIP == "" || err != nil {
 				continue

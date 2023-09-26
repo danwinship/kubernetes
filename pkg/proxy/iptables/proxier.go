@@ -1369,7 +1369,7 @@ func (proxier *Proxier) syncProxyRules() {
 			// Handle traffic that loops back to the originator with SNAT.
 			natRules.Write(
 				args,
-				"-s", epInfo.IP(),
+				"-s", epInfo.GetIP(),
 				"-j", string(kubeMarkMasqChain))
 			// Update client-affinity lists.
 			if svcInfo.SessionAffinityType() == v1.ServiceAffinityClientIP {

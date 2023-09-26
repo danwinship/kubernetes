@@ -107,13 +107,13 @@ func (info *BaseEndpointInfo) GetZoneHints() sets.Set[string] {
 	return info.ZoneHints
 }
 
-// IP returns just the IP part of the endpoint, it's a part of proxy.Endpoint interface.
-func (info *BaseEndpointInfo) IP() string {
+// GetIP returns just the IP part of the endpoint, it's a part of proxy.Endpoint interface.
+func (info *BaseEndpointInfo) GetIP() string {
 	return proxyutil.IPPart(info.Endpoint)
 }
 
-// Port returns just the Port part of the endpoint.
-func (info *BaseEndpointInfo) Port() (int, error) {
+// GetPort returns just the Port part of the endpoint.
+func (info *BaseEndpointInfo) GetPort() (int, error) {
 	return proxyutil.PortPart(info.Endpoint)
 }
 
@@ -369,7 +369,7 @@ func (em EndpointsMap) getLocalReadyEndpointIPs() map[types.NamespacedName]sets.
 				if localIPs[nsn] == nil {
 					localIPs[nsn] = sets.New[string]()
 				}
-				localIPs[nsn].Insert(ep.IP())
+				localIPs[nsn].Insert(ep.GetIP())
 			}
 		}
 	}
