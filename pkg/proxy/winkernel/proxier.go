@@ -40,7 +40,6 @@ import (
 	"k8s.io/klog/v2"
 	"k8s.io/kubernetes/pkg/proxy"
 	"k8s.io/kubernetes/pkg/proxy/apis/config"
-	proxyconfig "k8s.io/kubernetes/pkg/proxy/config"
 	"k8s.io/kubernetes/pkg/proxy/healthcheck"
 	"k8s.io/kubernetes/pkg/proxy/metrics"
 	proxyutil "k8s.io/kubernetes/pkg/proxy/util"
@@ -518,8 +517,6 @@ type endPointsReferenceCountMap map[string]*uint16
 type Proxier struct {
 	// ipFamily defines the IP family which this proxier is tracking.
 	ipFamily v1.IPFamily
-	// TODO(imroc): implement node handler for winkernel proxier.
-	proxyconfig.NoopNodeHandler
 
 	// endpointsChanges and serviceChanges contains all changes to endpoints and
 	// services that happened since policies were synced. For a single object,
@@ -846,6 +843,11 @@ func (proxier *Proxier) OnEndpointSlicesSynced() {
 
 	// Sync unconditionally - this is called once per lifetime.
 	proxier.syncProxyRules()
+}
+
+// OnTopologyChange is called when the node's topology-related labels have changed
+func (proxier *Proxier) OnTopologyChange(topologyLabels map[string]string) {
+	// TODO: implement topology for winkernel proxier.
 }
 
 // OnServiceCIDRsChanged is called whenever a change is observed

@@ -30,7 +30,6 @@ import (
 	"encoding/base32"
 	"fmt"
 	"net"
-	"reflect"
 	"strconv"
 	"strings"
 	"sync"
@@ -106,10 +105,10 @@ type Proxier struct {
 	endpointsChanges *proxy.EndpointsChangeTracker
 	serviceChanges   *proxy.ServiceChangeTracker
 
-	mu           sync.Mutex // protects the following fields
-	svcPortMap   proxy.ServicePortMap
-	endpointsMap proxy.EndpointsMap
-	nodeLabels   map[string]string
+	mu             sync.Mutex // protects the following fields
+	svcPortMap     proxy.ServicePortMap
+	endpointsMap   proxy.EndpointsMap
+	topologyLabels map[string]string
 	// endpointSlicesSynced, and servicesSynced are set to true
 	// when corresponding objects are synced after startup. This is used to avoid
 	// updating iptables with some partial data after kube-proxy restart.
@@ -535,76 +534,15 @@ func (proxier *Proxier) OnEndpointSlicesSynced() {
 	proxier.syncProxyRules()
 }
 
-// OnNodeAdd is called whenever creation of new node object
-// is observed.
-func (proxier *Proxier) OnNodeAdd(node *v1.Node) {
-	if node.Name != proxier.hostname {
-		proxier.logger.Error(nil, "Received a watch event for a node that doesn't match the current node",
-			"eventNode", node.Name, "currentNode", proxier.hostname)
-		return
-	}
-
-	if reflect.DeepEqual(proxier.nodeLabels, node.Labels) {
-		return
-	}
-
+// OnTopologyChange is called when the node's topology-related labels have changed
+func (proxier *Proxier) OnTopologyChange(topologyLabels map[string]string) {
 	proxier.mu.Lock()
-	proxier.nodeLabels = map[string]string{}
-	for k, v := range node.Labels {
-		proxier.nodeLabels[k] = v
-	}
+	proxier.topologyLabels = topologyLabels
 	proxier.needFullSync = true
 	proxier.mu.Unlock()
-	proxier.logger.V(4).Info("Updated proxier node labels", "labels", node.Labels)
+	proxier.logger.V(4).Info("Updated proxier node topology labels", "labels", topologyLabels)
 
 	proxier.Sync()
-}
-
-// OnNodeUpdate is called whenever modification of an existing
-// node object is observed.
-func (proxier *Proxier) OnNodeUpdate(oldNode, node *v1.Node) {
-	if node.Name != proxier.hostname {
-		proxier.logger.Error(nil, "Received a watch event for a node that doesn't match the current node",
-			"eventNode", node.Name, "currentNode", proxier.hostname)
-		return
-	}
-
-	if reflect.DeepEqual(proxier.nodeLabels, node.Labels) {
-		return
-	}
-
-	proxier.mu.Lock()
-	proxier.nodeLabels = map[string]string{}
-	for k, v := range node.Labels {
-		proxier.nodeLabels[k] = v
-	}
-	proxier.needFullSync = true
-	proxier.mu.Unlock()
-	proxier.logger.V(4).Info("Updated proxier node labels", "labels", node.Labels)
-
-	proxier.Sync()
-}
-
-// OnNodeDelete is called whenever deletion of an existing node
-// object is observed.
-func (proxier *Proxier) OnNodeDelete(node *v1.Node) {
-	if node.Name != proxier.hostname {
-		proxier.logger.Error(nil, "Received a watch event for a node that doesn't match the current node",
-			"eventNode", node.Name, "currentNode", proxier.hostname)
-		return
-	}
-
-	proxier.mu.Lock()
-	proxier.nodeLabels = nil
-	proxier.needFullSync = true
-	proxier.mu.Unlock()
-
-	proxier.Sync()
-}
-
-// OnNodeSynced is called once all the initial event handlers were
-// called and the state is fully propagated to local cache.
-func (proxier *Proxier) OnNodeSynced() {
 }
 
 // OnServiceCIDRsChanged is called whenever a change is observed
@@ -909,7 +847,7 @@ func (proxier *Proxier) syncProxyRules() {
 		// from this node, given the service's traffic policies. hasEndpoints is true
 		// if the service has any usable endpoints on any node, not just this one.
 		allEndpoints := proxier.endpointsMap[svcName]
-		clusterEndpoints, localEndpoints, allLocallyReachableEndpoints, hasEndpoints := proxy.CategorizeEndpoints(allEndpoints, svcInfo, proxier.nodeLabels)
+		clusterEndpoints, localEndpoints, allLocallyReachableEndpoints, hasEndpoints := proxy.CategorizeEndpoints(allEndpoints, svcInfo, proxier.topologyLabels)
 
 		// clusterPolicyChain contains the endpoints used with "Cluster" traffic policy
 		clusterPolicyChain := svcInfo.clusterPolicyChainName

@@ -18,6 +18,7 @@ package proxy
 
 import (
 	"context"
+	"sync"
 	"time"
 
 	v1 "k8s.io/api/core/v1"
@@ -33,8 +34,12 @@ import (
 
 // Backend represents a proxy backend that contains IPv4 and/or IPv6 proxiers
 type Backend struct {
+	sync.Mutex
+
 	ipv4Proxier Proxier
 	ipv6Proxier Proxier
+
+	topologyLabels map[string]string
 }
 
 // NewBackend returns a Backend. Proxier API calls will be dispatched to the Proxier
@@ -213,47 +218,46 @@ func (backend *Backend) OnEndpointSlicesSynced() {
 	}
 }
 
-// OnNodeAdd is called whenever creation of new node object is observed.
+// OnNodeAdd is called when this host's node object is created.
 func (backend *Backend) OnNodeAdd(node *v1.Node) {
-	if backend.ipv4Proxier != nil {
-		backend.ipv4Proxier.OnNodeAdd(node)
-	}
-	if backend.ipv6Proxier != nil {
-		backend.ipv6Proxier.OnNodeAdd(node)
-	}
+	backend.OnNodeUpdate(nil, node)
 }
 
-// OnNodeUpdate is called whenever modification of an existing
-// node object is observed.
+// OnNodeUpdate is called when this host's node object is updated.
 func (backend *Backend) OnNodeUpdate(oldNode, node *v1.Node) {
-	if backend.ipv4Proxier != nil {
-		backend.ipv4Proxier.OnNodeUpdate(oldNode, node)
+	backend.Lock()
+	defer backend.Unlock()
+
+	// See if a topology-related label has been set, unset, or modified.
+	changed := false
+	for _, label := range topologyRelatedLabels {
+		oldVal, oldIsSet := backend.topologyLabels[label]
+		newVal, newIsSet := node.Labels[label]
+		if oldIsSet != newIsSet || oldVal != newVal {
+			changed = true
+			break
+		}
 	}
-	if backend.ipv6Proxier != nil {
-		backend.ipv6Proxier.OnNodeUpdate(oldNode, node)
+
+	if changed {
+		backend.topologyLabels = node.Labels
+		if backend.ipv4Proxier != nil {
+			backend.ipv4Proxier.OnTopologyChange(backend.topologyLabels)
+		}
+		if backend.ipv6Proxier != nil {
+			backend.ipv6Proxier.OnTopologyChange(backend.topologyLabels)
+		}
 	}
 }
 
-// OnNodeDelete is called whenever deletion of an existing node
-// object is observed.
+// OnNodeUpdate is called when this host's node object is deleted.
 func (backend *Backend) OnNodeDelete(node *v1.Node) {
-	if backend.ipv4Proxier != nil {
-		backend.ipv4Proxier.OnNodeDelete(node)
-	}
-	if backend.ipv6Proxier != nil {
-		backend.ipv6Proxier.OnNodeDelete(node)
-	}
+	backend.OnNodeUpdate(node, &v1.Node{})
 }
 
 // OnNodeSynced is called once all the initial event handlers were
 // called and the state is fully propagated to local cache.
 func (backend *Backend) OnNodeSynced() {
-	if backend.ipv4Proxier != nil {
-		backend.ipv4Proxier.OnNodeSynced()
-	}
-	if backend.ipv6Proxier != nil {
-		backend.ipv6Proxier.OnNodeSynced()
-	}
 }
 
 // OnServiceCIDRsChanged is called whenever a change is observed
