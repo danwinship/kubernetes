@@ -47,8 +47,10 @@ type Backend interface {
 type Proxier interface {
 	config.EndpointSliceHandler
 	config.ServiceHandler
-	config.NodeHandler
 	config.ServiceCIDRHandler
+
+	// OnTopologyChange is called when the node's topology-related labels have changed
+	OnTopologyChange(topologyLabels map[string]string)
 
 	// Sync immediately synchronizes the Proxier's current state to proxy rules.
 	Sync()

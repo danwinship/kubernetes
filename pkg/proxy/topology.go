@@ -23,6 +23,12 @@ import (
 	"k8s.io/kubernetes/pkg/features"
 )
 
+// topologyRelatedLabels contains all of the Node labels that affect the output of
+// CategorizeEndpoints.
+var topologyRelatedLabels = []string{
+	v1.LabelTopologyZone,
+}
+
 // CategorizeEndpoints returns:
 //
 //   - The service's usable Cluster-traffic-policy endpoints (taking topology into account, if

@@ -18,6 +18,7 @@ package proxy
 
 import (
 	"context"
+	"sync"
 	"time"
 
 	v1 "k8s.io/api/core/v1"
@@ -32,11 +33,12 @@ import (
 // Runner wraps 0 or more other proxiers. Proxier API calls will be dispatched to the
 // Proxier instances depending on address family.
 type Runner struct {
-	proxiers map[v1.IPFamily]Proxier
-}
+	lock sync.Mutex
 
-// Runner implements Proxier
-var _ Proxier = &Runner{}
+	proxiers map[v1.IPFamily]Proxier
+
+	topologyLabels map[string]string
+}
 
 // NewRunner returns an empty Runner
 func NewRunner() *Runner {
@@ -194,33 +196,49 @@ func (r *Runner) OnEndpointSlicesSynced() {
 	}
 }
 
-// OnNodeAdd is called whenever creation of new node object is observed.
+// OnNodeAdd is called when this host's node object is created.
 func (r *Runner) OnNodeAdd(node *v1.Node) {
-	for _, proxier := range r.proxiers {
-		proxier.OnNodeAdd(node)
-	}
+	r.onNodeLabelUpdate(node.Labels)
 }
 
-// OnNodeUpdate is called whenever modification of an existing node object is observed.
+// OnNodeUpdate is called when this host's node object is updated.
 func (r *Runner) OnNodeUpdate(oldNode, node *v1.Node) {
-	for _, proxier := range r.proxiers {
-		proxier.OnNodeUpdate(oldNode, node)
-	}
+	r.onNodeLabelUpdate(node.Labels)
 }
 
-// OnNodeDelete is called whenever deletion of an existing node object is observed.
+// OnNodeDelete is called when this host's node is deleted.
 func (r *Runner) OnNodeDelete(node *v1.Node) {
-	for _, proxier := range r.proxiers {
-		proxier.OnNodeDelete(node)
+	r.onNodeLabelUpdate(nil)
+}
+
+func (r *Runner) onNodeLabelUpdate(newLabels map[string]string) {
+	r.lock.Lock()
+	defer r.lock.Unlock()
+
+	// See if a topology-related label has been set, unset, or modified.
+	changed := false
+	for _, label := range topologyRelatedLabels {
+		oldVal, oldIsSet := r.topologyLabels[label]
+		newVal, newIsSet := newLabels[label]
+		if oldIsSet && !newIsSet {
+			delete(r.topologyLabels, label)
+			changed = true
+		} else if (!oldIsSet && newIsSet) || (oldVal != newVal) {
+			r.topologyLabels[label] = newVal
+			changed = true
+		}
+	}
+
+	if changed {
+		for _, proxier := range r.proxiers {
+			proxier.OnTopologyChange(r.topologyLabels)
+		}
 	}
 }
 
 // OnNodeSynced is called once all the initial event handlers were called and the state is
 // fully propagated to local cache.
 func (r *Runner) OnNodeSynced() {
-	for _, proxier := range r.proxiers {
-		proxier.OnNodeSynced()
-	}
 }
 
 // OnServiceCIDRsChanged is called whenever a change is observed in any of the
