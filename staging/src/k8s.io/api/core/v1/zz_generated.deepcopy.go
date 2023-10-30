@@ -5620,7 +5620,7 @@ func (in *ServiceSpec) DeepCopyInto(out *ServiceSpec) {
 	}
 	if in.IPFamilies != nil {
 		in, out := &in.IPFamilies, &out.IPFamilies
-		*out = make([]IPFamily, len(*in))
+		*out = make([]metav1.IPFamily, len(*in))
 		copy(*out, *in)
 	}
 	if in.IPFamilyPolicy != nil {

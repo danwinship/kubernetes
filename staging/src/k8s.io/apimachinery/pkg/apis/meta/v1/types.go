@@ -1541,3 +1541,17 @@ type Condition struct {
 	// +kubebuilder:validation:MaxLength=32768
 	Message string `json:"message" protobuf:"bytes,6,opt,name=message"`
 }
+
+// IPFamily represents the IP Family (IPv4 or IPv6) of an IP address or CIDR block.
+// (Note that this type is aliased as v1.IPFamily.)
+// +enum
+type IPFamily string
+
+const (
+	// IPv4Protocol indicates an IPv4 IP or CIDR
+	IPv4Protocol IPFamily = "IPv4"
+	// IPv6Protocol indicates an IPv6 IP or CIDR
+	IPv6Protocol IPFamily = "IPv6"
+	// IPFamilyUnknown indicates an unspecified or invalid IP family
+	IPFamilyUnknown IPFamily = ""
+)

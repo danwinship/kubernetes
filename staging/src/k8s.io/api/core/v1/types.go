@@ -4770,14 +4770,20 @@ type LoadBalancerIngress struct {
 // IPFamily represents the IP Family (IPv4 or IPv6). This type is used
 // to express the family of an IP expressed by a type (e.g. service.spec.ipFamilies).
 // +enum
-type IPFamily string
+type IPFamily = metav1.IPFamily
+
+// v1.IPFamily and metav1.IPFamily are identical for type-checking purposes
+var _ IPFamily = metav1.IPFamily("")
 
 const (
-	// IPv4Protocol indicates that this IP is IPv4 protocol
+	// IPv4Protocol indicates an IPv4 IP or CIDR. (This is the same value as
+	// metav1.IPv4Protocol.)
 	IPv4Protocol IPFamily = "IPv4"
-	// IPv6Protocol indicates that this IP is IPv6 protocol
+	// IPv6Protocol indicates an IPv6 IP or CIDR. (This is the same value as
+	// metav1.IPv6Protocol.)
 	IPv6Protocol IPFamily = "IPv6"
-	// IPFamilyUnknown indicates that this IP is unknown protocol
+	// IPFamilyUnknown indicates an unspecified or invalid IP family. (This is the
+	// same value as metav1.IPFamilyUnknown.)
 	IPFamilyUnknown IPFamily = ""
 )
 

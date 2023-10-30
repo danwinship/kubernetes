@@ -20,6 +20,7 @@ package v1
 
 import (
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // ServiceSpecApplyConfiguration represents an declarative configuration of the ServiceSpec type for use
@@ -39,7 +40,7 @@ type ServiceSpecApplyConfiguration struct {
 	HealthCheckNodePort           *int32                                   `json:"healthCheckNodePort,omitempty"`
 	PublishNotReadyAddresses      *bool                                    `json:"publishNotReadyAddresses,omitempty"`
 	SessionAffinityConfig         *SessionAffinityConfigApplyConfiguration `json:"sessionAffinityConfig,omitempty"`
-	IPFamilies                    []corev1.IPFamily                        `json:"ipFamilies,omitempty"`
+	IPFamilies                    []metav1.IPFamily                        `json:"ipFamilies,omitempty"`
 	IPFamilyPolicy                *corev1.IPFamilyPolicy                   `json:"ipFamilyPolicy,omitempty"`
 	AllocateLoadBalancerNodePorts *bool                                    `json:"allocateLoadBalancerNodePorts,omitempty"`
 	LoadBalancerClass             *string                                  `json:"loadBalancerClass,omitempty"`
@@ -184,7 +185,7 @@ func (b *ServiceSpecApplyConfiguration) WithSessionAffinityConfig(value *Session
 // WithIPFamilies adds the given value to the IPFamilies field in the declarative configuration
 // and returns the receiver, so that objects can be build by chaining "With" function invocations.
 // If called multiple times, values provided by each call will be appended to the IPFamilies field.
-func (b *ServiceSpecApplyConfiguration) WithIPFamilies(values ...corev1.IPFamily) *ServiceSpecApplyConfiguration {
+func (b *ServiceSpecApplyConfiguration) WithIPFamilies(values ...metav1.IPFamily) *ServiceSpecApplyConfiguration {
 	for i := range values {
 		b.IPFamilies = append(b.IPFamilies, values[i])
 	}
