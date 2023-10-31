@@ -352,6 +352,7 @@ func IsValidPortName(port string) []string {
 }
 
 // IsValidIP tests that the argument is a valid IP address.
+// Deprecated: use utilip.ValidateIP, which validates more strictly.
 func IsValidIP(value string) []string {
 	if netutils.ParseIPSloppy(value) == nil {
 		return []string{"must be a valid IP address, (e.g. 10.9.8.7 or 2001:db8::ffff)"}
@@ -360,6 +361,7 @@ func IsValidIP(value string) []string {
 }
 
 // IsValidIPv4Address tests that the argument is a valid IPv4 address.
+// Deprecated: use utilip.ValidateIPOfFamily, which validates more strictly.
 func IsValidIPv4Address(fldPath *field.Path, value string) field.ErrorList {
 	var allErrors field.ErrorList
 	ip := netutils.ParseIPSloppy(value)
@@ -370,6 +372,7 @@ func IsValidIPv4Address(fldPath *field.Path, value string) field.ErrorList {
 }
 
 // IsValidIPv6Address tests that the argument is a valid IPv6 address.
+// Deprecated: use utilip.ValidateIPOfFamily, which validates more strictly.
 func IsValidIPv6Address(fldPath *field.Path, value string) field.ErrorList {
 	var allErrors field.ErrorList
 	ip := netutils.ParseIPSloppy(value)

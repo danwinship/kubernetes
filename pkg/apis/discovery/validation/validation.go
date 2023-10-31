@@ -18,10 +18,12 @@ package validation
 
 import (
 	"fmt"
+	"reflect"
 
 	corev1 "k8s.io/api/core/v1"
 	apimachineryvalidation "k8s.io/apimachinery/pkg/api/validation"
 	metavalidation "k8s.io/apimachinery/pkg/apis/meta/v1/validation"
+	utilip "k8s.io/apimachinery/pkg/util/ip"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/validation"
 	"k8s.io/apimachinery/pkg/util/validation/field"
@@ -54,23 +56,28 @@ var (
 var ValidateEndpointSliceName = apimachineryvalidation.NameIsDNSSubdomain
 
 // ValidateEndpointSlice validates an EndpointSlice.
-func ValidateEndpointSlice(endpointSlice *discovery.EndpointSlice) field.ErrorList {
+func ValidateEndpointSlice(endpointSlice, oldEndpointSlice *discovery.EndpointSlice) field.ErrorList {
 	allErrs := apivalidation.ValidateObjectMeta(&endpointSlice.ObjectMeta, true, ValidateEndpointSliceName, field.NewPath("metadata"))
 	allErrs = append(allErrs, validateAddressType(endpointSlice.AddressType)...)
-	allErrs = append(allErrs, validateEndpoints(endpointSlice.Endpoints, endpointSlice.AddressType, field.NewPath("endpoints"))...)
 	allErrs = append(allErrs, validatePorts(endpointSlice.Ports, field.NewPath("ports"))...)
+
+	// If the endpoints are unchanged then don't re-validate them, since they may
+	// contain IPs that were validated under older, less strict IP validation rules.
+	if oldEndpointSlice == nil || !reflect.DeepEqual(oldEndpointSlice.Endpoints, endpointSlice.Endpoints) {
+		allErrs = append(allErrs, validateEndpoints(endpointSlice.Endpoints, endpointSlice.AddressType, field.NewPath("endpoints"))...)
+	}
 
 	return allErrs
 }
 
 // ValidateEndpointSliceCreate validates an EndpointSlice when it is created.
 func ValidateEndpointSliceCreate(endpointSlice *discovery.EndpointSlice) field.ErrorList {
-	return ValidateEndpointSlice(endpointSlice)
+	return ValidateEndpointSlice(endpointSlice, nil)
 }
 
 // ValidateEndpointSliceUpdate validates an EndpointSlice when it is updated.
 func ValidateEndpointSliceUpdate(newEndpointSlice, oldEndpointSlice *discovery.EndpointSlice) field.ErrorList {
-	allErrs := ValidateEndpointSlice(newEndpointSlice)
+	allErrs := ValidateEndpointSlice(newEndpointSlice, oldEndpointSlice)
 	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newEndpointSlice.AddressType, oldEndpointSlice.AddressType, field.NewPath("addressType"))...)
 
 	return allErrs
@@ -99,10 +106,10 @@ func validateEndpoints(endpoints []discovery.Endpoint, addrType discovery.Addres
 			// and do not get validated.
 			switch addrType {
 			case discovery.AddressTypeIPv4:
-				allErrs = append(allErrs, validation.IsValidIPv4Address(addressPath.Index(i), address)...)
+				allErrs = append(allErrs, utilip.ValidateIPOfFamily(address, corev1.IPv4Protocol, addressPath.Index(i))...)
 				allErrs = append(allErrs, apivalidation.ValidateNonSpecialIP(address, addressPath.Index(i))...)
 			case discovery.AddressTypeIPv6:
-				allErrs = append(allErrs, validation.IsValidIPv6Address(addressPath.Index(i), address)...)
+				allErrs = append(allErrs, utilip.ValidateIPOfFamily(address, corev1.IPv6Protocol, addressPath.Index(i))...)
 				allErrs = append(allErrs, apivalidation.ValidateNonSpecialIP(address, addressPath.Index(i))...)
 			case discovery.AddressTypeFQDN:
 				allErrs = append(allErrs, validation.IsFullyQualifiedDomainName(addressPath.Index(i), address)...)

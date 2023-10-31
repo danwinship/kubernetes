@@ -40,6 +40,7 @@ import (
 	"k8s.io/apimachinery/pkg/conversion"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	utilip "k8s.io/apimachinery/pkg/util/ip"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/validation"
 	"k8s.io/apimachinery/pkg/util/validation/field"
@@ -3852,15 +3853,17 @@ func validatePodMetadataAndSpec(pod *core.Pod, opts PodValidationOptions) field.
 }
 
 // validatePodIPs validates IPs in pod status
-func validatePodIPs(pod *core.Pod) field.ErrorList {
+func validatePodIPs(pod, oldPod *core.Pod) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	podIPsField := field.NewPath("status", "podIPs")
 
-	// all PodIPs must be valid IPs
-	for i, podIP := range pod.Status.PodIPs {
-		for _, msg := range validation.IsValidIP(podIP.IP) {
-			allErrs = append(allErrs, field.Invalid(podIPsField.Index(i), podIP.IP, msg))
+	// All PodIPs must be valid IPs. However, we do not re-validate on update if they
+	// are not being changed, since old pod IPs may have been validated under older,
+	// less strict IP-validation rules.
+	if oldPod == nil || !reflect.DeepEqual(oldPod.Status.PodIPs, pod.Status.PodIPs) {
+		for i, podIP := range pod.Status.PodIPs {
+			allErrs = append(allErrs, utilip.ValidateIP(podIP.IP, podIPsField.Index(i))...)
 		}
 	}
 
@@ -3884,7 +3887,7 @@ func validatePodIPs(pod *core.Pod) field.ErrorList {
 		}
 
 		// There should be no duplicates in list of Pod.PodIPs
-		seen := sets.String{} // := make(map[string]int)
+		seen := sets.New[string]()
 		for i, podIP := range pod.Status.PodIPs {
 			if seen.Has(podIP.IP) {
 				allErrs = append(allErrs, field.Duplicate(podIPsField.Index(i), podIP))
@@ -3897,7 +3900,7 @@ func validatePodIPs(pod *core.Pod) field.ErrorList {
 }
 
 // validateHostIPs validates IPs in pod status
-func validateHostIPs(pod *core.Pod) field.ErrorList {
+func validateHostIPs(pod, oldPod *core.Pod) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	if len(pod.Status.HostIPs) == 0 {
@@ -3911,10 +3914,12 @@ func validateHostIPs(pod *core.Pod) field.ErrorList {
 		allErrs = append(allErrs, field.Invalid(hostIPsField.Index(0).Child("ip"), pod.Status.HostIPs[0].IP, "must be equal to `hostIP`"))
 	}
 
-	// all HostPs must be valid IPs
-	for i, hostIP := range pod.Status.HostIPs {
-		for _, msg := range validation.IsValidIP(hostIP.IP) {
-			allErrs = append(allErrs, field.Invalid(hostIPsField.Index(i), hostIP.IP, msg))
+	// All HodIPs must be valid IPs. However, we do not re-validate on update if they
+	// are not being changed, since old host IPs may have been validated under older,
+	// less strict IP-validation rules.
+	if oldPod == nil || !reflect.DeepEqual(oldPod.Status.HostIPs, pod.Status.HostIPs) {
+		for i, hostIP := range pod.Status.HostIPs {
+			allErrs = append(allErrs, utilip.ValidateIP(hostIP.IP, hostIPsField.Index(i))...)
 		}
 	}
 
@@ -3922,7 +3927,7 @@ func validateHostIPs(pod *core.Pod) field.ErrorList {
 	// - validate for dual stack
 	// - validate for duplication
 	if len(pod.Status.HostIPs) > 1 {
-		seen := sets.String{}
+		seen := sets.New[string]()
 		hostIPs := make([]string, 0, len(pod.Status.HostIPs))
 
 		// There should be no duplicates in list of Pod.HostIPs
@@ -4981,11 +4986,11 @@ func ValidatePodStatusUpdate(newPod, oldPod *core.Pod, opts PodValidationOptions
 	allErrs = append(allErrs, ValidateContainerStateTransition(newPod.Status.EphemeralContainerStatuses, oldPod.Status.EphemeralContainerStatuses, fldPath.Child("ephemeralContainerStatuses"), core.RestartPolicyNever)...)
 	allErrs = append(allErrs, validatePodResourceClaimStatuses(newPod.Status.ResourceClaimStatuses, newPod.Spec.ResourceClaims, fldPath.Child("resourceClaimStatuses"))...)
 
-	if newIPErrs := validatePodIPs(newPod); len(newIPErrs) > 0 {
+	if newIPErrs := validatePodIPs(newPod, oldPod); len(newIPErrs) > 0 {
 		allErrs = append(allErrs, newIPErrs...)
 	}
 
-	if newIPErrs := validateHostIPs(newPod); len(newIPErrs) > 0 {
+	if newIPErrs := validateHostIPs(newPod, oldPod); len(newIPErrs) > 0 {
 		allErrs = append(allErrs, newIPErrs...)
 	}
 
@@ -5117,7 +5122,7 @@ var supportedServiceIPFamily = sets.NewString(string(core.IPv4Protocol), string(
 var supportedServiceIPFamilyPolicy = sets.NewString(string(core.IPFamilyPolicySingleStack), string(core.IPFamilyPolicyPreferDualStack), string(core.IPFamilyPolicyRequireDualStack))
 
 // ValidateService tests if required fields/annotations of a Service are valid.
-func ValidateService(service *core.Service) field.ErrorList {
+func ValidateService(service, oldService *core.Service) field.ErrorList {
 	metaPath := field.NewPath("metadata")
 	allErrs := ValidateObjectMeta(&service.ObjectMeta, true, ValidateServiceName, metaPath)
 
@@ -5202,17 +5207,19 @@ func ValidateService(service *core.Service) field.ErrorList {
 	}
 
 	// dualstack <-> ClusterIPs <-> ipfamilies
-	allErrs = append(allErrs, ValidateServiceClusterIPsRelatedFields(service)...)
+	allErrs = append(allErrs, ValidateServiceClusterIPsRelatedFields(service, oldService)...)
 
-	ipPath := specPath.Child("externalIPs")
-	for i, ip := range service.Spec.ExternalIPs {
-		idxPath := ipPath.Index(i)
-		if msgs := validation.IsValidIP(ip); len(msgs) != 0 {
-			for i := range msgs {
-				allErrs = append(allErrs, field.Invalid(idxPath, ip, msgs[i]))
+	// Validate new external IPs. (Existing external IPs may have been validated under
+	// older, less strict rules and are allowed to be reused unchanged.)
+	if oldService == nil || !reflect.DeepEqual(oldService.Spec.ExternalIPs, service.Spec.ExternalIPs) {
+		ipPath := specPath.Child("externalIPs")
+		for i, ip := range service.Spec.ExternalIPs {
+			idxPath := ipPath.Index(i)
+			if errs := utilip.ValidateIP(ip, idxPath); len(errs) != 0 {
+				allErrs = append(allErrs, errs...)
+			} else {
+				allErrs = append(allErrs, ValidateNonSpecialIP(ip, idxPath)...)
 			}
-		} else {
-			allErrs = append(allErrs, ValidateNonSpecialIP(ip, idxPath)...)
 		}
 	}
 
@@ -5423,7 +5430,7 @@ func validateServiceInternalTrafficFieldsValue(service *core.Service) field.Erro
 
 // ValidateServiceCreate validates Services as they are created.
 func ValidateServiceCreate(service *core.Service) field.ErrorList {
-	return ValidateService(service)
+	return ValidateService(service, nil)
 }
 
 // ValidateServiceUpdate tests if required fields in the service are set during an update
@@ -5446,7 +5453,7 @@ func ValidateServiceUpdate(service, oldService *core.Service) field.ErrorList {
 
 	allErrs = append(allErrs, validateServiceExternalTrafficFieldsUpdate(oldService, service)...)
 
-	return append(allErrs, ValidateService(service)...)
+	return append(allErrs, ValidateService(service, oldService)...)
 }
 
 // ValidateServiceStatusUpdate tests if required fields in the Service are set when updating status.
@@ -6675,16 +6682,21 @@ func ValidateNamespaceFinalizeUpdate(newNamespace, oldNamespace *core.Namespace)
 }
 
 // ValidateEndpoints validates Endpoints on create and update.
-func ValidateEndpoints(endpoints *core.Endpoints) field.ErrorList {
+func ValidateEndpoints(endpoints, oldEndpoints *core.Endpoints) field.ErrorList {
 	allErrs := ValidateObjectMeta(&endpoints.ObjectMeta, true, ValidateEndpointsName, field.NewPath("metadata"))
 	allErrs = append(allErrs, ValidateEndpointsSpecificAnnotations(endpoints.Annotations, field.NewPath("annotations"))...)
-	allErrs = append(allErrs, validateEndpointSubsets(endpoints.Subsets, field.NewPath("subsets"))...)
+
+	// If the subsets are unchanged then don't re-validate them, since they may
+	// contain IPs that were validated under older, less strict IP validation rules.
+	if oldEndpoints == nil || !reflect.DeepEqual(oldEndpoints.Subsets, endpoints.Subsets) {
+		allErrs = append(allErrs, validateEndpointSubsets(endpoints.Subsets, field.NewPath("subsets"))...)
+	}
 	return allErrs
 }
 
 // ValidateEndpointsCreate validates Endpoints on create.
 func ValidateEndpointsCreate(endpoints *core.Endpoints) field.ErrorList {
-	return ValidateEndpoints(endpoints)
+	return ValidateEndpoints(endpoints, nil)
 }
 
 // ValidateEndpointsUpdate validates Endpoints on update. NodeName changes are
@@ -6693,7 +6705,7 @@ func ValidateEndpointsCreate(endpoints *core.Endpoints) field.ErrorList {
 // happens.
 func ValidateEndpointsUpdate(newEndpoints, oldEndpoints *core.Endpoints) field.ErrorList {
 	allErrs := ValidateObjectMetaUpdate(&newEndpoints.ObjectMeta, &oldEndpoints.ObjectMeta, field.NewPath("metadata"))
-	allErrs = append(allErrs, ValidateEndpoints(newEndpoints)...)
+	allErrs = append(allErrs, ValidateEndpoints(newEndpoints, oldEndpoints)...)
 	return allErrs
 }
 
@@ -6724,9 +6736,7 @@ func validateEndpointSubsets(subsets []core.EndpointSubset, fldPath *field.Path)
 
 func validateEndpointAddress(address *core.EndpointAddress, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
-	for _, msg := range validation.IsValidIP(address.IP) {
-		allErrs = append(allErrs, field.Invalid(fldPath.Child("ip"), address.IP, msg))
-	}
+	allErrs = append(allErrs, utilip.ValidateIP(address.IP, fldPath.Child("ip"))...)
 	if len(address.Hostname) > 0 {
 		allErrs = append(allErrs, ValidateDNS1123Label(address.Hostname, fldPath.Child("hostname"))...)
 	}
@@ -7361,14 +7371,13 @@ func validateLabelKeys(fldPath *field.Path, labelKeys []string, labelSelector *m
 // ValidateServiceClusterIPsRelatedFields validates .spec.ClusterIPs,,
 // .spec.IPFamilies, .spec.ipFamilyPolicy.  This is exported because it is used
 // during IP init and allocation.
-func ValidateServiceClusterIPsRelatedFields(service *core.Service) field.ErrorList {
+func ValidateServiceClusterIPsRelatedFields(service, oldService *core.Service) field.ErrorList {
 	// ClusterIP, ClusterIPs, IPFamilyPolicy and IPFamilies are validated prior (all must be unset) for ExternalName service
 	if service.Spec.Type == core.ServiceTypeExternalName {
 		return field.ErrorList{}
 	}
 
 	allErrs := field.ErrorList{}
-	hasInvalidIPs := false
 
 	specPath := field.NewPath("spec")
 	clusterIPsField := specPath.Child("clusterIPs")
@@ -7415,37 +7424,39 @@ func ValidateServiceClusterIPsRelatedFields(service *core.Service) field.ErrorLi
 		}
 	}
 
-	// clusterIPs stand alone validation
-	// valid ips with None and empty string handling
-	// duplication check is done as part of DualStackvalidation below
-	for i, clusterIP := range service.Spec.ClusterIPs {
-		// valid at first location only. if and only if len(clusterIPs) == 1
-		if i == 0 && clusterIP == core.ClusterIPNone {
-			if len(service.Spec.ClusterIPs) > 1 {
-				hasInvalidIPs = true
-				allErrs = append(allErrs, field.Invalid(clusterIPsField, service.Spec.ClusterIPs, "'None' must be the first and only value"))
+	// clusterIPs syntax validation. This section *only* does validation that does not
+	// depend on any other fields, so it can safely be skipped on update if the values
+	// have not changed. (We do that because clusterIPs may contain IP addresses that
+	// were validated under older, less strict IP validation rules.)
+	if oldService == nil || !reflect.DeepEqual(oldService.Spec.ClusterIPs, service.Spec.ClusterIPs) {
+		hasInvalidIPs := false
+		for i, clusterIP := range service.Spec.ClusterIPs {
+			// valid at first location only. if and only if len(clusterIPs) == 1
+			if i == 0 && clusterIP == core.ClusterIPNone {
+				if len(service.Spec.ClusterIPs) > 1 {
+					hasInvalidIPs = true
+					allErrs = append(allErrs, field.Invalid(clusterIPsField, service.Spec.ClusterIPs, "'None' must be the first and only value"))
+				}
+				continue
 			}
-			continue
+
+			// is it valid ip?
+			errs := utilip.ValidateIP(clusterIP, clusterIPsField.Index(i))
+			hasInvalidIPs = (len(errs) != 0) || hasInvalidIPs
+			allErrs = append(allErrs, errs...)
 		}
 
-		// is it valid ip?
-		errorMessages := validation.IsValidIP(clusterIP)
-		hasInvalidIPs = (len(errorMessages) != 0) || hasInvalidIPs
-		for _, msg := range errorMessages {
-			allErrs = append(allErrs, field.Invalid(clusterIPsField.Index(i), clusterIP, msg))
+		// If there is an invalid ip or misplaced none/empty string it will skew
+		// the error messages (bad index || dualstackness of already bad ips) so
+		// we stop here if there are errors in clusterIPs validation.
+		if hasInvalidIPs {
+			return allErrs
 		}
 	}
 
 	// max two
 	if len(service.Spec.ClusterIPs) > 2 {
 		allErrs = append(allErrs, field.Invalid(clusterIPsField, service.Spec.ClusterIPs, "may only hold up to 2 values"))
-	}
-
-	// at this stage if there is an invalid ip or misplaced none/empty string
-	// it will skew the error messages (bad index || dualstackness of already bad ips). so we
-	// stop here if there are errors in clusterIPs validation
-	if hasInvalidIPs {
-		return allErrs
 	}
 
 	// must be dual stacked ips if they are more than one ip

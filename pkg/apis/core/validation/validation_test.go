@@ -20471,7 +20471,7 @@ func TestValidateEndpointsCreate(t *testing.T) {
 				}},
 			},
 			errorType:   "FieldValueInvalid",
-			errorDetail: "must be a valid IP address",
+			errorDetail: "should not include brackets",
 		},
 		"Multiple ports, one without name": {
 			endpoints: core.Endpoints{
@@ -20513,7 +20513,7 @@ func TestValidateEndpointsCreate(t *testing.T) {
 				}},
 			},
 			errorType:   "FieldValueInvalid",
-			errorDetail: "must be a valid IP address",
+			errorDetail: "should not be empty",
 		},
 		"Port missing number": {
 			endpoints: core.Endpoints{
@@ -21555,7 +21555,7 @@ func TestEndpointAddressNodeNameUpdateRestrictions(t *testing.T) {
 	updatedEndpoint := newNodeNameEndpoint("kubernetes-changed-nodename")
 	// Check that NodeName can be changed during update, this is to accommodate the case where nodeIP or PodCIDR is reused.
 	// The same ip will now have a different nodeName.
-	errList := ValidateEndpoints(updatedEndpoint)
+	errList := ValidateEndpoints(updatedEndpoint, oldEndpoint)
 	errList = append(errList, ValidateEndpointsUpdate(updatedEndpoint, oldEndpoint)...)
 	if len(errList) != 0 {
 		t.Error("Endpoint should allow changing of Subset.Addresses.NodeName on update")
@@ -21565,7 +21565,7 @@ func TestEndpointAddressNodeNameUpdateRestrictions(t *testing.T) {
 func TestEndpointAddressNodeNameInvalidDNSSubdomain(t *testing.T) {
 	// Check NodeName DNS validation
 	endpoint := newNodeNameEndpoint("illegal*.nodename")
-	errList := ValidateEndpoints(endpoint)
+	errList := ValidateEndpoints(endpoint, nil)
 	if len(errList) == 0 {
 		t.Error("Endpoint should reject invalid NodeName")
 	}
@@ -21573,7 +21573,7 @@ func TestEndpointAddressNodeNameInvalidDNSSubdomain(t *testing.T) {
 
 func TestEndpointAddressNodeNameCanBeAnIPAddress(t *testing.T) {
 	endpoint := newNodeNameEndpoint("10.10.1.1")
-	errList := ValidateEndpoints(endpoint)
+	errList := ValidateEndpoints(endpoint, nil)
 	if len(errList) != 0 {
 		t.Error("Endpoint should accept a NodeName that is an IP address")
 	}
@@ -22413,6 +22413,7 @@ func TestPodIPsValidation(t *testing.T) {
 	testCases := []struct {
 		pod         core.Pod
 		expectError bool
+		allowUpdate bool
 	}{{
 		expectError: false,
 		pod:         makePod("nil-ips", "ns", nil),
@@ -22435,7 +22436,8 @@ func TestPodIPsValidation(t *testing.T) {
 		/* failure cases start here */
 		{
 			expectError: true,
-			pod:         makePod("invalid-pod-ip", "ns", []core.PodIP{{IP: "this-is-not-an-ip"}}),
+			allowUpdate: true,
+			pod:         makePod("invalid-pod-ip", "ns", []core.PodIP{{IP: "010.000.001.002"}}),
 		}, {
 			expectError: true,
 			pod:         makePod("dualstack-same-ip-family-6", "ns", []core.PodIP{{IP: "::1"}, {IP: "::2"}}),
@@ -22471,11 +22473,20 @@ func TestPodIPsValidation(t *testing.T) {
 
 				errs := ValidatePodStatusUpdate(newPod, oldPod, PodValidationOptions{})
 
-				if len(errs) == 0 && testCase.expectError {
+				if len(errs) == 0 && testCase.expectError && !testCase.allowUpdate {
 					t.Fatalf("expected failure for %s, but there were none", testCase.pod.Name)
 				}
 				if len(errs) != 0 && !testCase.expectError {
 					t.Fatalf("expected success for %s, but there were errors: %v", testCase.pod.Name, errs)
+				}
+
+				if testCase.expectError && testCase.allowUpdate {
+					oldPod.Status.PodIPs = nil
+					errs := ValidatePodStatusUpdate(newPod, oldPod, PodValidationOptions{})
+
+					if len(errs) == 0 {
+						t.Fatalf("expected failure for %s, but there were none", testCase.pod.Name)
+					}
 				}
 			}
 		})
@@ -22509,6 +22520,7 @@ func TestHostIPsValidation(t *testing.T) {
 	testCases := []struct {
 		pod         core.Pod
 		expectError bool
+		allowUpdate bool
 	}{
 		{
 			expectError: false,
@@ -22537,7 +22549,8 @@ func TestHostIPsValidation(t *testing.T) {
 		/* failure cases start here */
 		{
 			expectError: true,
-			pod:         makePodWithHostIPs("invalid-pod-ip", "ns", []core.HostIP{{IP: "this-is-not-an-ip"}}),
+			allowUpdate: true,
+			pod:         makePodWithHostIPs("invalid-pod-ip", "ns", []core.HostIP{{"010.000.001.002"}}),
 		},
 		{
 			expectError: true,
@@ -22578,11 +22591,20 @@ func TestHostIPsValidation(t *testing.T) {
 
 				errs := ValidatePodStatusUpdate(newPod, oldPod, PodValidationOptions{})
 
-				if len(errs) == 0 && testCase.expectError {
+				if len(errs) == 0 && testCase.expectError && !testCase.allowUpdate {
 					t.Fatalf("expected failure for %s, but there were none", testCase.pod.Name)
 				}
 				if len(errs) != 0 && !testCase.expectError {
 					t.Fatalf("expected success for %s, but there were errors: %v", testCase.pod.Name, errs)
+				}
+
+				if testCase.expectError && testCase.allowUpdate {
+					oldPod.Status.HostIPs = nil
+					errs := ValidatePodStatusUpdate(newPod, oldPod, PodValidationOptions{})
+
+					if len(errs) == 0 {
+						t.Fatalf("expected failure for %s, but there were none", testCase.pod.Name)
+					}
 				}
 			}
 		})

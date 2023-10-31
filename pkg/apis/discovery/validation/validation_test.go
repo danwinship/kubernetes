@@ -601,7 +601,7 @@ func TestValidateEndpointSlice(t *testing.T) {
 
 	for name, testCase := range testCases {
 		t.Run(name, func(t *testing.T) {
-			errs := ValidateEndpointSlice(testCase.endpointSlice)
+			errs := ValidateEndpointSlice(testCase.endpointSlice, nil)
 			if len(errs) != testCase.expectedErrors {
 				t.Errorf("Expected %d errors, got %d errors: %v", testCase.expectedErrors, len(errs), errs)
 			}
@@ -729,6 +729,23 @@ func TestValidateEndpointSliceUpdate(t *testing.T) {
 			},
 			expectedErrors: 0,
 		},
+		"unchanged IPs are not revalidated": {
+			oldEndpointSlice: &discovery.EndpointSlice{
+				ObjectMeta:  standardMeta,
+				AddressType: discovery.AddressTypeIPv4,
+				Endpoints: []discovery.Endpoint{{
+					Addresses: []string{"10.1.2.x"},
+				}},
+			},
+			newEndpointSlice: &discovery.EndpointSlice{
+				ObjectMeta:  standardMeta,
+				AddressType: discovery.AddressTypeIPv4,
+				Endpoints: []discovery.Endpoint{{
+					Addresses: []string{"10.1.2.x"},
+				}},
+			},
+			expectedErrors: 0,
+		},
 
 		// expected errors
 		"invalid node name set": {
@@ -749,7 +766,6 @@ func TestValidateEndpointSliceUpdate(t *testing.T) {
 			},
 			expectedErrors: 1,
 		},
-
 		"deprecated address type": {
 			expectedErrors: 1,
 			oldEndpointSlice: &discovery.EndpointSlice{
@@ -787,6 +803,24 @@ func TestValidateEndpointSliceUpdate(t *testing.T) {
 			},
 			expectedErrors: 1,
 		},
+		"changed IPs are revalidated": {
+			oldEndpointSlice: &discovery.EndpointSlice{
+				ObjectMeta:  standardMeta,
+				AddressType: discovery.AddressTypeIPv4,
+				Endpoints: []discovery.Endpoint{{
+					Addresses: []string{"10.1.2.3"},
+				}},
+			},
+			newEndpointSlice: &discovery.EndpointSlice{
+				ObjectMeta:  standardMeta,
+				AddressType: discovery.AddressTypeIPv4,
+				Endpoints: []discovery.Endpoint{{
+					Addresses: []string{"10.1.2.x"},
+				}},
+			},
+			expectedErrors: 2,
+		},
+
 	}
 
 	for name, testCase := range testCases {

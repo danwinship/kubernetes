@@ -21,12 +21,12 @@ import (
 	"net"
 	"reflect"
 	"strconv"
-	"strings"
 
 	"github.com/google/go-cmp/cmp"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
+	utilip "k8s.io/apimachinery/pkg/util/ip"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/validation"
 	"k8s.io/apimachinery/pkg/util/validation/field"
@@ -73,8 +73,8 @@ func ValidateKubeSchedulerConfiguration(cc *config.KubeSchedulerConfiguration) u
 		if err != nil {
 			errs = append(errs, field.Invalid(field.NewPath("healthzBindAddress"), cc.HealthzBindAddress, err.Error()))
 		} else {
-			if errMsgs := validation.IsValidIP(host); errMsgs != nil {
-				errs = append(errs, field.Invalid(field.NewPath("healthzBindAddress"), cc.HealthzBindAddress, strings.Join(errMsgs, ",")))
+			for _, err := range utilip.ValidateIP(host, field.NewPath("healthzBindAddress")) {
+				errs = append(errs, err)
 			}
 			if port != 0 {
 				errs = append(errs, field.Invalid(field.NewPath("healthzBindAddress"), cc.HealthzBindAddress, "must be empty or with an explicit 0 port"))
@@ -86,8 +86,8 @@ func ValidateKubeSchedulerConfiguration(cc *config.KubeSchedulerConfiguration) u
 		if err != nil {
 			errs = append(errs, field.Invalid(field.NewPath("metricsBindAddress"), cc.MetricsBindAddress, err.Error()))
 		} else {
-			if errMsgs := validation.IsValidIP(host); errMsgs != nil {
-				errs = append(errs, field.Invalid(field.NewPath("metricsBindAddress"), cc.MetricsBindAddress, strings.Join(errMsgs, ",")))
+			for _, err := range utilip.ValidateIP(host, field.NewPath("metricsBindAddress")) {
+				errs = append(errs, err)
 			}
 			if port != 0 {
 				errs = append(errs, field.Invalid(field.NewPath("metricsBindAddress"), cc.MetricsBindAddress, "must be empty or with an explicit 0 port"))
