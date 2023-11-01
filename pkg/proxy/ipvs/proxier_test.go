@@ -270,7 +270,7 @@ func TestCleanupLeftovers(t *testing.T) {
 	fp.syncProxyRules()
 
 	// test cleanup left over
-	if CleanupLeftovers(ctx, ipvs, ipt, ipset) {
+	if cleanupLeftovers(ctx, ipvs, ipt, ipset) {
 		t.Errorf("Cleanup leftovers failed")
 	}
 }
@@ -326,7 +326,7 @@ func TestCanUseIPVSProxier(t *testing.T) {
 	for _, tc := range testCases {
 		ipvs := &fakeIpvs{tc.ipvsErr, false}
 		versioner := &fakeIPSetVersioner{version: tc.ipsetVersion, err: tc.ipsetErr}
-		err := CanUseIPVSProxier(ctx, ipvs, versioner, tc.scheduler)
+		err := canUseIPVSProxier(ctx, ipvs, versioner, tc.scheduler)
 		if (err == nil) != tc.ok {
 			t.Errorf("Case [%s], expect %v, got err: %v", tc.name, tc.ok, err)
 		}

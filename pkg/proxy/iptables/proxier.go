@@ -53,7 +53,6 @@ import (
 	"k8s.io/kubernetes/pkg/proxy/util/nfacct"
 	"k8s.io/kubernetes/pkg/util/async"
 	utiliptables "k8s.io/kubernetes/pkg/util/iptables"
-	utilexec "k8s.io/utils/exec"
 )
 
 const (
@@ -183,7 +182,6 @@ func newProxier(ctx context.Context,
 	ipFamily v1.IPFamily,
 	ipt utiliptables.Interface,
 	sysctl utilsysctl.Interface,
-	exec utilexec.Interface,
 	syncPeriod time.Duration,
 	minSyncPeriod time.Duration,
 	masqueradeAll bool,
@@ -370,9 +368,7 @@ var iptablesKubeletJumpChains = []iptablesJumpChain{
 // on upgrade.
 var iptablesCleanupOnlyChains = []iptablesJumpChain{}
 
-// CleanupLeftovers removes all iptables rules and chains created by the Proxier
-// It returns true if an error was encountered. Errors are logged.
-func CleanupLeftovers(ctx context.Context, ipt utiliptables.Interface) (encounteredError bool) {
+func cleanupLeftovers(ctx context.Context, ipt utiliptables.Interface) (encounteredError bool) {
 	logger := klog.FromContext(ctx)
 	// Unlink our chains
 	for _, jump := range append(iptablesJumpChains, iptablesCleanupOnlyChains...) {

@@ -40,19 +40,14 @@ import (
 	clientset "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/cache"
 	toolswatch "k8s.io/client-go/tools/watch"
-	utilsysctl "k8s.io/component-helpers/node/util/sysctl"
 	"k8s.io/klog/v2"
 	"k8s.io/kubernetes/pkg/features"
 	"k8s.io/kubernetes/pkg/proxy"
 	proxyconfigapi "k8s.io/kubernetes/pkg/proxy/apis/config"
 	"k8s.io/kubernetes/pkg/proxy/iptables"
 	"k8s.io/kubernetes/pkg/proxy/ipvs"
-	utilipset "k8s.io/kubernetes/pkg/proxy/ipvs/ipset"
-	utilipvs "k8s.io/kubernetes/pkg/proxy/ipvs/util"
 	"k8s.io/kubernetes/pkg/proxy/nftables"
 	proxyutil "k8s.io/kubernetes/pkg/proxy/util"
-	utiliptables "k8s.io/kubernetes/pkg/util/iptables"
-	"k8s.io/utils/exec"
 )
 
 // timeoutForNodePodCIDR is the time to wait for allocators to assign a PodCIDR to the
@@ -107,28 +102,6 @@ func isIPTablesBased(mode proxyconfigapi.ProxyMode) bool {
 	return mode == proxyconfigapi.ProxyModeIPTables || mode == proxyconfigapi.ProxyModeIPVS
 }
 
-// getIPTables returns an array of [IPv4, IPv6] utiliptables.Interfaces. If primaryFamily
-// is not v1.IPFamilyUnknown then it will also separately return the interface for just
-// that family.
-func getIPTables(primaryFamily v1.IPFamily) ([2]utiliptables.Interface, utiliptables.Interface) {
-	execer := exec.New()
-
-	// Create iptables handlers for both families. Always ordered as IPv4, IPv6
-	ipt := [2]utiliptables.Interface{
-		utiliptables.New(execer, utiliptables.ProtocolIPv4),
-		utiliptables.New(execer, utiliptables.ProtocolIPv6),
-	}
-
-	var iptInterface utiliptables.Interface
-	if primaryFamily == v1.IPv4Protocol {
-		iptInterface = ipt[0]
-	} else if primaryFamily == v1.IPv6Protocol {
-		iptInterface = ipt[1]
-	}
-
-	return ipt, iptInterface
-}
-
 // createBackend creates the proxy.Backend
 func (s *ProxyServer) createBackend(ctx context.Context, config *proxyconfigapi.KubeProxyConfiguration, initOnly bool) (*proxy.Backend, error) {
 	var backend *proxy.Backend
@@ -141,14 +114,9 @@ func (s *ProxyServer) createBackend(ctx context.Context, config *proxyconfigapi.
 	if config.Mode == proxyconfigapi.ProxyModeIPTables {
 		logger.Info("Using iptables Proxier")
 
-		ipt, _ := getIPTables(s.PrimaryIPFamily)
-
 		// TODO this has side effects that should only happen when Run() is invoked.
 		backend, err = iptables.NewBackend(
 			ctx,
-			ipt,
-			utilsysctl.New(),
-			exec.New(),
 			config.SyncPeriod.Duration,
 			config.MinSyncPeriod.Duration,
 			config.Linux.MasqueradeAll,
@@ -165,21 +133,8 @@ func (s *ProxyServer) createBackend(ctx context.Context, config *proxyconfigapi.
 	} else if config.Mode == proxyconfigapi.ProxyModeIPVS {
 		logger.Info("Using ipvs Proxier")
 
-		execer := exec.New()
-		ipsetInterface := utilipset.New(execer)
-		ipvsInterface := utilipvs.New()
-		if err := ipvs.CanUseIPVSProxier(ctx, ipvsInterface, ipsetInterface, config.IPVS.Scheduler); err != nil {
-			return nil, fmt.Errorf("can't use the IPVS proxier: %v", err)
-		}
-		ipt, _ := getIPTables(s.PrimaryIPFamily)
-
 		backend, err = ipvs.NewBackend(
 			ctx,
-			ipt,
-			ipvsInterface,
-			ipsetInterface,
-			utilsysctl.New(),
-			execer,
 			config.SyncPeriod.Duration,
 			config.MinSyncPeriod.Duration,
 			config.IPVS.ExcludeCIDRs,
@@ -405,15 +360,8 @@ func platformCleanup(ctx context.Context, mode proxyconfigapi.ProxyMode, cleanup
 
 	// Clean up iptables and ipvs rules if switching to nftables, or if cleanupAndExit
 	if !isIPTablesBased(mode) || cleanupAndExit {
-		ipts, _ := getIPTables(v1.IPFamilyUnknown)
-		execer := exec.New()
-		ipsetInterface := utilipset.New(execer)
-		ipvsInterface := utilipvs.New()
-
-		for _, ipt := range ipts {
-			encounteredError = iptables.CleanupLeftovers(ctx, ipt) || encounteredError
-			encounteredError = ipvs.CleanupLeftovers(ctx, ipvsInterface, ipt, ipsetInterface) || encounteredError
-		}
+		encounteredError = iptables.CleanupLeftovers(ctx) || encounteredError
+		encounteredError = ipvs.CleanupLeftovers(ctx) || encounteredError
 	}
 
 	if utilfeature.DefaultFeatureGate.Enabled(features.NFTablesProxyMode) {

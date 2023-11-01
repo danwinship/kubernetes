@@ -39,9 +39,6 @@ import (
 // NewBackend creates a new IPTables backend
 func NewBackend(
 	ctx context.Context,
-	ipt [2]utiliptables.Interface,
-	sysctl utilsysctl.Interface,
-	exec utilexec.Interface,
 	syncPeriod time.Duration,
 	minSyncPeriod time.Duration,
 	masqueradeAll bool,
@@ -57,11 +54,13 @@ func NewBackend(
 ) (*proxy.Backend, error) {
 	logger := klog.FromContext(ctx)
 
-	iptv4 := ipt[0]
+	sysctl := utilsysctl.New()
+	exec := utilexec.New()
+	iptv4 := utiliptables.New(exec, utiliptables.ProtocolIPv4)
 	if !iptv4.Present() {
 		iptv4 = nil
 	}
-	iptv6 := ipt[1]
+	iptv6 := utiliptables.New(exec, utiliptables.ProtocolIPv6)
 	if !iptv6.Present() {
 		iptv6 = nil
 	}
@@ -73,7 +72,7 @@ func NewBackend(
 	var err error
 
 	if iptv4 != nil {
-		ipv4Proxier, err = newProxier(ctx, v1.IPv4Protocol, iptv4, sysctl, exec,
+		ipv4Proxier, err = newProxier(ctx, v1.IPv4Protocol, iptv4, sysctl,
 			syncPeriod, minSyncPeriod, masqueradeAll, localhostNodePorts, masqueradeBit,
 			localDetectors[v1.IPv4Protocol], hostname, nodeIPs[v1.IPv4Protocol],
 			recorder, healthzServer, nodePortAddresses, initOnly)
@@ -85,7 +84,7 @@ func NewBackend(
 	}
 
 	if iptv6 != nil {
-		ipv6Proxier, err = newProxier(ctx, v1.IPv6Protocol, iptv6, sysctl, exec,
+		ipv6Proxier, err = newProxier(ctx, v1.IPv6Protocol, iptv6, sysctl,
 			syncPeriod, minSyncPeriod, masqueradeAll, false, masqueradeBit,
 			localDetectors[v1.IPv6Protocol], hostname, nodeIPs[v1.IPv6Protocol],
 			recorder, healthzServer, nodePortAddresses, initOnly)
@@ -97,4 +96,16 @@ func NewBackend(
 	}
 
 	return proxy.NewBackend(ipv4Proxier, ipv6Proxier), nil
+}
+
+// CleanupLeftovers removes all iptables rules and chains created by the Backend
+// It returns true if an error was encountered. Errors are logged.
+func CleanupLeftovers(ctx context.Context) (encounteredError bool) {
+	// Clean up both IPv4 and IPv6 since the previous proxier may have run in either mode.
+	execer := utilexec.New()
+	ipt := utiliptables.New(execer, utiliptables.ProtocolIPv4)
+	encounteredError = cleanupLeftovers(ctx, ipt) || encounteredError
+	ipt = utiliptables.New(execer, utiliptables.ProtocolIPv6)
+	encounteredError = cleanupLeftovers(ctx, ipt) || encounteredError
+	return
 }
