@@ -22026,7 +22026,7 @@ func TestEndpointAddressNodeNameUpdateRestrictions(t *testing.T) {
 	updatedEndpoint := newNodeNameEndpoint("kubernetes-changed-nodename")
 	// Check that NodeName can be changed during update, this is to accommodate the case where nodeIP or PodCIDR is reused.
 	// The same ip will now have a different nodeName.
-	errList := ValidateEndpoints(updatedEndpoint)
+	errList := ValidateEndpoints(updatedEndpoint, oldEndpoint)
 	errList = append(errList, ValidateEndpointsUpdate(updatedEndpoint, oldEndpoint)...)
 	if len(errList) != 0 {
 		t.Error("Endpoint should allow changing of Subset.Addresses.NodeName on update")
@@ -22036,7 +22036,7 @@ func TestEndpointAddressNodeNameUpdateRestrictions(t *testing.T) {
 func TestEndpointAddressNodeNameInvalidDNSSubdomain(t *testing.T) {
 	// Check NodeName DNS validation
 	endpoint := newNodeNameEndpoint("illegal*.nodename")
-	errList := ValidateEndpoints(endpoint)
+	errList := ValidateEndpoints(endpoint, nil)
 	if len(errList) == 0 {
 		t.Error("Endpoint should reject invalid NodeName")
 	}
@@ -22044,7 +22044,7 @@ func TestEndpointAddressNodeNameInvalidDNSSubdomain(t *testing.T) {
 
 func TestEndpointAddressNodeNameCanBeAnIPAddress(t *testing.T) {
 	endpoint := newNodeNameEndpoint("10.10.1.1")
-	errList := ValidateEndpoints(endpoint)
+	errList := ValidateEndpoints(endpoint, nil)
 	if len(errList) != 0 {
 		t.Error("Endpoint should accept a NodeName that is an IP address")
 	}
@@ -22946,9 +22946,14 @@ func makePod(podName string, podNamespace string, podIPs []core.PodIP) core.Pod 
 	}
 }
 func TestPodIPsValidation(t *testing.T) {
+	// We test updating every pod in testCases to every other pod in testCases.
+	// expectError is true if we expect an error when updating *to* that pod.
+	// allowNoOpUpdate is true if we expect a no-op update to succeed.
+
 	testCases := []struct {
-		pod         core.Pod
-		expectError bool
+		pod             core.Pod
+		expectError     bool
+		allowNoOpUpdate bool
 	}{{
 		expectError: false,
 		pod:         makePod("nil-ips", "ns", nil),
@@ -22970,8 +22975,9 @@ func TestPodIPsValidation(t *testing.T) {
 	},
 		/* failure cases start here */
 		{
-			expectError: true,
-			pod:         makePod("invalid-pod-ip", "ns", []core.PodIP{{IP: "this-is-not-an-ip"}}),
+			expectError:     true,
+			allowNoOpUpdate: true,
+			pod:             makePod("invalid-pod-ip", "ns", []core.PodIP{{IP: "this-is-not-an-ip"}}),
 		}, {
 			expectError: true,
 			pod:         makePod("dualstack-same-ip-family-6", "ns", []core.PodIP{{IP: "::1"}, {IP: "::2"}}),
@@ -22995,9 +23001,9 @@ func TestPodIPsValidation(t *testing.T) {
 		},
 	}
 
-	for _, testCase := range testCases {
+	for i, testCase := range testCases {
 		t.Run(testCase.pod.Name, func(t *testing.T) {
-			for _, oldTestCase := range testCases {
+			for j, oldTestCase := range testCases {
 				newPod := testCase.pod.DeepCopy()
 				newPod.ResourceVersion = "1"
 
@@ -23005,9 +23011,14 @@ func TestPodIPsValidation(t *testing.T) {
 				oldPod.ResourceVersion = "1"
 				oldPod.Name = newPod.Name
 
+				expectError := testCase.expectError
+				if testCase.allowNoOpUpdate && i == j {
+					expectError = false
+				}
+
 				errs := ValidatePodStatusUpdate(newPod, oldPod, PodValidationOptions{})
 
-				if len(errs) == 0 && testCase.expectError {
+				if len(errs) == 0 && expectError {
 					t.Fatalf("expected failure for %s, but there were none", testCase.pod.Name)
 				}
 				if len(errs) != 0 && !testCase.expectError {
@@ -23042,9 +23053,14 @@ func makePodWithHostIPs(podName string, podNamespace string, hostIPs []core.Host
 }
 
 func TestHostIPsValidation(t *testing.T) {
+	// We test updating every pod in testCases to every other pod in testCases.
+	// expectError is true if we expect an error when updating *to* that pod.
+	// allowNoOpUpdate is true if we expect a no-op update to succeed.
+
 	testCases := []struct {
-		pod         core.Pod
-		expectError bool
+		pod             core.Pod
+		expectError     bool
+		allowNoOpUpdate bool
 	}{
 		{
 			expectError: false,
@@ -23072,8 +23088,9 @@ func TestHostIPsValidation(t *testing.T) {
 		},
 		/* failure cases start here */
 		{
-			expectError: true,
-			pod:         makePodWithHostIPs("invalid-pod-ip", "ns", []core.HostIP{{IP: "this-is-not-an-ip"}}),
+			expectError:     true,
+			allowNoOpUpdate: true,
+			pod:             makePodWithHostIPs("invalid-pod-ip", "ns", []core.HostIP{{"this-is-not-an-ip"}}),
 		},
 		{
 			expectError: true,
@@ -23102,9 +23119,9 @@ func TestHostIPsValidation(t *testing.T) {
 		},
 	}
 
-	for _, testCase := range testCases {
+	for i, testCase := range testCases {
 		t.Run(testCase.pod.Name, func(t *testing.T) {
-			for _, oldTestCase := range testCases {
+			for j, oldTestCase := range testCases {
 				newPod := testCase.pod.DeepCopy()
 				newPod.ResourceVersion = "1"
 
@@ -23112,9 +23129,14 @@ func TestHostIPsValidation(t *testing.T) {
 				oldPod.ResourceVersion = "1"
 				oldPod.Name = newPod.Name
 
+				expectError := testCase.expectError
+				if testCase.allowNoOpUpdate && i == j {
+					expectError = false
+				}
+
 				errs := ValidatePodStatusUpdate(newPod, oldPod, PodValidationOptions{})
 
-				if len(errs) == 0 && testCase.expectError {
+				if len(errs) == 0 && expectError {
 					t.Fatalf("expected failure for %s, but there were none", testCase.pod.Name)
 				}
 				if len(errs) != 0 && !testCase.expectError {
@@ -24764,13 +24786,14 @@ func TestValidateLoadBalancerStatus(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			defer featuregatetesting.SetFeatureGateDuringTest(t, utilfeature.DefaultFeatureGate, features.LoadBalancerIPMode, tc.ipModeEnabled)()
 			defer featuregatetesting.SetFeatureGateDuringTest(t, utilfeature.DefaultFeatureGate, features.AllowServiceLBStatusOnNonLB, tc.nonLBAllowed)()
+			oldStatus := core.LoadBalancerStatus{}
 			status := core.LoadBalancerStatus{}
 			tc.tweakLBStatus(&status)
 			spec := core.ServiceSpec{Type: core.ServiceTypeLoadBalancer}
 			if tc.tweakSvcSpec != nil {
 				tc.tweakSvcSpec(&spec)
 			}
-			errs := ValidateLoadBalancerStatus(&status, field.NewPath("status"), &spec)
+			errs := ValidateLoadBalancerStatus(&status, &oldStatus, field.NewPath("status"), &spec)
 			if len(errs) != tc.numErrs {
 				t.Errorf("Unexpected error list for case %q(expected:%v got %v) - Errors:\n %v", tc.name, tc.numErrs, len(errs), errs.ToAggregate())
 			}

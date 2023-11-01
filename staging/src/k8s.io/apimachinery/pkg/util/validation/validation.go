@@ -360,6 +360,24 @@ func IsValidIP(value string) []string {
 	return nil
 }
 
+// IsValidImmutableIPUpdate returns true if we should allow changing an "immutable" IP
+// address field from oldValue to newValue. This is allowed so that objects with fields
+// that historically allowed ambiguous/unsafe IP address syntax can be fixed to use
+// proper syntax instead.
+//
+// So, for example, this would allow updating:
+//
+//   - "010.001.002.003" to "10.1.2.3"
+//   - "::ffff:192.168.0.3" to "192.168.0.3"
+//   - "2001:DB8:0:0::1" to "2001:db8::1"
+func IsValidImmutableIPUpdate(oldValue, newValue string) bool {
+	if oldValue == newValue {
+		return true
+	}
+	oldIP := netutils.ParseIPSloppy(oldValue)
+	return oldIP != nil && oldIP.String() == newValue
+}
+
 // IsValidHostname tests that the argument is a valid hostname; that is, it
 // IsDNS1123Subdomain() && !IsValidIP().
 func IsValidHostname(value string) []string {
@@ -399,6 +417,27 @@ func IsValidCIDR(value string) []string {
 		return []string{"must be a valid CIDR value, (e.g. 10.9.8.0/24 or 2001:db8::/64)"}
 	}
 	return nil
+}
+
+// IsValidImmutableCIDRUpdate returns true if we should allow changing an "immutable" CIDR
+// field from oldValue to newValue. This is allowed so that objects with fields that
+// historically allowed ambiguous/unsafe CIDR syntax can be fixed to use proper syntax
+// instead.
+//
+// So, for example, this would allow updating:
+//
+//   - "010.001.002.000/24" to "10.1.2.0/24"
+//   - "::ffff:192.168.0.0/112" to "192.168.0.0/16"
+//   - "2001:DB8:0:0::/64" to "2001:db8::/64"
+//   - "1.2.3.4/24" to "1.2.3.0/24"
+//   - "1.2.3.0/024" to "1.2.3.0/24"
+func IsValidImmutableCIDRUpdate(oldValue, newValue string) bool {
+	if oldValue == newValue {
+		return true
+	}
+
+	_, oldCIDR, _ := netutils.ParseCIDRSloppy(oldValue)
+	return oldCIDR != nil && oldCIDR.String() == newValue
 }
 
 const percentFmt string = "[0-9]+%"
