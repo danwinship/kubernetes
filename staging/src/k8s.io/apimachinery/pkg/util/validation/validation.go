@@ -210,8 +210,9 @@ const DNS1123SubdomainMaxLength int = 253
 
 var dns1123SubdomainRegexp = regexp.MustCompile("^" + dns1123SubdomainFmt + "$")
 
-// IsDNS1123Subdomain tests for a string that conforms to the definition of a
-// subdomain in DNS (RFC 1123).
+// IsDNS1123Subdomain tests for a string that conforms to the definition of a subdomain in
+// DNS (RFC 1123). Note that if you are checking for an actual DNS hostname and don't also
+// want to accept IPv4 IP addresess, you need to use IsValidHostname instead.
 func IsDNS1123Subdomain(value string) []string {
 	var errs []string
 	if len(value) > DNS1123SubdomainMaxLength {
@@ -359,6 +360,18 @@ func IsValidIP(value string) []string {
 	return nil
 }
 
+// IsValidHostname tests that the argument is a valid hostname; that is, it
+// IsDNS1123Subdomain() && !IsValidIP().
+func IsValidHostname(value string) []string {
+	if msgs := IsDNS1123Subdomain(value); len(msgs) > 0 {
+		return msgs
+	}
+	if msgs := IsValidIP(value); len(msgs) == 0 {
+		return []string{"must be a DNS name, not an IP address"}
+	}
+	return nil
+}
+
 // IsValidIPv4Address tests that the argument is a valid IPv4 address.
 func IsValidIPv4Address(fldPath *field.Path, value string) field.ErrorList {
 	var allErrors field.ErrorList
@@ -377,6 +390,15 @@ func IsValidIPv6Address(fldPath *field.Path, value string) field.ErrorList {
 		allErrors = append(allErrors, field.Invalid(fldPath, value, "must be a valid IPv6 address"))
 	}
 	return allErrors
+}
+
+// IsValidCIDR tests that the argument is a valid CIDR value.
+func IsValidCIDR(value string) []string {
+	_, _, err := netutils.ParseCIDRSloppy(value)
+	if err != nil {
+		return []string{"must be a valid CIDR value, (e.g. 10.9.8.0/24 or 2001:db8::/64)"}
+	}
+	return nil
 }
 
 const percentFmt string = "[0-9]+%"

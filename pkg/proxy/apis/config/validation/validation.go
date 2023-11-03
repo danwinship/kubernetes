@@ -25,6 +25,7 @@ import (
 
 	utilnet "k8s.io/apimachinery/pkg/util/net"
 	"k8s.io/apimachinery/pkg/util/sets"
+	"k8s.io/apimachinery/pkg/util/validation"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	utilfeature "k8s.io/apiserver/pkg/util/feature"
 	componentbaseconfig "k8s.io/component-base/config"
@@ -66,8 +67,8 @@ func Validate(config *kubeproxyconfig.KubeProxyConfiguration) field.ErrorList {
 		allErrs = append(allErrs, field.Invalid(newPath.Child("ConfigSyncPeriod"), config.ConfigSyncPeriod, "must be greater than 0"))
 	}
 
-	if netutils.ParseIPSloppy(config.BindAddress) == nil {
-		allErrs = append(allErrs, field.Invalid(newPath.Child("BindAddress"), config.BindAddress, "not a valid textual representation of an IP address"))
+	for _, msg := range validation.IsValidIP(config.BindAddress) {
+		allErrs = append(allErrs, field.Invalid(newPath.Child("BindAddress"), config.BindAddress, msg))
 	}
 
 	if config.HealthzBindAddress != "" {
@@ -88,8 +89,8 @@ func Validate(config *kubeproxyconfig.KubeProxyConfiguration) field.ErrorList {
 			}
 		// if we are here means that len(cidrs) == 1, we need to validate it
 		default:
-			if _, _, err := netutils.ParseCIDRSloppy(config.ClusterCIDR); err != nil {
-				allErrs = append(allErrs, field.Invalid(newPath.Child("ClusterCIDR"), config.ClusterCIDR, "must be a valid CIDR block (e.g. 10.100.0.0/16 or fde4:8dba:82e1::/48)"))
+			for _, msg := range validation.IsValidCIDR(config.ClusterCIDR) {
+				allErrs = append(allErrs, field.Invalid(newPath.Child("ClusterCIDR"), config.ClusterCIDR, msg)
 			}
 		}
 	}
@@ -280,8 +281,8 @@ func validateHostPort(input string, fldPath *field.Path) field.ErrorList {
 		return allErrs
 	}
 
-	if ip := netutils.ParseIPSloppy(hostIP); ip == nil {
-		allErrs = append(allErrs, field.Invalid(fldPath, hostIP, "must be a valid IP"))
+	for _, msg := range validation.IsValidIP(hostIP) {
+		allErrs = append(allErrs, field.Invalid(fldPath, hostIP, msg)
 	}
 
 	if p, err := strconv.Atoi(port); err != nil {
@@ -297,8 +298,8 @@ func validateKubeProxyNodePortAddress(nodePortAddresses []string, fldPath *field
 	allErrs := field.ErrorList{}
 
 	for i := range nodePortAddresses {
-		if _, _, err := netutils.ParseCIDRSloppy(nodePortAddresses[i]); err != nil {
-			allErrs = append(allErrs, field.Invalid(fldPath.Index(i), nodePortAddresses[i], "must be a valid CIDR"))
+		for _, msg := range validation.IsValidCIDR(nodePortAddresses[i]) {
+			allErrs = append(allErrs, field.Invalid(fldPath.Index(i), nodePortAddresses[i], msg))
 		}
 	}
 
@@ -327,8 +328,8 @@ func validateIPVSExcludeCIDRs(excludeCIDRs []string, fldPath *field.Path) field.
 	allErrs := field.ErrorList{}
 
 	for i := range excludeCIDRs {
-		if _, _, err := netutils.ParseCIDRSloppy(excludeCIDRs[i]); err != nil {
-			allErrs = append(allErrs, field.Invalid(fldPath.Index(i), excludeCIDRs[i], "must be a valid CIDR"))
+		for _, msg := range validation.IsValidCIDR(excludeCIDRs[i]) {
+			allErrs = append(allErrs, field.Invalid(fldPath.Index(i), excludeCIDRs[i], msg))
 		}
 	}
 	return allErrs

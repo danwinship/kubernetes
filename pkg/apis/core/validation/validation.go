@@ -3655,8 +3655,8 @@ func validatePodDNSConfig(dnsConfig *core.PodDNSConfig, dnsPolicy *core.DNSPolic
 			allErrs = append(allErrs, field.Invalid(fldPath.Child("nameservers"), dnsConfig.Nameservers, fmt.Sprintf("must not have more than %v nameservers", MaxDNSNameservers)))
 		}
 		for i, ns := range dnsConfig.Nameservers {
-			if ip := netutils.ParseIPSloppy(ns); ip == nil {
-				allErrs = append(allErrs, field.Invalid(fldPath.Child("nameservers").Index(i), ns, "must be valid IP address"))
+			for _, msg := range validation.IsValidIP(ns) {
+				allErrs = append(allErrs, field.Invalid(fldPath.Child("nameservers").Index(i), ns, msg))
 			}
 		}
 		// Validate searches.
@@ -3824,12 +3824,12 @@ func validateOnlyDeletedSchedulingGates(newGates, oldGates []core.PodSchedulingG
 
 func ValidateHostAliases(hostAliases []core.HostAlias, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
-	for _, hostAlias := range hostAliases {
-		if ip := netutils.ParseIPSloppy(hostAlias.IP); ip == nil {
-			allErrs = append(allErrs, field.Invalid(fldPath.Child("ip"), hostAlias.IP, "must be valid IP address"))
+	for i, hostAlias := range hostAliases {
+		for _, msg := range validation.IsValidIP(hostAlias.IP) {
+			allErrs = append(allErrs, field.Invalid(fldPath.Index(i).Child("ip"), hostAlias.IP, msg))
 		}
-		for _, hostname := range hostAlias.Hostnames {
-			allErrs = append(allErrs, ValidateDNS1123Subdomain(hostname, fldPath.Child("hostnames"))...)
+		for j, hostname := range hostAlias.Hostnames {
+			allErrs = append(allErrs, ValidateDNS1123Subdomain(hostname, fldPath.Index(i).Child("hostnames").Index(j))...)
 		}
 	}
 	return allErrs
@@ -5813,8 +5813,8 @@ func ValidateNode(node *core.Node) field.ErrorList {
 
 		// all PodCIDRs should be valid ones
 		for idx, value := range node.Spec.PodCIDRs {
-			if _, err := ValidateCIDR(value); err != nil {
-				allErrs = append(allErrs, field.Invalid(podCIDRsField.Index(idx), node.Spec.PodCIDRs, "must be valid CIDR"))
+			for _, msg := range validation.IsValidCIDR(value) {
+				allErrs = append(allErrs, field.Invalid(podCIDRsField.Index(idx), value, msg))
 			}
 		}
 
@@ -7199,8 +7199,8 @@ func ValidateLoadBalancerStatus(status *core.LoadBalancerStatus, fldPath *field.
 		for i, ingress := range status.Ingress {
 			idxPath := ingrPath.Index(i)
 			if len(ingress.IP) > 0 {
-				if isIP := (netutils.ParseIPSloppy(ingress.IP) != nil); !isIP {
-					allErrs = append(allErrs, field.Invalid(idxPath.Child("ip"), ingress.IP, "must be a valid IP address"))
+				for _, msg := range validation.IsValidIP(ingress.IP) {
+					allErrs = append(allErrs, field.Invalid(idxPath.Child("ip"), ingress.IP, msg))
 				}
 			}
 
@@ -7215,11 +7215,8 @@ func ValidateLoadBalancerStatus(status *core.LoadBalancerStatus, fldPath *field.
 			}
 
 			if len(ingress.Hostname) > 0 {
-				for _, msg := range validation.IsDNS1123Subdomain(ingress.Hostname) {
+				for _, msg := range validation.IsValidHostname(ingress.Hostname) {
 					allErrs = append(allErrs, field.Invalid(idxPath.Child("hostname"), ingress.Hostname, msg))
-				}
-				if isIP := (netutils.ParseIPSloppy(ingress.Hostname) != nil); isIP {
-					allErrs = append(allErrs, field.Invalid(idxPath.Child("hostname"), ingress.Hostname, "must be a DNS name, not an IP address"))
 				}
 			}
 		}
@@ -7245,15 +7242,6 @@ func validateVolumeNodeAffinity(nodeAffinity *core.VolumeNodeAffinity, fldPath *
 	}
 
 	return true, allErrs
-}
-
-// ValidateCIDR validates whether a CIDR matches the conventions expected by net.ParseCIDR
-func ValidateCIDR(cidr string) (*net.IPNet, error) {
-	_, net, err := netutils.ParseCIDRSloppy(cidr)
-	if err != nil {
-		return nil, err
-	}
-	return net, nil
 }
 
 func IsDecremented(update, old *int32) bool {

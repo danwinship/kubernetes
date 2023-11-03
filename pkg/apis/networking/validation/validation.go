@@ -216,27 +216,35 @@ func ValidateNetworkPolicyUpdate(update, old *networking.NetworkPolicy, opts Net
 // ValidateIPBlock validates a cidr and the except fields of an IpBlock NetworkPolicyPeer
 func ValidateIPBlock(ipb *networking.IPBlock, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
-	if len(ipb.CIDR) == 0 || ipb.CIDR == "" {
+	if ipb.CIDR == "" {
 		allErrs = append(allErrs, field.Required(fldPath.Child("cidr"), ""))
 		return allErrs
 	}
-	cidrIPNet, err := apivalidation.ValidateCIDR(ipb.CIDR)
+	for _, msg := range validation.IsValidCIDR(ipb.CIDR) {
+		allErrs = append(allErrs, field.Invalid(fldPath.Child("cidr"), ipb.CIDR, msg))
+	}
+	_, cidrIPNet, err := netutils.ParseCIDRSloppy(ipb.CIDR)
 	if err != nil {
-		allErrs = append(allErrs, field.Invalid(fldPath.Child("cidr"), ipb.CIDR, "not a valid CIDR"))
+		// Implies validation would have failed so we already added errors for it.
 		return allErrs
 	}
-	exceptCIDR := ipb.Except
-	for i, exceptIP := range exceptCIDR {
+
+	for i, exceptStr := range ipb.Except {
 		exceptPath := fldPath.Child("except").Index(i)
-		exceptCIDR, err := apivalidation.ValidateCIDR(exceptIP)
-		if err != nil {
-			allErrs = append(allErrs, field.Invalid(exceptPath, exceptIP, "not a valid CIDR"))
-			return allErrs
+		for _, msg := range validation.IsValidCIDR(exceptStr) {
+			allErrs = append(allErrs, field.Invalid(exceptPath, exceptStr, msg))
 		}
+
+		_, exceptCIDR, err := netutils.ParseCIDRSloppy(exceptStr)
+		if err != nil {
+			// Implies validation would have failed so we already added errors for it.
+			continue
+		}
+
 		cidrMaskLen, _ := cidrIPNet.Mask.Size()
 		exceptMaskLen, _ := exceptCIDR.Mask.Size()
 		if !cidrIPNet.Contains(exceptCIDR.IP) || cidrMaskLen >= exceptMaskLen {
-			allErrs = append(allErrs, field.Invalid(exceptPath, exceptIP, "must be a strict subset of `cidr`"))
+			allErrs = append(allErrs, field.Invalid(exceptPath, exceptStr, "must be a strict subset of `cidr`"))
 		}
 	}
 	return allErrs
@@ -354,15 +362,15 @@ func ValidateIngressLoadBalancerStatus(status *networking.IngressLoadBalancerSta
 	for i, ingress := range status.Ingress {
 		idxPath := fldPath.Child("ingress").Index(i)
 		if len(ingress.IP) > 0 {
-			if isIP := (netutils.ParseIPSloppy(ingress.IP) != nil); !isIP {
-				allErrs = append(allErrs, field.Invalid(idxPath.Child("ip"), ingress.IP, "must be a valid IP address"))
+			for _, msg := range validation.IsValidIP(ingress.IP) {
+				allErrs = append(allErrs, field.Invalid(idxPath.Child("ip"), ingress.IP, msg))
 			}
 		}
 		if len(ingress.Hostname) > 0 {
 			for _, msg := range validation.IsDNS1123Subdomain(ingress.Hostname) {
 				allErrs = append(allErrs, field.Invalid(idxPath.Child("hostname"), ingress.Hostname, msg))
 			}
-			if isIP := (netutils.ParseIPSloppy(ingress.Hostname) != nil); isIP {
+			if errMsgs := validation.IsValidIP(ingress.Hostname); len(errMsgs) != 0 {
 				allErrs = append(allErrs, field.Invalid(idxPath.Child("hostname"), ingress.Hostname, "must be a DNS name, not an IP address"))
 			}
 		}
@@ -378,9 +386,6 @@ func validateIngressRules(ingressRules []networking.IngressRule, fldPath *field.
 	for i, ih := range ingressRules {
 		wildcardHost := false
 		if len(ih.Host) > 0 {
-			if isIP := (netutils.ParseIPSloppy(ih.Host) != nil); isIP {
-				allErrs = append(allErrs, field.Invalid(fldPath.Index(i).Child("host"), ih.Host, "must be a DNS name, not an IP address"))
-			}
 			// TODO: Ports and ips are allowed in the host part of a url
 			// according to RFC 3986, consider allowing them.
 			if strings.Contains(ih.Host, "*") {
@@ -389,7 +394,7 @@ func validateIngressRules(ingressRules []networking.IngressRule, fldPath *field.
 				}
 				wildcardHost = true
 			} else {
-				for _, msg := range validation.IsDNS1123Subdomain(ih.Host) {
+				for _, msg := range validation.IsValidHostname(ih.Host) {
 					allErrs = append(allErrs, field.Invalid(fldPath.Index(i).Child("host"), ih.Host, msg))
 				}
 			}
