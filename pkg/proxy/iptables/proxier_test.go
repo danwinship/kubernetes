@@ -616,7 +616,7 @@ func countRules(tableName utiliptables.Table, ruleData string) int {
 }
 
 func countRulesFromMetric(tableName utiliptables.Table) int {
-	numRulesFloat, err := testutil.GetGaugeMetricValue(metrics.IptablesRulesTotal.WithLabelValues(string(tableName)))
+	numRulesFloat, err := testutil.GetGaugeMetricValue(metrics.IPTablesRulesTotal.WithLabelValues(string(tableName)))
 	if err != nil {
 		klog.ErrorS(err, "metrics are not registered?")
 		return -1
@@ -625,7 +625,7 @@ func countRulesFromMetric(tableName utiliptables.Table) int {
 }
 
 func countRulesFromLastSyncMetric(tableName utiliptables.Table) int {
-	numRulesFloat, err := testutil.GetGaugeMetricValue(metrics.IptablesRulesLastSync.WithLabelValues(string(tableName)))
+	numRulesFloat, err := testutil.GetGaugeMetricValue(metrics.IPTablesRulesLastSync.WithLabelValues(string(tableName)))
 	if err != nil {
 		klog.ErrorS(err, "metrics are not registered?")
 		return -1
@@ -4467,7 +4467,7 @@ func TestProxierDeleteNodePortStaleUDP(t *testing.T) {
 	}
 }
 
-func TestProxierMetricsIptablesTotalRules(t *testing.T) {
+func TestProxierMetricsIPTablesTotalRules(t *testing.T) {
 	ipt := iptablestest.NewFake()
 	fp := NewFakeProxier(ipt)
 
@@ -6679,7 +6679,7 @@ func TestSyncProxyRulesRepeated(t *testing.T) {
 	if fp.needFullSync {
 		t.Fatalf("Proxier unexpectedly already needs a full sync?")
 	}
-	partialRestoreFailures, err := testutil.GetCounterMetricValue(metrics.IptablesPartialRestoreFailuresTotal)
+	partialRestoreFailures, err := testutil.GetCounterMetricValue(metrics.IPTablesPartialRestoreFailuresTotal)
 	if err != nil {
 		t.Fatalf("Could not get partial restore failures metric: %v", err)
 	}
@@ -6713,7 +6713,7 @@ func TestSyncProxyRulesRepeated(t *testing.T) {
 	if !fp.needFullSync {
 		t.Errorf("Proxier did not fail on previous partial resync?")
 	}
-	updatedPartialRestoreFailures, err := testutil.GetCounterMetricValue(metrics.IptablesPartialRestoreFailuresTotal)
+	updatedPartialRestoreFailures, err := testutil.GetCounterMetricValue(metrics.IPTablesPartialRestoreFailuresTotal)
 	if err != nil {
 		t.Errorf("Could not get partial restore failures metric: %v", err)
 	}
