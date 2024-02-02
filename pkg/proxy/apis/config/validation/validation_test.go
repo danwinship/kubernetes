@@ -37,204 +37,214 @@ func TestValidateKubeProxyConfiguration(t *testing.T) {
 	} else {
 		proxyMode = kubeproxyconfig.ProxyModeIPVS
 	}
-	successCases := []kubeproxyconfig.KubeProxyConfiguration{{
-		BindAddress:        "192.168.59.103",
-		HealthzBindAddress: "0.0.0.0:10256",
-		MetricsBindAddress: "127.0.0.1:10249",
-		ClusterCIDR:        "192.168.59.0/24",
-		ConfigSyncPeriod:   metav1.Duration{Duration: 1 * time.Second},
-		IPTables: kubeproxyconfig.KubeProxyIPTablesConfiguration{
-			MasqueradeAll: true,
-			SyncPeriod:    metav1.Duration{Duration: 5 * time.Second},
-			MinSyncPeriod: metav1.Duration{Duration: 2 * time.Second},
+	successCases := map[string]kubeproxyconfig.KubeProxyConfiguration{
+		"basic config, unspecified Mode": {
+			BindAddress:        "192.168.59.103",
+			HealthzBindAddress: "0.0.0.0:10256",
+			MetricsBindAddress: "127.0.0.1:10249",
+			ClusterCIDR:        "192.168.59.0/24",
+			ConfigSyncPeriod:   metav1.Duration{Duration: 1 * time.Second},
+			IPTables: kubeproxyconfig.KubeProxyIPTablesConfiguration{
+				MasqueradeAll: true,
+				SyncPeriod:    metav1.Duration{Duration: 5 * time.Second},
+				MinSyncPeriod: metav1.Duration{Duration: 2 * time.Second},
+			},
+			Conntrack: kubeproxyconfig.KubeProxyConntrackConfiguration{
+				MaxPerCore:            ptr.To[int32](1),
+				Min:                   ptr.To[int32](1),
+				TCPEstablishedTimeout: &metav1.Duration{Duration: 5 * time.Second},
+				TCPCloseWaitTimeout:   &metav1.Duration{Duration: 5 * time.Second},
+			},
+			Logging: logsapi.LoggingConfiguration{
+				Format: "text",
+			},
 		},
-		Mode: proxyMode,
-		IPVS: kubeproxyconfig.KubeProxyIPVSConfiguration{
-			SyncPeriod:    metav1.Duration{Duration: 10 * time.Second},
-			MinSyncPeriod: metav1.Duration{Duration: 5 * time.Second},
+		"Mode specified, extra mode-specific configs": {
+			BindAddress:        "192.168.59.103",
+			HealthzBindAddress: "0.0.0.0:10256",
+			MetricsBindAddress: "127.0.0.1:10249",
+			ClusterCIDR:        "192.168.59.0/24",
+			ConfigSyncPeriod:   metav1.Duration{Duration: 1 * time.Second},
+			IPTables: kubeproxyconfig.KubeProxyIPTablesConfiguration{
+				MasqueradeAll: true,
+				SyncPeriod:    metav1.Duration{Duration: 5 * time.Second},
+				MinSyncPeriod: metav1.Duration{Duration: 2 * time.Second},
+			},
+			Mode: proxyMode,
+			IPVS: kubeproxyconfig.KubeProxyIPVSConfiguration{
+				SyncPeriod:    metav1.Duration{Duration: 10 * time.Second},
+				MinSyncPeriod: metav1.Duration{Duration: 5 * time.Second},
+			},
+			Conntrack: kubeproxyconfig.KubeProxyConntrackConfiguration{
+				MaxPerCore:            ptr.To[int32](1),
+				Min:                   ptr.To[int32](1),
+				TCPEstablishedTimeout: &metav1.Duration{Duration: 5 * time.Second},
+				TCPCloseWaitTimeout:   &metav1.Duration{Duration: 5 * time.Second},
+			},
+			Logging: logsapi.LoggingConfiguration{
+				Format: "text",
+			},
 		},
-		Conntrack: kubeproxyconfig.KubeProxyConntrackConfiguration{
-			MaxPerCore:            ptr.To[int32](1),
-			Min:                   ptr.To[int32](1),
-			TCPEstablishedTimeout: &metav1.Duration{Duration: 5 * time.Second},
-			TCPCloseWaitTimeout:   &metav1.Duration{Duration: 5 * time.Second},
+		"empty HealthzBindAddress": {
+			BindAddress:        "192.168.59.103",
+			HealthzBindAddress: "",
+			MetricsBindAddress: "127.0.0.1:10249",
+			ClusterCIDR:        "192.168.59.0/24",
+			ConfigSyncPeriod:   metav1.Duration{Duration: 1 * time.Second},
+			IPTables: kubeproxyconfig.KubeProxyIPTablesConfiguration{
+				MasqueradeAll: true,
+				SyncPeriod:    metav1.Duration{Duration: 5 * time.Second},
+				MinSyncPeriod: metav1.Duration{Duration: 2 * time.Second},
+			},
+			Conntrack: kubeproxyconfig.KubeProxyConntrackConfiguration{
+				MaxPerCore:            ptr.To[int32](1),
+				Min:                   ptr.To[int32](1),
+				TCPEstablishedTimeout: &metav1.Duration{Duration: 5 * time.Second},
+				TCPCloseWaitTimeout:   &metav1.Duration{Duration: 5 * time.Second},
+			},
+			Logging: logsapi.LoggingConfiguration{
+				Format: "text",
+			},
 		},
-		Logging: logsapi.LoggingConfiguration{
-			Format: "text",
+		"IPv6": {
+			BindAddress:        "fd00:192:168:59::103",
+			HealthzBindAddress: "",
+			MetricsBindAddress: "[::1]:10249",
+			ClusterCIDR:        "fd00:192:168:59::/64",
+			ConfigSyncPeriod:   metav1.Duration{Duration: 1 * time.Second},
+			IPTables: kubeproxyconfig.KubeProxyIPTablesConfiguration{
+				MasqueradeAll: true,
+				SyncPeriod:    metav1.Duration{Duration: 5 * time.Second},
+				MinSyncPeriod: metav1.Duration{Duration: 2 * time.Second},
+			},
+			Conntrack: kubeproxyconfig.KubeProxyConntrackConfiguration{
+				MaxPerCore:            ptr.To[int32](1),
+				Min:                   ptr.To[int32](1),
+				TCPEstablishedTimeout: &metav1.Duration{Duration: 5 * time.Second},
+				TCPCloseWaitTimeout:   &metav1.Duration{Duration: 5 * time.Second},
+			},
+			Logging: logsapi.LoggingConfiguration{
+				Format: "text",
+			},
 		},
-	}, {
-		BindAddress:        "192.168.59.103",
-		HealthzBindAddress: "0.0.0.0:10256",
-		MetricsBindAddress: "127.0.0.1:10249",
-		ClusterCIDR:        "192.168.59.0/24",
-		ConfigSyncPeriod:   metav1.Duration{Duration: 1 * time.Second},
-		IPTables: kubeproxyconfig.KubeProxyIPTablesConfiguration{
-			MasqueradeAll: true,
-			SyncPeriod:    metav1.Duration{Duration: 5 * time.Second},
-			MinSyncPeriod: metav1.Duration{Duration: 2 * time.Second},
+		"alternate healthz port": {
+			BindAddress:        "10.10.12.11",
+			HealthzBindAddress: "0.0.0.0:12345",
+			MetricsBindAddress: "127.0.0.1:10249",
+			ClusterCIDR:        "192.168.59.0/24",
+			ConfigSyncPeriod:   metav1.Duration{Duration: 1 * time.Second},
+			IPTables: kubeproxyconfig.KubeProxyIPTablesConfiguration{
+				MasqueradeAll: true,
+				SyncPeriod:    metav1.Duration{Duration: 5 * time.Second},
+				MinSyncPeriod: metav1.Duration{Duration: 2 * time.Second},
+			},
+			Conntrack: kubeproxyconfig.KubeProxyConntrackConfiguration{
+				MaxPerCore:            ptr.To[int32](1),
+				Min:                   ptr.To[int32](1),
+				TCPEstablishedTimeout: &metav1.Duration{Duration: 5 * time.Second},
+				TCPCloseWaitTimeout:   &metav1.Duration{Duration: 5 * time.Second},
+			},
+			Logging: logsapi.LoggingConfiguration{
+				Format: "text",
+			},
 		},
-		Conntrack: kubeproxyconfig.KubeProxyConntrackConfiguration{
-			MaxPerCore:            ptr.To[int32](1),
-			Min:                   ptr.To[int32](1),
-			TCPEstablishedTimeout: &metav1.Duration{Duration: 5 * time.Second},
-			TCPCloseWaitTimeout:   &metav1.Duration{Duration: 5 * time.Second},
+		"ClusterCIDR is wrong IP family": {
+			BindAddress:        "10.10.12.11",
+			HealthzBindAddress: "0.0.0.0:12345",
+			MetricsBindAddress: "127.0.0.1:10249",
+			ClusterCIDR:        "fd00:192:168::/64",
+			ConfigSyncPeriod:   metav1.Duration{Duration: 1 * time.Second},
+			IPTables: kubeproxyconfig.KubeProxyIPTablesConfiguration{
+				MasqueradeAll: true,
+				SyncPeriod:    metav1.Duration{Duration: 5 * time.Second},
+				MinSyncPeriod: metav1.Duration{Duration: 2 * time.Second},
+			},
+			Conntrack: kubeproxyconfig.KubeProxyConntrackConfiguration{
+				MaxPerCore:            ptr.To[int32](1),
+				Min:                   ptr.To[int32](1),
+				TCPEstablishedTimeout: &metav1.Duration{Duration: 5 * time.Second},
+				TCPCloseWaitTimeout:   &metav1.Duration{Duration: 5 * time.Second},
+			},
+			Logging: logsapi.LoggingConfiguration{
+				Format: "text",
+			},
 		},
-		Logging: logsapi.LoggingConfiguration{
-			Format: "text",
+		"dual-stack ClusterCIDR": {
+			BindAddress:        "10.10.12.11",
+			HealthzBindAddress: "0.0.0.0:12345",
+			MetricsBindAddress: "127.0.0.1:10249",
+			ClusterCIDR:        "192.168.59.0/24,fd00:192:168::/64",
+			ConfigSyncPeriod:   metav1.Duration{Duration: 1 * time.Second},
+			IPTables: kubeproxyconfig.KubeProxyIPTablesConfiguration{
+				MasqueradeAll: true,
+				SyncPeriod:    metav1.Duration{Duration: 5 * time.Second},
+				MinSyncPeriod: metav1.Duration{Duration: 2 * time.Second},
+			},
+			Conntrack: kubeproxyconfig.KubeProxyConntrackConfiguration{
+				MaxPerCore:            ptr.To[int32](1),
+				Min:                   ptr.To[int32](1),
+				TCPEstablishedTimeout: &metav1.Duration{Duration: 5 * time.Second},
+				TCPCloseWaitTimeout:   &metav1.Duration{Duration: 5 * time.Second},
+			},
+			Logging: logsapi.LoggingConfiguration{
+				Format: "text",
+			},
 		},
-	}, {
-		BindAddress:        "192.168.59.103",
-		HealthzBindAddress: "",
-		MetricsBindAddress: "127.0.0.1:10249",
-		ClusterCIDR:        "192.168.59.0/24",
-		ConfigSyncPeriod:   metav1.Duration{Duration: 1 * time.Second},
-		IPTables: kubeproxyconfig.KubeProxyIPTablesConfiguration{
-			MasqueradeAll: true,
-			SyncPeriod:    metav1.Duration{Duration: 5 * time.Second},
-			MinSyncPeriod: metav1.Duration{Duration: 2 * time.Second},
+		"LocalModeInterfaceNamePrefix": {
+			BindAddress:        "10.10.12.11",
+			HealthzBindAddress: "0.0.0.0:12345",
+			MetricsBindAddress: "127.0.0.1:10249",
+			ClusterCIDR:        "192.168.59.0/24",
+			ConfigSyncPeriod:   metav1.Duration{Duration: 1 * time.Second},
+			IPTables: kubeproxyconfig.KubeProxyIPTablesConfiguration{
+				MasqueradeAll: true,
+				SyncPeriod:    metav1.Duration{Duration: 5 * time.Second},
+				MinSyncPeriod: metav1.Duration{Duration: 2 * time.Second},
+			},
+			Conntrack: kubeproxyconfig.KubeProxyConntrackConfiguration{
+				MaxPerCore:            ptr.To[int32](1),
+				Min:                   ptr.To[int32](1),
+				TCPEstablishedTimeout: &metav1.Duration{Duration: 5 * time.Second},
+				TCPCloseWaitTimeout:   &metav1.Duration{Duration: 5 * time.Second},
+			},
+			DetectLocalMode: kubeproxyconfig.LocalModeInterfaceNamePrefix,
+			DetectLocal: kubeproxyconfig.DetectLocalConfiguration{
+				InterfaceNamePrefix: "vethabcde",
+			},
+			Logging: logsapi.LoggingConfiguration{
+				Format: "text",
+			},
 		},
-		Conntrack: kubeproxyconfig.KubeProxyConntrackConfiguration{
-			MaxPerCore:            ptr.To[int32](1),
-			Min:                   ptr.To[int32](1),
-			TCPEstablishedTimeout: &metav1.Duration{Duration: 5 * time.Second},
-			TCPCloseWaitTimeout:   &metav1.Duration{Duration: 5 * time.Second},
+		"LocalModeBridgeInterface": {
+			BindAddress:        "10.10.12.11",
+			HealthzBindAddress: "0.0.0.0:12345",
+			MetricsBindAddress: "127.0.0.1:10249",
+			ClusterCIDR:        "192.168.59.0/24",
+			ConfigSyncPeriod:   metav1.Duration{Duration: 1 * time.Second},
+			IPTables: kubeproxyconfig.KubeProxyIPTablesConfiguration{
+				MasqueradeAll: true,
+				SyncPeriod:    metav1.Duration{Duration: 5 * time.Second},
+				MinSyncPeriod: metav1.Duration{Duration: 2 * time.Second},
+			},
+			Conntrack: kubeproxyconfig.KubeProxyConntrackConfiguration{
+				MaxPerCore:            ptr.To[int32](1),
+				Min:                   ptr.To[int32](1),
+				TCPEstablishedTimeout: &metav1.Duration{Duration: 5 * time.Second},
+				TCPCloseWaitTimeout:   &metav1.Duration{Duration: 5 * time.Second},
+			},
+			DetectLocalMode: kubeproxyconfig.LocalModeBridgeInterface,
+			DetectLocal: kubeproxyconfig.DetectLocalConfiguration{
+				BridgeInterface: "avz",
+			},
+			Logging: logsapi.LoggingConfiguration{
+				Format: "text",
+			},
 		},
-		Logging: logsapi.LoggingConfiguration{
-			Format: "text",
-		},
-	}, {
-		BindAddress:        "fd00:192:168:59::103",
-		HealthzBindAddress: "",
-		MetricsBindAddress: "[::1]:10249",
-		ClusterCIDR:        "fd00:192:168:59::/64",
-		ConfigSyncPeriod:   metav1.Duration{Duration: 1 * time.Second},
-		IPTables: kubeproxyconfig.KubeProxyIPTablesConfiguration{
-			MasqueradeAll: true,
-			SyncPeriod:    metav1.Duration{Duration: 5 * time.Second},
-			MinSyncPeriod: metav1.Duration{Duration: 2 * time.Second},
-		},
-		Conntrack: kubeproxyconfig.KubeProxyConntrackConfiguration{
-			MaxPerCore:            ptr.To[int32](1),
-			Min:                   ptr.To[int32](1),
-			TCPEstablishedTimeout: &metav1.Duration{Duration: 5 * time.Second},
-			TCPCloseWaitTimeout:   &metav1.Duration{Duration: 5 * time.Second},
-		},
-		Logging: logsapi.LoggingConfiguration{
-			Format: "text",
-		},
-	}, {
-		BindAddress:        "10.10.12.11",
-		HealthzBindAddress: "0.0.0.0:12345",
-		MetricsBindAddress: "127.0.0.1:10249",
-		ClusterCIDR:        "192.168.59.0/24",
-		ConfigSyncPeriod:   metav1.Duration{Duration: 1 * time.Second},
-		IPTables: kubeproxyconfig.KubeProxyIPTablesConfiguration{
-			MasqueradeAll: true,
-			SyncPeriod:    metav1.Duration{Duration: 5 * time.Second},
-			MinSyncPeriod: metav1.Duration{Duration: 2 * time.Second},
-		},
-		Conntrack: kubeproxyconfig.KubeProxyConntrackConfiguration{
-			MaxPerCore:            ptr.To[int32](1),
-			Min:                   ptr.To[int32](1),
-			TCPEstablishedTimeout: &metav1.Duration{Duration: 5 * time.Second},
-			TCPCloseWaitTimeout:   &metav1.Duration{Duration: 5 * time.Second},
-		},
-		Logging: logsapi.LoggingConfiguration{
-			Format: "text",
-		},
-	}, {
-		BindAddress:        "10.10.12.11",
-		HealthzBindAddress: "0.0.0.0:12345",
-		MetricsBindAddress: "127.0.0.1:10249",
-		ClusterCIDR:        "fd00:192:168::/64",
-		ConfigSyncPeriod:   metav1.Duration{Duration: 1 * time.Second},
-		IPTables: kubeproxyconfig.KubeProxyIPTablesConfiguration{
-			MasqueradeAll: true,
-			SyncPeriod:    metav1.Duration{Duration: 5 * time.Second},
-			MinSyncPeriod: metav1.Duration{Duration: 2 * time.Second},
-		},
-		Conntrack: kubeproxyconfig.KubeProxyConntrackConfiguration{
-			MaxPerCore:            ptr.To[int32](1),
-			Min:                   ptr.To[int32](1),
-			TCPEstablishedTimeout: &metav1.Duration{Duration: 5 * time.Second},
-			TCPCloseWaitTimeout:   &metav1.Duration{Duration: 5 * time.Second},
-		},
-		Logging: logsapi.LoggingConfiguration{
-			Format: "text",
-		},
-	}, {
-		BindAddress:        "10.10.12.11",
-		HealthzBindAddress: "0.0.0.0:12345",
-		MetricsBindAddress: "127.0.0.1:10249",
-		ClusterCIDR:        "192.168.59.0/24,fd00:192:168::/64",
-		ConfigSyncPeriod:   metav1.Duration{Duration: 1 * time.Second},
-		IPTables: kubeproxyconfig.KubeProxyIPTablesConfiguration{
-			MasqueradeAll: true,
-			SyncPeriod:    metav1.Duration{Duration: 5 * time.Second},
-			MinSyncPeriod: metav1.Duration{Duration: 2 * time.Second},
-		},
-		Conntrack: kubeproxyconfig.KubeProxyConntrackConfiguration{
-			MaxPerCore:            ptr.To[int32](1),
-			Min:                   ptr.To[int32](1),
-			TCPEstablishedTimeout: &metav1.Duration{Duration: 5 * time.Second},
-			TCPCloseWaitTimeout:   &metav1.Duration{Duration: 5 * time.Second},
-		},
-		Logging: logsapi.LoggingConfiguration{
-			Format: "text",
-		},
-	}, {
-		BindAddress:        "10.10.12.11",
-		HealthzBindAddress: "0.0.0.0:12345",
-		MetricsBindAddress: "127.0.0.1:10249",
-		ClusterCIDR:        "192.168.59.0/24",
-		ConfigSyncPeriod:   metav1.Duration{Duration: 1 * time.Second},
-		IPTables: kubeproxyconfig.KubeProxyIPTablesConfiguration{
-			MasqueradeAll: true,
-			SyncPeriod:    metav1.Duration{Duration: 5 * time.Second},
-			MinSyncPeriod: metav1.Duration{Duration: 2 * time.Second},
-		},
-		Conntrack: kubeproxyconfig.KubeProxyConntrackConfiguration{
-			MaxPerCore:            ptr.To[int32](1),
-			Min:                   ptr.To[int32](1),
-			TCPEstablishedTimeout: &metav1.Duration{Duration: 5 * time.Second},
-			TCPCloseWaitTimeout:   &metav1.Duration{Duration: 5 * time.Second},
-		},
-		DetectLocalMode: kubeproxyconfig.LocalModeInterfaceNamePrefix,
-		DetectLocal: kubeproxyconfig.DetectLocalConfiguration{
-			InterfaceNamePrefix: "vethabcde",
-		},
-		Logging: logsapi.LoggingConfiguration{
-			Format: "text",
-		},
-	}, {
-		BindAddress:        "10.10.12.11",
-		HealthzBindAddress: "0.0.0.0:12345",
-		MetricsBindAddress: "127.0.0.1:10249",
-		ClusterCIDR:        "192.168.59.0/24",
-		ConfigSyncPeriod:   metav1.Duration{Duration: 1 * time.Second},
-		IPTables: kubeproxyconfig.KubeProxyIPTablesConfiguration{
-			MasqueradeAll: true,
-			SyncPeriod:    metav1.Duration{Duration: 5 * time.Second},
-			MinSyncPeriod: metav1.Duration{Duration: 2 * time.Second},
-		},
-		Conntrack: kubeproxyconfig.KubeProxyConntrackConfiguration{
-			MaxPerCore:            ptr.To[int32](1),
-			Min:                   ptr.To[int32](1),
-			TCPEstablishedTimeout: &metav1.Duration{Duration: 5 * time.Second},
-			TCPCloseWaitTimeout:   &metav1.Duration{Duration: 5 * time.Second},
-		},
-		DetectLocalMode: kubeproxyconfig.LocalModeBridgeInterface,
-		DetectLocal: kubeproxyconfig.DetectLocalConfiguration{
-			BridgeInterface: "avz",
-		},
-		Logging: logsapi.LoggingConfiguration{
-			Format: "text",
-		},
-	}}
+	}
 
-	for _, successCase := range successCases {
+	for name, successCase := range successCases {
 		if errs := Validate(&successCase); len(errs) != 0 {
-			t.Errorf("expected success: %v", errs)
+			t.Errorf("%s: expected success: %v", name, errs)
 		}
 	}
 
