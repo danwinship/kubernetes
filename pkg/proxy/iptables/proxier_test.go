@@ -4310,7 +4310,7 @@ func TestInternalTrafficPolicy(t *testing.T) {
 					sourceIP: "10.0.0.2",
 					destIP:   "172.30.1.1",
 					destPort: 80,
-					output:   "DROP",
+					output:   "REJECT",
 				},
 			},
 		},

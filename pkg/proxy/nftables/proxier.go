@@ -1155,9 +1155,9 @@ func (proxier *Proxier) syncProxyRules() {
 		} else {
 			if !hasInternalEndpoints {
 				// The internalTrafficPolicy is "Local" but there are no local
-				// endpoints. Traffic to the clusterIP will be dropped, but
+				// endpoints. Traffic to the clusterIP will be rejected, but
 				// external traffic may still be accepted.
-				internalTrafficFilterVerdict = "drop"
+				internalTrafficFilterVerdict = fmt.Sprintf("goto %s", rejectChain)
 				serviceNoLocalEndpointsTotalInternal++
 			}
 			if !hasExternalEndpoints {
