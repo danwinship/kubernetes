@@ -205,8 +205,8 @@ type Proxier struct {
 // Proxier implements proxy.Proxier
 var _ proxy.Proxier = &Proxier{}
 
-// NewProxier returns a new single-stack IPVS proxier.
-func NewProxier(
+// newProxier returns a new single-stack IPVS proxier.
+func newProxier(
 	ctx context.Context,
 	ipFamily v1.IPFamily,
 	ipt utiliptables.Interface,

@@ -22,39 +22,20 @@ import (
 	"time"
 
 	v1 "k8s.io/api/core/v1"
-	discoveryv1 "k8s.io/api/discovery/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	clientset "k8s.io/client-go/kubernetes"
 	v1core "k8s.io/client-go/kubernetes/typed/core/v1"
 	"k8s.io/client-go/tools/events"
 	proxyapp "k8s.io/kubernetes/cmd/kube-proxy/app"
+	"k8s.io/kubernetes/pkg/proxy"
 	proxyconfigapi "k8s.io/kubernetes/pkg/proxy/apis/config"
-	proxyconfig "k8s.io/kubernetes/pkg/proxy/config"
 	"k8s.io/utils/ptr"
 )
 
 type HollowProxy struct {
 	ProxyServer *proxyapp.ProxyServer
 }
-
-type FakeProxier struct {
-	proxyconfig.NoopNodeHandler
-}
-
-func (*FakeProxier) Sync() {}
-func (*FakeProxier) SyncLoop() {
-	select {}
-}
-func (*FakeProxier) OnServiceAdd(service *v1.Service)                                 {}
-func (*FakeProxier) OnServiceUpdate(oldService, service *v1.Service)                  {}
-func (*FakeProxier) OnServiceDelete(service *v1.Service)                              {}
-func (*FakeProxier) OnServiceSynced()                                                 {}
-func (*FakeProxier) OnEndpointSliceAdd(slice *discoveryv1.EndpointSlice)              {}
-func (*FakeProxier) OnEndpointSliceUpdate(oldSlice, slice *discoveryv1.EndpointSlice) {}
-func (*FakeProxier) OnEndpointSliceDelete(slice *discoveryv1.EndpointSlice)           {}
-func (*FakeProxier) OnEndpointSlicesSynced()                                          {}
-func (*FakeProxier) OnServiceCIDRsChanged(_ []string)                                 {}
 
 func NewHollowProxy(
 	nodeName string,
@@ -74,7 +55,7 @@ func NewHollowProxy(
 			},
 
 			Client:      client,
-			Proxier:     &FakeProxier{},
+			Backend:     proxy.NewBackend(nil, nil),
 			Broadcaster: broadcaster,
 			Recorder:    recorder,
 			NodeRef: &v1.ObjectReference{

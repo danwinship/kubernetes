@@ -129,210 +129,99 @@ func getIPTables(primaryFamily v1.IPFamily) ([2]utiliptables.Interface, utilipta
 	return ipt, iptInterface
 }
 
-// platformCheckSupported is called immediately before creating the Proxier, to check
-// what IP families are supported (and whether the configuration is usable at all).
-func (s *ProxyServer) platformCheckSupported(ctx context.Context) (ipv4Supported, ipv6Supported, dualStackSupported bool, err error) {
-	logger := klog.FromContext(ctx)
-
-	if isIPTablesBased(s.Config.Mode) {
-		ipt, _ := getIPTables(v1.IPFamilyUnknown)
-		ipv4Supported = ipt[0].Present()
-		ipv6Supported = ipt[1].Present()
-
-		if !ipv4Supported && !ipv6Supported {
-			err = fmt.Errorf("iptables is not available on this host")
-		} else if !ipv4Supported {
-			logger.Info("No iptables support for family", "ipFamily", v1.IPv4Protocol)
-		} else if !ipv6Supported {
-			logger.Info("No iptables support for family", "ipFamily", v1.IPv6Protocol)
-		}
-	} else {
-		// Assume support for both families.
-		// FIXME: figure out how to check for kernel IPv6 support using nft
-		ipv4Supported, ipv6Supported = true, true
-	}
-
-	// The Linux proxies can always support dual-stack if they can support both IPv4
-	// and IPv6.
-	dualStackSupported = ipv4Supported && ipv6Supported
-	return
-}
-
-// createProxier creates the proxy.Proxier
-func (s *ProxyServer) createProxier(ctx context.Context, config *proxyconfigapi.KubeProxyConfiguration, dualStack, initOnly bool) (proxy.Proxier, error) {
-	logger := klog.FromContext(ctx)
-	var proxier proxy.Proxier
+// createBackend creates the proxy.Backend
+func (s *ProxyServer) createBackend(ctx context.Context, config *proxyconfigapi.KubeProxyConfiguration, initOnly bool) (*proxy.Backend, error) {
+	var backend *proxy.Backend
 	var err error
+
+	logger := klog.FromContext(ctx)
 
 	localDetectors := getLocalDetectors(logger, s.PrimaryIPFamily, config, s.podCIDRs)
 
 	if config.Mode == proxyconfigapi.ProxyModeIPTables {
 		logger.Info("Using iptables Proxier")
 
-		if dualStack {
-			ipt, _ := getIPTables(s.PrimaryIPFamily)
+		ipt, _ := getIPTables(s.PrimaryIPFamily)
 
-			// TODO this has side effects that should only happen when Run() is invoked.
-			proxier, err = iptables.NewDualStackProxier(
-				ctx,
-				ipt,
-				utilsysctl.New(),
-				exec.New(),
-				config.SyncPeriod.Duration,
-				config.MinSyncPeriod.Duration,
-				config.Linux.MasqueradeAll,
-				*config.IPTables.LocalhostNodePorts,
-				int(*config.IPTables.MasqueradeBit),
-				localDetectors,
-				s.Hostname,
-				s.NodeIPs,
-				s.Recorder,
-				s.HealthzServer,
-				config.NodePortAddresses,
-				initOnly,
-			)
-		} else {
-			// Create a single-stack proxier if and only if the node does not support dual-stack (i.e, no iptables support).
-			_, iptInterface := getIPTables(s.PrimaryIPFamily)
-
-			// TODO this has side effects that should only happen when Run() is invoked.
-			proxier, err = iptables.NewProxier(
-				ctx,
-				s.PrimaryIPFamily,
-				iptInterface,
-				utilsysctl.New(),
-				exec.New(),
-				config.SyncPeriod.Duration,
-				config.MinSyncPeriod.Duration,
-				config.Linux.MasqueradeAll,
-				*config.IPTables.LocalhostNodePorts,
-				int(*config.IPTables.MasqueradeBit),
-				localDetectors[s.PrimaryIPFamily],
-				s.Hostname,
-				s.NodeIPs[s.PrimaryIPFamily],
-				s.Recorder,
-				s.HealthzServer,
-				config.NodePortAddresses,
-				initOnly,
-			)
-		}
-
-		if err != nil {
-			return nil, fmt.Errorf("unable to create proxier: %v", err)
-		}
+		// TODO this has side effects that should only happen when Run() is invoked.
+		backend, err = iptables.NewBackend(
+			ctx,
+			ipt,
+			utilsysctl.New(),
+			exec.New(),
+			config.SyncPeriod.Duration,
+			config.MinSyncPeriod.Duration,
+			config.Linux.MasqueradeAll,
+			*config.IPTables.LocalhostNodePorts,
+			int(*config.IPTables.MasqueradeBit),
+			localDetectors,
+			s.Hostname,
+			s.NodeIPs,
+			s.Recorder,
+			s.HealthzServer,
+			config.NodePortAddresses,
+			initOnly,
+		)
 	} else if config.Mode == proxyconfigapi.ProxyModeIPVS {
+		logger.Info("Using ipvs Proxier")
+
 		execer := exec.New()
 		ipsetInterface := utilipset.New(execer)
 		ipvsInterface := utilipvs.New()
 		if err := ipvs.CanUseIPVSProxier(ctx, ipvsInterface, ipsetInterface, config.IPVS.Scheduler); err != nil {
 			return nil, fmt.Errorf("can't use the IPVS proxier: %v", err)
 		}
+		ipt, _ := getIPTables(s.PrimaryIPFamily)
 
-		logger.Info("Using ipvs Proxier")
-		if dualStack {
-			ipt, _ := getIPTables(s.PrimaryIPFamily)
-			proxier, err = ipvs.NewDualStackProxier(
-				ctx,
-				ipt,
-				ipvsInterface,
-				ipsetInterface,
-				utilsysctl.New(),
-				execer,
-				config.SyncPeriod.Duration,
-				config.MinSyncPeriod.Duration,
-				config.IPVS.ExcludeCIDRs,
-				config.IPVS.StrictARP,
-				config.IPVS.TCPTimeout.Duration,
-				config.IPVS.TCPFinTimeout.Duration,
-				config.IPVS.UDPTimeout.Duration,
-				config.Linux.MasqueradeAll,
-				int(*config.IPTables.MasqueradeBit),
-				localDetectors,
-				s.Hostname,
-				s.NodeIPs,
-				s.Recorder,
-				s.HealthzServer,
-				config.IPVS.Scheduler,
-				config.NodePortAddresses,
-				initOnly,
-			)
-		} else {
-			_, iptInterface := getIPTables(s.PrimaryIPFamily)
-			proxier, err = ipvs.NewProxier(
-				ctx,
-				s.PrimaryIPFamily,
-				iptInterface,
-				ipvsInterface,
-				ipsetInterface,
-				utilsysctl.New(),
-				execer,
-				config.SyncPeriod.Duration,
-				config.MinSyncPeriod.Duration,
-				config.IPVS.ExcludeCIDRs,
-				config.IPVS.StrictARP,
-				config.IPVS.TCPTimeout.Duration,
-				config.IPVS.TCPFinTimeout.Duration,
-				config.IPVS.UDPTimeout.Duration,
-				config.Linux.MasqueradeAll,
-				int(*config.IPTables.MasqueradeBit),
-				localDetectors[s.PrimaryIPFamily],
-				s.Hostname,
-				s.NodeIPs[s.PrimaryIPFamily],
-				s.Recorder,
-				s.HealthzServer,
-				config.IPVS.Scheduler,
-				config.NodePortAddresses,
-				initOnly,
-			)
-		}
-		if err != nil {
-			return nil, fmt.Errorf("unable to create proxier: %v", err)
-		}
+		backend, err = ipvs.NewBackend(
+			ctx,
+			ipt,
+			ipvsInterface,
+			ipsetInterface,
+			utilsysctl.New(),
+			execer,
+			config.SyncPeriod.Duration,
+			config.MinSyncPeriod.Duration,
+			config.IPVS.ExcludeCIDRs,
+			config.IPVS.StrictARP,
+			config.IPVS.TCPTimeout.Duration,
+			config.IPVS.TCPFinTimeout.Duration,
+			config.IPVS.UDPTimeout.Duration,
+			config.Linux.MasqueradeAll,
+			int(*config.IPTables.MasqueradeBit),
+			localDetectors,
+			s.Hostname,
+			s.NodeIPs,
+			s.Recorder,
+			s.HealthzServer,
+			config.IPVS.Scheduler,
+			config.NodePortAddresses,
+			initOnly,
+		)
 	} else if config.Mode == proxyconfigapi.ProxyModeNFTables {
 		logger.Info("Using nftables Proxier")
 
-		if dualStack {
-			// TODO this has side effects that should only happen when Run() is invoked.
-			proxier, err = nftables.NewDualStackProxier(
-				ctx,
-				config.SyncPeriod.Duration,
-				config.MinSyncPeriod.Duration,
-				config.Linux.MasqueradeAll,
-				int(*config.NFTables.MasqueradeBit),
-				localDetectors,
-				s.Hostname,
-				s.NodeIPs,
-				s.Recorder,
-				s.HealthzServer,
-				config.NodePortAddresses,
-				initOnly,
-			)
-		} else {
-			// Create a single-stack proxier if and only if the node does not support dual-stack
-			// TODO this has side effects that should only happen when Run() is invoked.
-			proxier, err = nftables.NewProxier(
-				ctx,
-				s.PrimaryIPFamily,
-				config.SyncPeriod.Duration,
-				config.MinSyncPeriod.Duration,
-				config.Linux.MasqueradeAll,
-				int(*config.NFTables.MasqueradeBit),
-				localDetectors[s.PrimaryIPFamily],
-				s.Hostname,
-				s.NodeIPs[s.PrimaryIPFamily],
-				s.Recorder,
-				s.HealthzServer,
-				config.NodePortAddresses,
-				initOnly,
-			)
-		}
-
-		if err != nil {
-			return nil, fmt.Errorf("unable to create proxier: %v", err)
-		}
+		// TODO this has side effects that should only happen when Run() is invoked.
+		backend, err = nftables.NewBackend(
+			ctx,
+			config.SyncPeriod.Duration,
+			config.MinSyncPeriod.Duration,
+			config.Linux.MasqueradeAll,
+			int(*config.NFTables.MasqueradeBit),
+			localDetectors,
+			s.Hostname,
+			s.NodeIPs,
+			s.Recorder,
+			s.HealthzServer,
+			config.NodePortAddresses,
+			initOnly,
+		)
 	}
 
-	return proxier, nil
+	if err != nil {
+		return nil, fmt.Errorf("unable to create proxy backend: %v", err)
+	}
+	return backend, nil
 }
 
 func (s *ProxyServer) setupConntrack(ctx context.Context, ct Conntracker) error {

@@ -178,8 +178,8 @@ type Proxier struct {
 // Proxier implements proxy.Proxier
 var _ proxy.Proxier = &Proxier{}
 
-// NewProxier returns a new single-stack IPTables proxier.
-func NewProxier(ctx context.Context,
+// newProxier returns a new single-stack IPTables proxier.
+func newProxier(ctx context.Context,
 	ipFamily v1.IPFamily,
 	ipt utiliptables.Interface,
 	sysctl utilsysctl.Interface,

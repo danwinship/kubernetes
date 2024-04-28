@@ -167,7 +167,7 @@ type ProxyServer struct {
 
 	podCIDRs []string // only used for LocalModeNodeCIDR
 
-	Proxier proxy.Proxier
+	Backend *proxy.Backend
 }
 
 // newProxyServer creates a ProxyServer based on the given config
@@ -237,10 +237,13 @@ func newProxyServer(ctx context.Context, config *kubeproxyconfig.KubeProxyConfig
 		logger.Error(err, "Kube-proxy configuration may be incomplete or incorrect")
 	}
 
-	ipv4Supported, ipv6Supported, dualStackSupported, err := s.platformCheckSupported(ctx)
+	s.Backend, err = s.createBackend(ctx, config, initOnly)
 	if err != nil {
 		return nil, err
-	} else if (s.PrimaryIPFamily == v1.IPv4Protocol && !ipv4Supported) || (s.PrimaryIPFamily == v1.IPv6Protocol && !ipv6Supported) {
+	}
+
+	ipv4Supported, ipv6Supported, dualStackSupported := s.Backend.SupportedFamilies()
+	if (s.PrimaryIPFamily == v1.IPv4Protocol && !ipv4Supported) || (s.PrimaryIPFamily == v1.IPv6Protocol && !ipv6Supported) {
 		return nil, fmt.Errorf("no support for primary IP family %q", s.PrimaryIPFamily)
 	} else if dualStackSupported {
 		logger.Info("kube-proxy running in dual-stack mode", "primary ipFamily", s.PrimaryIPFamily)
@@ -254,11 +257,6 @@ func newProxyServer(ctx context.Context, config *kubeproxyconfig.KubeProxyConfig
 			return nil, fmt.Errorf("kube-proxy configuration is incorrect: %w", err)
 		}
 		logger.Error(err, "Kube-proxy configuration may be incomplete or incorrect")
-	}
-
-	s.Proxier, err = s.createProxier(ctx, config, dualStackSupported, initOnly)
-	if err != nil {
-		return nil, err
 	}
 
 	return s, nil
@@ -565,16 +563,16 @@ func (s *ProxyServer) Run(ctx context.Context) error {
 			options.FieldSelector = fields.OneTermNotEqualSelector("spec.clusterIP", v1.ClusterIPNone).String()
 		}))
 	serviceConfig := config.NewServiceConfig(ctx, serviceInformerFactory.Core().V1().Services(), s.Config.ConfigSyncPeriod.Duration)
-	serviceConfig.RegisterEventHandler(s.Proxier)
+	serviceConfig.RegisterEventHandler(s.Backend)
 	go serviceConfig.Run(ctx.Done())
 
 	endpointSliceConfig := config.NewEndpointSliceConfig(ctx, informerFactory.Discovery().V1().EndpointSlices(), s.Config.ConfigSyncPeriod.Duration)
-	endpointSliceConfig.RegisterEventHandler(s.Proxier)
+	endpointSliceConfig.RegisterEventHandler(s.Backend)
 	go endpointSliceConfig.Run(ctx.Done())
 
 	if utilfeature.DefaultFeatureGate.Enabled(features.MultiCIDRServiceAllocator) {
 		serviceCIDRConfig := config.NewServiceCIDRConfig(ctx, informerFactory.Networking().V1beta1().ServiceCIDRs(), s.Config.ConfigSyncPeriod.Duration)
-		serviceCIDRConfig.RegisterEventHandler(s.Proxier)
+		serviceCIDRConfig.RegisterEventHandler(s.Backend)
 		go serviceCIDRConfig.Run(wait.NeverStop)
 	}
 	// This has to start after the calls to NewServiceConfig because that
@@ -597,7 +595,7 @@ func (s *ProxyServer) Run(ctx context.Context) error {
 			HealthServer: s.HealthzServer,
 		})
 	}
-	nodeConfig.RegisterEventHandler(s.Proxier)
+	nodeConfig.RegisterEventHandler(s.Backend)
 
 	go nodeConfig.Run(wait.NeverStop)
 
@@ -608,7 +606,7 @@ func (s *ProxyServer) Run(ctx context.Context) error {
 	// Birth Cry after the birth is successful
 	s.birthCry()
 
-	go s.Proxier.SyncLoop()
+	go s.Backend.SyncLoop()
 
 	select {
 	case err = <-healthzErrCh:

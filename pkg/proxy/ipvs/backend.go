@@ -28,6 +28,7 @@ import (
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/tools/events"
 	utilsysctl "k8s.io/component-helpers/node/util/sysctl"
+	"k8s.io/klog/v2"
 	"k8s.io/kubernetes/pkg/proxy"
 	"k8s.io/kubernetes/pkg/proxy/healthcheck"
 	utilipset "k8s.io/kubernetes/pkg/proxy/ipvs/ipset"
@@ -37,8 +38,8 @@ import (
 	utilexec "k8s.io/utils/exec"
 )
 
-// NewDualStackProxier returns a new dual-stack IPVS proxier
-func NewDualStackProxier(
+// NewBackend returns a new IPVS backend
+func NewBackend(
 	ctx context.Context,
 	ipt [2]utiliptables.Interface,
 	ipvs utilipvs.Interface,
@@ -63,26 +64,49 @@ func NewDualStackProxier(
 	nodePortAddresses []string,
 	initOnly bool,
 ) (*proxy.Backend, error) {
-	// Create an ipv4 instance of the single-stack proxier
-	ipv4Proxier, err := NewProxier(ctx, v1.IPv4Protocol, ipt[0], ipvs, ipset, sysctl,
-		exec, syncPeriod, minSyncPeriod, filterCIDRs(false, excludeCIDRs), strictARP,
-		tcpTimeout, tcpFinTimeout, udpTimeout, masqueradeAll, masqueradeBit,
-		localDetectors[v1.IPv4Protocol], hostname, nodeIPs[v1.IPv4Protocol], recorder,
-		healthzServer, scheduler, nodePortAddresses, initOnly)
-	if err != nil {
-		return nil, fmt.Errorf("unable to create ipv4 proxier: %v", err)
+	logger := klog.FromContext(ctx)
+
+	iptv4 := ipt[0]
+	if !iptv4.Present() {
+		iptv4 = nil
+	}
+	iptv6 := ipt[1]
+	if !iptv6.Present() {
+		iptv6 = nil
+	}
+	if iptv4 == nil && iptv6 == nil {
+		return nil, fmt.Errorf("iptables is not available on this host")
 	}
 
-	ipv6Proxier, err := NewProxier(ctx, v1.IPv6Protocol, ipt[1], ipvs, ipset, sysctl,
-		exec, syncPeriod, minSyncPeriod, filterCIDRs(true, excludeCIDRs), strictARP,
-		tcpTimeout, tcpFinTimeout, udpTimeout, masqueradeAll, masqueradeBit,
-		localDetectors[v1.IPv6Protocol], hostname, nodeIPs[v1.IPv6Protocol], recorder,
-		healthzServer, scheduler, nodePortAddresses, initOnly)
-	if err != nil {
-		return nil, fmt.Errorf("unable to create ipv6 proxier: %v", err)
+	var ipv4Proxier, ipv6Proxier proxy.Proxier
+	var err error
+
+	if iptv4 != nil {
+		ipv4Proxier, err = newProxier(ctx, v1.IPv4Protocol,
+			iptv4, ipvs, ipset, sysctl, exec,
+			syncPeriod, minSyncPeriod, filterCIDRs(false, excludeCIDRs),
+			strictARP, tcpTimeout, tcpFinTimeout, udpTimeout, masqueradeAll, masqueradeBit,
+			localDetectors[v1.IPv4Protocol], hostname, nodeIPs[v1.IPv4Protocol],
+			recorder, healthzServer, scheduler, nodePortAddresses, initOnly)
+		if err != nil {
+			return nil, fmt.Errorf("unable to create ipv4 proxier: %v", err)
+		}
+	} else {
+		logger.Info("No iptables support for family", "ipFamily", v1.IPv4Protocol)
 	}
-	if initOnly {
-		return nil, nil
+
+	if iptv6 != nil {
+		ipv6Proxier, err = newProxier(ctx, v1.IPv6Protocol,
+			iptv6, ipvs, ipset, sysctl, exec,
+			syncPeriod, minSyncPeriod, filterCIDRs(true, excludeCIDRs),
+			strictARP, tcpTimeout, tcpFinTimeout, udpTimeout, masqueradeAll, masqueradeBit,
+			localDetectors[v1.IPv6Protocol], hostname, nodeIPs[v1.IPv6Protocol],
+			recorder, healthzServer, scheduler, nodePortAddresses, initOnly)
+		if err != nil {
+			return nil, fmt.Errorf("unable to create ipv6 proxier: %v", err)
+		}
+	} else {
+		logger.Info("No iptables support for family", "ipFamily", v1.IPv6Protocol)
 	}
 
 	return proxy.NewBackend(ipv4Proxier, ipv6Proxier), nil

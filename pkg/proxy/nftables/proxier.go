@@ -30,7 +30,6 @@ import (
 	"fmt"
 	"golang.org/x/time/rate"
 	"net"
-	"os"
 	"os/exec"
 	"reflect"
 	"strconv"
@@ -43,7 +42,6 @@ import (
 	discovery "k8s.io/api/discovery/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
-	"k8s.io/apimachinery/pkg/util/version"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/tools/events"
 	"k8s.io/klog/v2"
@@ -53,7 +51,6 @@ import (
 	"k8s.io/kubernetes/pkg/proxy/metrics"
 	proxyutil "k8s.io/kubernetes/pkg/proxy/util"
 	"k8s.io/kubernetes/pkg/util/async"
-	utilkernel "k8s.io/kubernetes/pkg/util/kernel"
 	netutils "k8s.io/utils/net"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/knftables"
@@ -171,9 +168,10 @@ type Proxier struct {
 // Proxier implements proxy.Proxier
 var _ proxy.Proxier = &Proxier{}
 
-// NewProxier returns a new single-stack NFTables proxier.
-func NewProxier(ctx context.Context,
+// newProxier returns a new single-stack NFTables proxier.
+func newProxier(ctx context.Context,
 	ipFamily v1.IPFamily,
+	nft knftables.Interface,
 	syncPeriod time.Duration,
 	minSyncPeriod time.Duration,
 	masqueradeAll bool,
@@ -184,19 +182,8 @@ func NewProxier(ctx context.Context,
 	recorder events.EventRecorder,
 	healthzServer *healthcheck.ProxierHealthServer,
 	nodePortAddressStrings []string,
-	initOnly bool,
 ) (*Proxier, error) {
 	logger := klog.LoggerWithValues(klog.FromContext(ctx), "ipFamily", ipFamily)
-
-	nft, err := getNFTablesInterface(ipFamily)
-	if err != nil {
-		return nil, err
-	}
-
-	if initOnly {
-		logger.Info("System initialized and --init-only specified")
-		return nil, nil
-	}
 
 	// Generate the masquerade mark to use for SNAT rules.
 	masqueradeValue := 1 << uint(masqueradeBit)
@@ -244,52 +231,6 @@ func NewProxier(ctx context.Context,
 	proxier.syncRunner = async.NewBoundedFrequencyRunner("sync-runner", proxier.syncProxyRules, minSyncPeriod, time.Hour, burstSyncs)
 
 	return proxier, nil
-}
-
-// Create a knftables.Interface and check if we can use the nftables proxy mode on this host.
-func getNFTablesInterface(ipFamily v1.IPFamily) (knftables.Interface, error) {
-	var nftablesFamily knftables.Family
-	if ipFamily == v1.IPv4Protocol {
-		nftablesFamily = knftables.IPv4Family
-	} else {
-		nftablesFamily = knftables.IPv6Family
-	}
-
-	// We require (or rather, knftables.New does) that the nft binary be version 1.0.1
-	// or later, because versions before that would always attempt to parse the entire
-	// nft ruleset at startup, even if you were only operating on a single table.
-	// That's bad, because in some cases, new versions of nft have added new rule
-	// types in ways that triggered bugs in older versions of nft, causing them to
-	// crash. Thus, if kube-proxy used nft < 1.0.1, it could potentially get locked
-	// out of its rules because of something some other component had done in a
-	// completely different table.
-	nft, err := knftables.New(nftablesFamily, kubeProxyTable)
-	if err != nil {
-		return nil, err
-	}
-
-	// Likewise, we want to ensure that the host filesystem has nft >= 1.0.1, so that
-	// it's not possible that *our* rules break *the system's* nft. (In particular, we
-	// know that if kube-proxy uses nft >= 1.0.3 and the system has nft <= 0.9.8, that
-	// the system nft will become completely unusable.) Unfortunately, we can't easily
-	// figure out the version of nft installed on the host filesystem, so instead, we
-	// check the kernel version, under the assumption that the distro will have an nft
-	// binary that supports the same features as its kernel does, and so kernel 5.13
-	// or later implies nft 1.0.1 or later. https://issues.k8s.io/122743
-	//
-	// However, we allow the user to bypass this check by setting
-	// `KUBE_PROXY_NFTABLES_SKIP_KERNEL_VERSION_CHECK` to anything non-empty.
-	if os.Getenv("KUBE_PROXY_NFTABLES_SKIP_KERNEL_VERSION_CHECK") != "" {
-		kernelVersion, err := utilkernel.GetVersion()
-		if err != nil {
-			return nil, fmt.Errorf("could not check kernel version: %w", err)
-		}
-		if kernelVersion.LessThan(version.MustParseGeneric(utilkernel.NFTablesKubeProxyKernelVersion)) {
-			return nil, fmt.Errorf("kube-proxy in nftables mode requires kernel %s or later", utilkernel.NFTablesKubeProxyKernelVersion)
-		}
-	}
-
-	return nft, nil
 }
 
 // internal struct for string service information

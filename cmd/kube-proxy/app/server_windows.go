@@ -60,64 +60,28 @@ func (s *ProxyServer) platformSetup(ctx context.Context) error {
 	return nil
 }
 
-// platformCheckSupported is called immediately before creating the Proxier, to check
-// what IP families are supported (and whether the configuration is usable at all).
-func (s *ProxyServer) platformCheckSupported(ctx context.Context) (ipv4Supported, ipv6Supported, dualStackSupported bool, err error) {
-	// Check if Kernel proxier can be used at all
-	_, err = winkernel.CanUseWinKernelProxier(winkernel.WindowsKernelCompatTester{})
-	if err != nil {
-		return false, false, false, err
-	}
-
-	// winkernel always supports both single-stack IPv4 and single-stack IPv6, but may
-	// not support dual-stack.
-	ipv4Supported = true
-	ipv6Supported = true
-
-	compatTester := winkernel.DualStackCompatTester{}
-	dualStackSupported = compatTester.DualStackCompatible(s.Config.Winkernel.NetworkName)
-
-	return
-}
-
-// createProxier creates the proxy.Proxier
-func (s *ProxyServer) createProxier(ctx context.Context, config *proxyconfigapi.KubeProxyConfiguration, dualStackMode, initOnly bool) (proxy.Proxier, error) {
+// createBackend creates the proxy.Backend
+func (s *ProxyServer) createBackend(ctx context.Context, config *proxyconfigapi.KubeProxyConfiguration, initOnly bool) (*proxy.Backend, error) {
 	if initOnly {
 		return nil, fmt.Errorf("--init-only is not implemented on Windows")
 	}
 
-	var proxier proxy.Proxier
-	var err error
-
-	if dualStackMode {
-		proxier, err = winkernel.NewDualStackProxier(
-			config.SyncPeriod.Duration,
-			config.MinSyncPeriod.Duration,
-			s.Hostname,
-			s.NodeIPs,
-			s.Recorder,
-			s.HealthzServer,
-			config.HealthzBindAddress,
-			config.Winkernel,
-		)
-	} else {
-		proxier, err = winkernel.NewProxier(
-			s.PrimaryIPFamily,
-			config.SyncPeriod.Duration,
-			config.MinSyncPeriod.Duration,
-			s.Hostname,
-			s.NodeIPs[s.PrimaryIPFamily],
-			s.Recorder,
-			s.HealthzServer,
-			config.HealthzBindAddress,
-			config.Winkernel,
-		)
-	}
+	backend, err := winkernel.NewBackend(
+		s.PrimaryIPFamily,
+		config.SyncPeriod.Duration,
+		config.MinSyncPeriod.Duration,
+		s.Hostname,
+		s.NodeIPs,
+		s.Recorder,
+		s.HealthzServer,
+		config.HealthzBindAddress,
+		config.Winkernel,
+	)
 	if err != nil {
-		return nil, fmt.Errorf("unable to create proxier: %v", err)
+		return nil, fmt.Errorf("unable to create proxy backend: %v", err)
 	}
 
-	return proxier, nil
+	return backend, nil
 }
 
 // platformCleanup removes stale kube-proxy rules that can be safely removed.
