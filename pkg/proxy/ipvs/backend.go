@@ -157,12 +157,23 @@ func NewBackend(
 		return nil, nil
 	}
 
+	if len(scheduler) == 0 {
+		logger.Info("IPVS scheduler not specified, use rr by default")
+		scheduler = defaultScheduler
+	}
+
+	// Generate the masquerade mark to use for SNAT rules.
+	masqueradeValue := 1 << uint(masqueradeBit)
+	masqueradeMark := fmt.Sprintf("%#08x", masqueradeValue)
+
+	parsedExcludeCIDRs := proxyutil.MapCIDRsByIPFamily(excludeCIDRs)
+
 	var ipv4Proxier, ipv6Proxier proxy.Proxier
 	if iptv4 != nil {
 		ipv4Proxier, err = newProxier(ctx, v1.IPv4Protocol,
 			iptv4, ipvs, ipset, exec,
-			syncPeriod, minSyncPeriod, filterCIDRs(false, excludeCIDRs),
-			masqueradeAll, masqueradeBit,
+			syncPeriod, minSyncPeriod, parsedExcludeCIDRs[v1.IPv4Protocol],
+			masqueradeAll, masqueradeMark,
 			localDetectors[v1.IPv4Protocol], hostname, nodeIPs[v1.IPv4Protocol],
 			recorder, healthzServer, scheduler, nodePortAddresses)
 		if err != nil {
@@ -175,8 +186,8 @@ func NewBackend(
 	if iptv6 != nil {
 		ipv6Proxier, err = newProxier(ctx, v1.IPv6Protocol,
 			iptv6, ipvs, ipset, exec,
-			syncPeriod, minSyncPeriod, filterCIDRs(true, excludeCIDRs),
-			masqueradeAll, masqueradeBit,
+			syncPeriod, minSyncPeriod, parsedExcludeCIDRs[v1.IPv6Protocol],
+			masqueradeAll, masqueradeMark,
 			localDetectors[v1.IPv6Protocol], hostname, nodeIPs[v1.IPv6Protocol],
 			recorder, healthzServer, scheduler, nodePortAddresses)
 		if err != nil {

@@ -137,6 +137,7 @@ func NewFakeProxier(ipt utiliptables.Interface) *Proxier {
 		localhostNodePorts:       true,
 		nodePortAddresses:        proxyutil.NewNodePortAddresses(ipfamily, nil),
 		networkInterfacer:        networkInterfacer,
+		needConntrackDropRule:    true,
 		nfAcctCounters: map[string]bool{
 			metrics.IPTablesCTStateInvalidDroppedNFAcctCounter: true,
 			metrics.LocalhostNodePortAcceptedNFAcctCounter:     true,
@@ -2560,19 +2561,19 @@ func TestDropInvalidRule(t *testing.T) {
 
 	testCases := []struct {
 		nfacctEnsured  bool
-		tcpLiberal     bool
+		needDropRule   bool
 		dropRule       string
 		nfAcctCounters map[string]bool
 	}{
 		{
 			nfacctEnsured:  false,
-			tcpLiberal:     false,
+			needDropRule:   true,
 			nfAcctCounters: map[string]bool{},
 			dropRule:       "-A KUBE-FORWARD -m conntrack --ctstate INVALID -j DROP",
 		},
 		{
 			nfacctEnsured: true,
-			tcpLiberal:    false,
+			needDropRule:  true,
 			nfAcctCounters: map[string]bool{
 				metrics.IPTablesCTStateInvalidDroppedNFAcctCounter: true,
 			},
@@ -2580,16 +2581,16 @@ func TestDropInvalidRule(t *testing.T) {
 		},
 		{
 			nfacctEnsured:  false,
-			tcpLiberal:     true,
+			needDropRule:   false,
 			nfAcctCounters: map[string]bool{},
 			dropRule:       "",
 		},
 	}
 	for _, tc := range testCases {
-		t.Run(fmt.Sprintf("tcpLiberal is %t and nfacctEnsured is %t", tc.tcpLiberal, tc.nfacctEnsured), func(t *testing.T) {
+		t.Run(fmt.Sprintf("needDropRule is %t and nfacctEnsured is %t", tc.needDropRule, tc.nfacctEnsured), func(t *testing.T) {
 			ipt := iptablestest.NewFake()
 			fp := NewFakeProxier(ipt)
-			fp.conntrackTCPLiberal = tc.tcpLiberal
+			fp.needConntrackDropRule = tc.needDropRule
 			fp.nfAcctCounters = tc.nfAcctCounters
 			fp.syncProxyRules()
 

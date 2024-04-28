@@ -34,13 +34,10 @@ import (
 	v1 "k8s.io/api/core/v1"
 	discovery "k8s.io/api/discovery/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	apiutil "k8s.io/apimachinery/pkg/util/net"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/wait"
-	utilfeature "k8s.io/apiserver/pkg/util/feature"
 	"k8s.io/client-go/tools/events"
 	"k8s.io/klog/v2"
-	kubefeatures "k8s.io/kubernetes/pkg/features"
 	"k8s.io/kubernetes/pkg/proxy"
 	"k8s.io/kubernetes/pkg/proxy/apis/config"
 	proxyconfig "k8s.io/kubernetes/pkg/proxy/config"
@@ -598,6 +595,9 @@ var _ proxy.Proxier = &Proxier{}
 // newProxier returns a new single-stack winkernel Proxier
 func newProxier(
 	ipFamily v1.IPFamily,
+	hcn HcnService,
+	hns HostNetworkService,
+	network hnsNetworkInfo,
 	syncPeriod time.Duration,
 	minSyncPeriod time.Duration,
 	hostname string,
@@ -605,6 +605,10 @@ func newProxier(
 	recorder events.EventRecorder,
 	healthzServer *healthcheck.ProxierHealthServer,
 	healthzBindAddress string,
+	isDSR bool,
+	sourceVip string,
+	hostMac string,
+	supportedFeatures hcn.SupportedFeatures,
 	config config.KubeProxyWinkernelConfiguration,
 ) (*Proxier, error) {
 	if nodeIP == nil {
@@ -622,83 +626,6 @@ func newProxier(
 		healthzPort, _ = strconv.Atoi(port)
 	}
 
-	hcnImpl := newHcnImpl()
-	hns, supportedFeatures := newHostNetworkService(hcnImpl)
-	hnsNetworkName, err := getNetworkName(config.NetworkName)
-	if err != nil {
-		return nil, err
-	}
-
-	klog.V(3).InfoS("Cleaning up old HNS policy lists")
-	hcnImpl.DeleteAllHnsLoadBalancerPolicy()
-
-	// Get HNS network information
-	hnsNetworkInfo, err := getNetworkInfo(hns, hnsNetworkName)
-	if err != nil {
-		return nil, err
-	}
-
-	// Network could have been detected before Remote Subnet Routes are applied or ManagementIP is updated
-	// Sleep and update the network to include new information
-	if isOverlay(hnsNetworkInfo) {
-		time.Sleep(10 * time.Second)
-		hnsNetworkInfo, err = hns.getNetworkByName(hnsNetworkName)
-		if err != nil {
-			return nil, fmt.Errorf("could not find HNS network %s", hnsNetworkName)
-		}
-	}
-
-	klog.V(1).InfoS("Hns Network loaded", "hnsNetworkInfo", hnsNetworkInfo)
-	isDSR := config.EnableDSR
-	if isDSR && !utilfeature.DefaultFeatureGate.Enabled(kubefeatures.WinDSR) {
-		return nil, fmt.Errorf("WinDSR feature gate not enabled")
-	}
-
-	err = hcnImpl.DsrSupported()
-	if isDSR && err != nil {
-		return nil, err
-	}
-
-	var sourceVip string
-	var hostMac string
-	if isOverlay(hnsNetworkInfo) {
-		if !utilfeature.DefaultFeatureGate.Enabled(kubefeatures.WinOverlay) {
-			return nil, fmt.Errorf("WinOverlay feature gate not enabled")
-		}
-		err = hcn.RemoteSubnetSupported()
-		if err != nil {
-			return nil, err
-		}
-		sourceVip = config.SourceVip
-		if len(sourceVip) == 0 {
-			return nil, fmt.Errorf("source-vip flag not set")
-		}
-
-		if nodeIP.IsUnspecified() {
-			// attempt to get the correct ip address
-			klog.V(2).InfoS("Node ip was unspecified, attempting to find node ip")
-			nodeIP, err = apiutil.ResolveBindAddress(nodeIP)
-			if err != nil {
-				klog.InfoS("Failed to find an ip. You may need set the --bind-address flag", "err", err)
-			}
-		}
-
-		interfaces, _ := net.Interfaces() //TODO create interfaces
-		for _, inter := range interfaces {
-			addresses, _ := inter.Addrs()
-			for _, addr := range addresses {
-				addrIP, _, _ := netutils.ParseCIDRSloppy(addr.String())
-				if addrIP.String() == nodeIP.String() {
-					klog.V(2).InfoS("Record Host MAC address", "addr", inter.HardwareAddr)
-					hostMac = inter.HardwareAddr.String()
-				}
-			}
-		}
-		if len(hostMac) == 0 {
-			return nil, fmt.Errorf("could not find host mac address for %s", nodeIP)
-		}
-	}
-
 	proxier := &Proxier{
 		ipFamily:              ipFamily,
 		endPointsRefCount:     make(endPointsReferenceCountMap),
@@ -710,8 +637,8 @@ func newProxier(
 		serviceHealthServer:   serviceHealthServer,
 		healthzServer:         healthzServer,
 		hns:                   hns,
-		hcn:                   hcnImpl,
-		network:               *hnsNetworkInfo,
+		hcn:                   hcn,
+		network:               network,
 		sourceVip:             sourceVip,
 		hostMac:               hostMac,
 		isDSR:                 isDSR,

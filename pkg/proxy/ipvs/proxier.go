@@ -200,9 +200,9 @@ func newProxier(
 	exec utilexec.Interface,
 	syncPeriod time.Duration,
 	minSyncPeriod time.Duration,
-	excludeCIDRs []string,
+	excludeCIDRs []*net.IPNet,
 	masqueradeAll bool,
-	masqueradeBit int,
+	masqueradeMark string,
 	localDetector proxyutil.LocalTrafficDetector,
 	hostname string,
 	nodeIP net.IP,
@@ -213,23 +213,11 @@ func newProxier(
 ) (*Proxier, error) {
 	logger := klog.LoggerWithValues(klog.FromContext(ctx), "ipFamily", ipFamily)
 
-	// Generate the masquerade mark to use for SNAT rules.
-	masqueradeValue := 1 << uint(masqueradeBit)
-	masqueradeMark := fmt.Sprintf("%#08x", masqueradeValue)
-
 	logger.V(2).Info("Record nodeIP and family", "nodeIP", nodeIP, "family", ipFamily)
-
-	if len(scheduler) == 0 {
-		logger.Info("IPVS scheduler not specified, use rr by default")
-		scheduler = defaultScheduler
-	}
 
 	nodePortAddresses := proxyutil.NewNodePortAddresses(ipFamily, nodePortAddressStrings)
 
 	serviceHealthServer := healthcheck.NewServiceHealthServer(hostname, recorder, nodePortAddresses, healthzServer)
-
-	// excludeCIDRs has been validated before, here we just parse it to IPNet list
-	parsedExcludeCIDRs, _ := netutils.ParseCIDRs(excludeCIDRs)
 
 	proxier := &Proxier{
 		ipFamily:              ipFamily,
@@ -240,7 +228,7 @@ func newProxier(
 		initialSync:           true,
 		syncPeriod:            syncPeriod,
 		minSyncPeriod:         minSyncPeriod,
-		excludeCIDRs:          parsedExcludeCIDRs,
+		excludeCIDRs:          excludeCIDRs,
 		iptables:              ipt,
 		masqueradeAll:         masqueradeAll,
 		masqueradeMark:        masqueradeMark,
@@ -276,16 +264,6 @@ func newProxier(
 	proxier.syncRunner = async.NewBoundedFrequencyRunner("sync-runner", proxier.syncProxyRules, minSyncPeriod, syncPeriod, burstSyncs)
 	proxier.gracefuldeleteManager.Run()
 	return proxier, nil
-}
-
-func filterCIDRs(wantIPv6 bool, cidrs []string) []string {
-	var filteredCIDRs []string
-	for _, cidr := range cidrs {
-		if netutils.IsIPv6CIDRString(cidr) == wantIPv6 {
-			filteredCIDRs = append(filteredCIDRs, cidr)
-		}
-	}
-	return filteredCIDRs
 }
 
 // iptablesJumpChain is tables of iptables chains that ipvs proxier used to install iptables or cleanup iptables.

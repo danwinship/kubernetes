@@ -87,12 +87,24 @@ func NewBackend(
 		return nil, nil
 	}
 
+	// Check to see if we need the drop rule for ctstate INVALID packets
+	needConntrackDropRule := true
+	if val, err := sysctl.GetSysctl(sysctlNFConntrackTCPBeLiberal); err == nil && val != 0 {
+		needConntrackDropRule = false
+	}
+
+	// Generate the masquerade mark to use for SNAT rules.
+	masqueradeValue := 1 << uint(masqueradeBit)
+	masqueradeMark := fmt.Sprintf("%#08x", masqueradeValue)
+	logger.V(2).Info("Using iptables mark for masquerade", "mark", masqueradeMark)
+
 	var ipv4Proxier, ipv6Proxier proxy.Proxier
 	var err error
 
 	if iptv4 != nil {
-		ipv4Proxier, err = newProxier(ctx, v1.IPv4Protocol, iptv4, sysctl,
-			syncPeriod, minSyncPeriod, masqueradeAll, localhostNodePorts, masqueradeBit,
+		ipv4Proxier, err = newProxier(ctx, v1.IPv4Protocol, iptv4,
+			syncPeriod, minSyncPeriod, masqueradeAll, masqueradeMark,
+			localhostNodePorts, needConntrackDropRule,
 			localDetectors[v1.IPv4Protocol], hostname, nodeIPs[v1.IPv4Protocol],
 			recorder, healthzServer, nodePortAddresses)
 		if err != nil {
@@ -103,8 +115,9 @@ func NewBackend(
 	}
 
 	if iptv6 != nil {
-		ipv6Proxier, err = newProxier(ctx, v1.IPv6Protocol, iptv6, sysctl,
-			syncPeriod, minSyncPeriod, masqueradeAll, false, masqueradeBit,
+		ipv6Proxier, err = newProxier(ctx, v1.IPv6Protocol, iptv6,
+			syncPeriod, minSyncPeriod, masqueradeAll, masqueradeMark,
+			false /* no localhostNodePorts for IPv6 */, needConntrackDropRule,
 			localDetectors[v1.IPv6Protocol], hostname, nodeIPs[v1.IPv6Protocol],
 			recorder, healthzServer, nodePortAddresses)
 		if err != nil {

@@ -65,11 +65,16 @@ func NewBackend(
 		return nil, nil
 	}
 
+	// Generate the masquerade mark to use for SNAT rules.
+	masqueradeValue := 1 << uint(masqueradeBit)
+	masqueradeMark := fmt.Sprintf("%#08x", masqueradeValue)
+	logger.V(2).Info("Using nftables mark for masquerade", "mark", masqueradeMark)
+
 	var ipv4Proxier, ipv6Proxier proxy.Proxier
 
 	if nftv4 != nil {
 		ipv4Proxier, err = newProxier(ctx, v1.IPv4Protocol, nftv4,
-			syncPeriod, minSyncPeriod, masqueradeAll, masqueradeBit,
+			syncPeriod, minSyncPeriod, masqueradeAll, masqueradeMark,
 			localDetectors[v1.IPv4Protocol], hostname, nodeIPs[v1.IPv4Protocol],
 			recorder, healthzServer, nodePortAddresses)
 		if err != nil {
@@ -81,8 +86,8 @@ func NewBackend(
 
 	if nftv6 != nil {
 		ipv6Proxier, err = newProxier(ctx, v1.IPv6Protocol, nftv6,
-			syncPeriod, minSyncPeriod, masqueradeAll, masqueradeBit,
-			localDetectors[v1.IPv4Protocol], hostname, nodeIPs[v1.IPv6Protocol],
+			syncPeriod, minSyncPeriod, masqueradeAll, masqueradeMark,
+			localDetectors[v1.IPv6Protocol], hostname, nodeIPs[v1.IPv6Protocol],
 			recorder, healthzServer, nodePortAddresses)
 		if err != nil {
 			return nil, fmt.Errorf("unable to create ipv6 proxier: %v", err)

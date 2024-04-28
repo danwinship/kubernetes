@@ -43,7 +43,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/tools/events"
-	utilsysctl "k8s.io/component-helpers/node/util/sysctl"
 	"k8s.io/klog/v2"
 	"k8s.io/kubernetes/pkg/proxy"
 	"k8s.io/kubernetes/pkg/proxy/conntrack"
@@ -159,8 +158,9 @@ type Proxier struct {
 	// via localhost.
 	localhostNodePorts bool
 
-	// conntrackTCPLiberal indicates whether the system sets the kernel nf_conntrack_tcp_be_liberal
-	conntrackTCPLiberal bool
+	// needConntrackDropRule indicates whether we need a rule to drop ctstate INVALID
+	// packets
+	needConntrackDropRule bool
 
 	// nodePortAddresses selects the interfaces where nodePort works.
 	nodePortAddresses *proxyutil.NodePortAddresses
@@ -181,12 +181,12 @@ var _ proxy.Proxier = &Proxier{}
 func newProxier(ctx context.Context,
 	ipFamily v1.IPFamily,
 	ipt utiliptables.Interface,
-	sysctl utilsysctl.Interface,
 	syncPeriod time.Duration,
 	minSyncPeriod time.Duration,
 	masqueradeAll bool,
+	masqueradeMark string,
 	localhostNodePorts bool,
-	masqueradeBit int,
+	needConntrackDropRule bool,
 	localDetector proxyutil.LocalTrafficDetector,
 	hostname string,
 	nodeIP net.IP,
@@ -197,20 +197,6 @@ func newProxier(ctx context.Context,
 	logger := klog.LoggerWithValues(klog.FromContext(ctx), "ipFamily", ipFamily)
 
 	nodePortAddresses := proxyutil.NewNodePortAddresses(ipFamily, nodePortAddressStrings)
-
-	// Be conservative in what you do, be liberal in what you accept from others.
-	// If it's non-zero, we mark only out of window RST segments as INVALID.
-	// Ref: https://docs.kernel.org/networking/nf_conntrack-sysctl.html
-	conntrackTCPLiberal := false
-	if val, err := sysctl.GetSysctl(sysctlNFConntrackTCPBeLiberal); err == nil && val != 0 {
-		conntrackTCPLiberal = true
-		logger.Info("nf_conntrack_tcp_be_liberal set, not installing DROP rules for INVALID packets")
-	}
-
-	// Generate the masquerade mark to use for SNAT rules.
-	masqueradeValue := 1 << uint(masqueradeBit)
-	masqueradeMark := fmt.Sprintf("%#08x", masqueradeValue)
-	logger.V(2).Info("Using iptables mark for masquerade", "mark", masqueradeMark)
 
 	serviceHealthServer := healthcheck.NewServiceHealthServer(hostname, recorder, nodePortAddresses, healthzServer)
 	nfacctRunner, err := nfacct.New()
@@ -247,7 +233,7 @@ func newProxier(ctx context.Context,
 		localhostNodePorts:       localhostNodePorts,
 		nodePortAddresses:        nodePortAddresses,
 		networkInterfacer:        proxyutil.RealNetwork{},
-		conntrackTCPLiberal:      conntrackTCPLiberal,
+		needConntrackDropRule:    needConntrackDropRule,
 		logger:                   logger,
 		nfAcctCounters: map[string]bool{
 			metrics.IPTablesCTStateInvalidDroppedNFAcctCounter: false,
@@ -264,12 +250,6 @@ func newProxier(ctx context.Context,
 
 	go ipt.Monitor(kubeProxyCanaryChain, []utiliptables.Table{utiliptables.TableMangle, utiliptables.TableNAT, utiliptables.TableFilter},
 		proxier.forceSyncProxyRules, syncPeriod, wait.NeverStop)
-
-	if ipt.HasRandomFully() {
-		logger.V(2).Info("Iptables supports --random-fully")
-	} else {
-		logger.V(2).Info("Iptables does not support --random-fully")
-	}
 
 	return proxier, nil
 }
@@ -1424,7 +1404,7 @@ func (proxier *Proxier) syncProxyRules() {
 	// unexpected connection reset if nf_conntrack_tcp_be_liberal is not set.
 	// Ref: https://github.com/kubernetes/kubernetes/issues/74839
 	// Ref: https://github.com/kubernetes/kubernetes/issues/117924
-	if !proxier.conntrackTCPLiberal {
+	if proxier.needConntrackDropRule {
 		rule := []string{
 			"-A", string(kubeForwardChain),
 			"-m", "conntrack",
