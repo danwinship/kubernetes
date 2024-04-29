@@ -47,6 +47,8 @@ type Backend struct {
 	localDetectors map[v1.IPFamily]proxyutil.LocalTrafficDetector
 
 	nfts    map[v1.IPFamily]knftables.Interface
+
+	masqueradeMark string
 }
 
 // Backend implements proxy.Backend
@@ -82,6 +84,10 @@ func NewBackend(
 		logger.Info("No nftables support for family", "ipFamily", v1.IPv6Protocol, "error", err)
 	}
 
+	// Generate the masquerade mark to use for SNAT rules.
+	masqueradeValue := 1 << uint(*config.NFTables.MasqueradeBit)
+	masqueradeMark := fmt.Sprintf("%#08x", masqueradeValue)
+
 	return &Backend{
 		config:         config,
 		nodeName:       nodeName,
@@ -91,6 +97,8 @@ func NewBackend(
 		localDetectors: localDetectors,
 
 		nfts: nfts,
+
+		masqueradeMark: masqueradeMark,
 	}, nil
 }
 
@@ -108,10 +116,11 @@ func (backend *Backend) NewRunner(ctx context.Context) (*proxy.Runner, error) {
 		proxier, err := newProxier(
 			ctx,
 			family,
+			backend.nfts[family],
 			backend.config.SyncPeriod.Duration,
 			backend.config.MinSyncPeriod.Duration,
 			backend.config.Linux.MasqueradeAll,
-			int(*backend.config.NFTables.MasqueradeBit),
+			backend.masqueradeMark,
 			backend.localDetectors[family],
 			backend.nodeName,
 			backend.nodeIPs[family],

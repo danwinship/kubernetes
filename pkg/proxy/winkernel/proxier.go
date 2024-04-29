@@ -22,7 +22,6 @@ package winkernel
 import (
 	"fmt"
 	"net"
-	"os"
 	"strconv"
 	"strings"
 	"sync"
@@ -35,13 +34,10 @@ import (
 	v1 "k8s.io/api/core/v1"
 	discovery "k8s.io/api/discovery/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	apiutil "k8s.io/apimachinery/pkg/util/net"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/wait"
-	utilfeature "k8s.io/apiserver/pkg/util/feature"
 	"k8s.io/client-go/tools/events"
 	"k8s.io/klog/v2"
-	kubefeatures "k8s.io/kubernetes/pkg/features"
 	"k8s.io/kubernetes/pkg/proxy"
 	"k8s.io/kubernetes/pkg/proxy/apis/config"
 	proxyconfig "k8s.io/kubernetes/pkg/proxy/config"
@@ -161,20 +157,6 @@ const (
 	MAX_COUNT_STALE_LOADBALANCERS = 20
 )
 
-func newHostNetworkService(hcnImpl HcnService) (HostNetworkService, hcn.SupportedFeatures) {
-	var h HostNetworkService
-	supportedFeatures := hcnImpl.GetSupportedFeatures()
-	klog.V(3).InfoS("HNS Supported features", "hnsSupportedFeatures", supportedFeatures)
-	if supportedFeatures.Api.V2 {
-		h = hns{
-			hcn: hcnImpl,
-		}
-	} else {
-		panic("Windows HNS Api V2 required. This version of windows does not support API V2")
-	}
-	return h, supportedFeatures
-}
-
 // logFormattedEndpoints will log all endpoints and its states which are taking part in endpointmap change.
 // This mostly for debugging purpose and verbosity is set to 5.
 func logFormattedEndpoints(logMsg string, logLevel klog.Level, svcPortName proxy.ServicePortName, eps []proxy.Endpoint) {
@@ -211,31 +193,6 @@ func (proxier *Proxier) cleanupStaleLoadbalancers() {
 	if countStaleLB > 0 {
 		klog.V(3).InfoS("Stale loadbalancers still remaining", "LB Count", countStaleLB, "stale_lb_ids", proxier.mapStaleLoadbalancers)
 	}
-}
-
-func getNetworkName(hnsNetworkName string) (string, error) {
-	if len(hnsNetworkName) == 0 {
-		klog.V(3).InfoS("Flag --network-name not set, checking environment variable")
-		hnsNetworkName = os.Getenv("KUBE_NETWORK")
-		if len(hnsNetworkName) == 0 {
-			return "", fmt.Errorf("Environment variable KUBE_NETWORK and network-flag not initialized")
-		}
-	}
-	return hnsNetworkName, nil
-}
-
-func getNetworkInfo(hns HostNetworkService, hnsNetworkName string) (*hnsNetworkInfo, error) {
-	hnsNetworkInfo, err := hns.getNetworkByName(hnsNetworkName)
-	for err != nil {
-		klog.ErrorS(err, "Unable to find HNS Network specified, please check network name and CNI deployment", "hnsNetworkName", hnsNetworkName)
-		time.Sleep(1 * time.Second)
-		hnsNetworkInfo, err = hns.getNetworkByName(hnsNetworkName)
-	}
-	return hnsNetworkInfo, err
-}
-
-func isOverlay(hnsNetworkInfo *hnsNetworkInfo) bool {
-	return strings.EqualFold(hnsNetworkInfo.networkType, NETWORK_TYPE_OVERLAY)
 }
 
 // internal struct for endpoints information
@@ -639,130 +596,25 @@ var _ proxy.Proxier = &Proxier{}
 // newProxier returns a new single-stack winkernel proxier.
 func newProxier(
 	ipFamily v1.IPFamily,
+	hcn HcnService,
+	hns HostNetworkService,
+	network *hnsNetworkInfo,
 	syncPeriod time.Duration,
 	minSyncPeriod time.Duration,
 	nodeName string,
 	nodeIP net.IP,
 	recorder events.EventRecorder,
 	healthzServer *healthcheck.ProxyHealthServer,
-	healthzBindAddress string,
+	healthzPort int,
+	isDSR bool,
+	sourceVIP string,
+	hostMAC string,
+	supportedFeatures hcn.SupportedFeatures,
 	config config.KubeProxyWinkernelConfiguration,
 ) (*Proxier, error) {
 	// windows listens to all node addresses
 	nodePortAddresses := proxyutil.NewNodePortAddresses(ipFamily, nil)
 	serviceHealthServer := healthcheck.NewServiceHealthServer(nodeName, recorder, nodePortAddresses, healthzServer)
-
-	var healthzPort int
-	if len(healthzBindAddress) > 0 {
-		_, port, _ := net.SplitHostPort(healthzBindAddress)
-		healthzPort, _ = strconv.Atoi(port)
-	}
-
-	hcnImpl := newHcnImpl()
-	proxier, err := newProxierInternal(
-		ipFamily,
-		nodeName,
-		nodeIP,
-		serviceHealthServer,
-		healthzServer,
-		healthzPort,
-		hcnImpl,
-		&localHostMacProvider{},
-		config,
-		true, // waitForHNSOverlay
-	)
-	if err != nil {
-		return nil, err
-	}
-
-	burstSyncs := 2
-	klog.V(3).InfoS("Record sync param", "minSyncPeriod", minSyncPeriod, "syncPeriod", syncPeriod, "burstSyncs", burstSyncs)
-	proxier.syncRunner = async.NewBoundedFrequencyRunner("sync-runner", proxier.syncProxyRules, minSyncPeriod, syncPeriod, burstSyncs)
-	return proxier, nil
-}
-
-// allow internal testing of proxier
-func newProxierInternal(
-	ipFamily v1.IPFamily,
-	nodeName string,
-	nodeIP net.IP,
-	serviceHealthServer healthcheck.ServiceHealthServer,
-	healthzServer *healthcheck.ProxyHealthServer,
-	healthzPort int,
-	hcnImpl HcnService,
-	hostMacProvider HostMacProvider,
-	config config.KubeProxyWinkernelConfiguration,
-	waitForHNSOverlay bool,
-) (*Proxier, error) {
-	hns, supportedFeatures := newHostNetworkService(hcnImpl)
-	hnsNetworkName, err := getNetworkName(config.NetworkName)
-	if err != nil {
-		return nil, err
-	}
-
-	klog.V(3).InfoS("Cleaning up old HNS policy lists")
-	hcnImpl.DeleteAllHnsLoadBalancerPolicy()
-
-	// Get HNS network information
-	hnsNetworkInfo, err := getNetworkInfo(hns, hnsNetworkName)
-	if err != nil {
-		return nil, err
-	}
-
-	// Network could have been detected before Remote Subnet Routes are applied or ManagementIP is updated
-	// Sleep and update the network to include new information
-	if isOverlay(hnsNetworkInfo) {
-		if waitForHNSOverlay {
-			time.Sleep(10 * time.Second)
-		}
-
-		hnsNetworkInfo, err = hns.getNetworkByName(hnsNetworkName)
-		if err != nil {
-			return nil, fmt.Errorf("could not find HNS network %s", hnsNetworkName)
-		}
-	}
-
-	klog.V(1).InfoS("Hns Network loaded", "hnsNetworkInfo", hnsNetworkInfo)
-	isDSR := config.EnableDSR
-	if isDSR && !utilfeature.DefaultFeatureGate.Enabled(kubefeatures.WinDSR) {
-		return nil, fmt.Errorf("WinDSR feature gate not enabled")
-	}
-
-	err = hcnImpl.DsrSupported()
-	if isDSR && err != nil {
-		return nil, err
-	}
-
-	var sourceVip string
-	var hostMac string
-	if isOverlay(hnsNetworkInfo) {
-		if !utilfeature.DefaultFeatureGate.Enabled(kubefeatures.WinOverlay) {
-			return nil, fmt.Errorf("WinOverlay feature gate not enabled")
-		}
-		err = hcnImpl.RemoteSubnetSupported()
-		if err != nil {
-			return nil, err
-		}
-		sourceVip = config.SourceVip
-		if len(sourceVip) == 0 {
-			return nil, fmt.Errorf("source-vip flag not set")
-		}
-
-		if nodeIP.IsUnspecified() {
-			// attempt to get the correct ip address
-			klog.V(2).InfoS("Node ip was unspecified, attempting to find node ip")
-			nodeIP, err = apiutil.ResolveBindAddress(nodeIP)
-			if err != nil {
-				klog.InfoS("Failed to find an ip. You may need set the --bind-address flag", "err", err)
-			}
-		}
-
-		hostMac = hostMacProvider.GetHostMac(nodeIP)
-
-		if len(hostMac) == 0 {
-			return nil, fmt.Errorf("could not find host mac address for %s", nodeIP)
-		}
-	}
 
 	proxier := &Proxier{
 		ipFamily:              ipFamily,
@@ -774,10 +626,10 @@ func newProxierInternal(
 		serviceHealthServer:   serviceHealthServer,
 		healthzServer:         healthzServer,
 		hns:                   hns,
-		hcn:                   hcnImpl,
-		network:               *hnsNetworkInfo,
-		sourceVip:             sourceVip,
-		hostMac:               hostMac,
+		hcn:                   hcn,
+		network:               *network,
+		sourceVip:             sourceVIP,
+		hostMac:               hostMAC,
 		isDSR:                 isDSR,
 		supportedFeatures:     supportedFeatures,
 		healthzPort:           healthzPort,

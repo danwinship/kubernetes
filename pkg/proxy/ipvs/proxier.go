@@ -197,13 +197,9 @@ func newProxier(
 	sysctl utilsysctl.Interface,
 	syncPeriod time.Duration,
 	minSyncPeriod time.Duration,
-	excludeCIDRs []string,
-	strictARP bool,
-	tcpTimeout time.Duration,
-	tcpFinTimeout time.Duration,
-	udpTimeout time.Duration,
+	excludeCIDRs []*net.IPNet,
 	masqueradeAll bool,
-	masqueradeBit int,
+	masqueradeMark string,
 	localDetector proxyutil.LocalTrafficDetector,
 	nodeName string,
 	nodeIP net.IP,
@@ -213,24 +209,11 @@ func newProxier(
 	nodePortAddressStrings []string,
 ) (*Proxier, error) {
 	logger := klog.LoggerWithValues(klog.FromContext(ctx), "ipFamily", ipFamily)
-
-	// Generate the masquerade mark to use for SNAT rules.
-	masqueradeValue := 1 << uint(masqueradeBit)
-	masqueradeMark := fmt.Sprintf("%#08x", masqueradeValue)
-
 	logger.V(2).Info("Record nodeIP and family", "nodeIP", nodeIP, "family", ipFamily)
-
-	if len(scheduler) == 0 {
-		logger.Info("IPVS scheduler not specified, use rr by default")
-		scheduler = defaultScheduler
-	}
 
 	nodePortAddresses := proxyutil.NewNodePortAddresses(ipFamily, nodePortAddressStrings)
 
 	serviceHealthServer := healthcheck.NewServiceHealthServer(nodeName, recorder, nodePortAddresses, healthzServer)
-
-	// excludeCIDRs has been validated before, here we just parse it to IPNet list
-	parsedExcludeCIDRs, _ := netutils.ParseCIDRs(excludeCIDRs)
 
 	proxier := &Proxier{
 		ipFamily:              ipFamily,
@@ -241,7 +224,7 @@ func newProxier(
 		initialSync:           true,
 		syncPeriod:            syncPeriod,
 		minSyncPeriod:         minSyncPeriod,
-		excludeCIDRs:          parsedExcludeCIDRs,
+		excludeCIDRs:          excludeCIDRs,
 		iptables:              ipt,
 		masqueradeAll:         masqueradeAll,
 		masqueradeMark:        masqueradeMark,

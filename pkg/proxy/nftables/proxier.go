@@ -169,10 +169,11 @@ var _ proxy.Proxier = &Proxier{}
 // newProxier returns a new single-stack NFTables proxier.
 func newProxier(ctx context.Context,
 	ipFamily v1.IPFamily,
+	nft knftables.Interface,
 	syncPeriod time.Duration,
 	minSyncPeriod time.Duration,
 	masqueradeAll bool,
-	masqueradeBit int,
+	masqueradeMark string,
 	localDetector proxyutil.LocalTrafficDetector,
 	nodeName string,
 	nodeIP net.IP,
@@ -181,16 +182,6 @@ func newProxier(ctx context.Context,
 	nodePortAddressStrings []string,
 ) (*Proxier, error) {
 	logger := klog.LoggerWithValues(klog.FromContext(ctx), "ipFamily", ipFamily)
-
-	nft, err := getNFTablesInterface(ipFamily)
-	if err != nil {
-		return nil, err
-	}
-
-	// Generate the masquerade mark to use for SNAT rules.
-	masqueradeValue := 1 << uint(masqueradeBit)
-	masqueradeMark := fmt.Sprintf("%#08x", masqueradeValue)
-	logger.V(2).Info("Using nftables mark for masquerade", "mark", masqueradeMark)
 
 	nodePortAddresses := proxyutil.NewNodePortAddresses(ipFamily, nodePortAddressStrings)
 

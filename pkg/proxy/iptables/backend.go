@@ -25,30 +25,38 @@ import (
 	"net"
 
 	v1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/client-go/tools/events"
 	utilsysctl "k8s.io/component-helpers/node/util/sysctl"
 	"k8s.io/klog/v2"
 	"k8s.io/kubernetes/pkg/proxy"
 	kubeproxyconfig "k8s.io/kubernetes/pkg/proxy/apis/config"
 	"k8s.io/kubernetes/pkg/proxy/healthcheck"
+	"k8s.io/kubernetes/pkg/proxy/metrics"
 	proxyutil "k8s.io/kubernetes/pkg/proxy/util"
+	"k8s.io/kubernetes/pkg/proxy/util/nfacct"
 	utiliptables "k8s.io/kubernetes/pkg/util/iptables"
 )
 
 const sysctlRouteLocalnet = "net/ipv4/conf/all/route_localnet"
+const sysctlNFConntrackTCPBeLiberal = "net/netfilter/nf_conntrack_tcp_be_liberal"
 
 // Backend implements the IPTables backend
 type Backend struct {
-	config            *kubeproxyconfig.KubeProxyConfiguration
-	nodeName          string
-	nodeIPs           map[v1.IPFamily]net.IP
-	recorder          events.EventRecorder
-	healthzServer     *healthcheck.ProxyHealthServer
-	localDetectors    map[v1.IPFamily]proxyutil.LocalTrafficDetector
-	nodePortAddresses map[v1.IPFamily]*proxyutil.NodePortAddresses
+	config         *kubeproxyconfig.KubeProxyConfiguration
+	nodeName       string
+	nodeIPs        map[v1.IPFamily]net.IP
+	recorder       events.EventRecorder
+	healthzServer  *healthcheck.ProxyHealthServer
+	localDetectors map[v1.IPFamily]proxyutil.LocalTrafficDetector
 
 	ipts   map[v1.IPFamily]utiliptables.Interface
 	sysctl utilsysctl.Interface
+
+	nfAcctCounters        sets.Set[string]
+	nodePortAddresses     map[v1.IPFamily]*proxyutil.NodePortAddresses
+	needConntrackDropRule bool
+	masqueradeMark        string
 }
 
 // Backend implements proxy.Backend
@@ -80,22 +88,55 @@ func NewBackend(
 		logger.Info("No iptables support for family", "ipFamily", v1.IPv6Protocol)
 	}
 
+	var nfAcctCounters sets.Set[string]
+	if nfacctRunner, err := nfacct.New(); err == nil {
+		nfAcctCounters := sets.New[string]()
+		for _, name := range []string{
+			metrics.IPTablesCTStateInvalidDroppedNFAcctCounter,
+			metrics.LocalhostNodePortAcceptedNFAcctCounter,
+		} {
+			if err := nfacctRunner.Ensure(name); err == nil {
+				nfAcctCounters.Insert(name)
+			} else {
+				logger.Error(err, "Failed to create nfacct counter; the corresponding metric will not be updated", "counter", name)
+			}
+		}
+	} else {
+		logger.Error(err, "Failed to create nfacct runner, nfacct based metrics won't be available")
+	}
+
 	nodePortAddresses := map[v1.IPFamily]*proxyutil.NodePortAddresses{
 		v1.IPv4Protocol: proxyutil.NewNodePortAddresses(v1.IPv4Protocol, config.NodePortAddresses),
 		v1.IPv6Protocol: proxyutil.NewNodePortAddresses(v1.IPv6Protocol, config.NodePortAddresses),
 	}
 
+	// Check to see if we need the drop rule for ctstate INVALID packets
+	needConntrackDropRule := true
+	if val, err := sysctl.GetSysctl(sysctlNFConntrackTCPBeLiberal); err == nil && val != 0 {
+		needConntrackDropRule = false
+		logger.Info("nf_conntrack_tcp_be_liberal set, not installing DROP rules for INVALID packets")
+	}
+
+	// Generate the masquerade mark to use for SNAT rules.
+	masqueradeValue := 1 << uint(*config.IPTables.MasqueradeBit)
+	masqueradeMark := fmt.Sprintf("%#08x", masqueradeValue)
+	logger.V(2).Info("Using iptables mark for masquerade", "mark", masqueradeMark)
+
 	return &Backend{
-		config:            config,
-		nodeName:          nodeName,
-		nodeIPs:           nodeIPs,
-		recorder:          recorder,
-		healthzServer:     healthzServer,
-		localDetectors:    localDetectors,
-		nodePortAddresses: nodePortAddresses,
+		config:         config,
+		nodeName:       nodeName,
+		nodeIPs:        nodeIPs,
+		recorder:       recorder,
+		healthzServer:  healthzServer,
+		localDetectors: localDetectors,
 
 		ipts:   ipts,
 		sysctl: sysctl,
+
+		nfAcctCounters:        nfAcctCounters,
+		nodePortAddresses:     nodePortAddresses,
+		needConntrackDropRule: needConntrackDropRule,
+		masqueradeMark:        masqueradeMark,
 	}, nil
 }
 
@@ -127,18 +168,19 @@ func (backend *Backend) NewRunner(ctx context.Context) (*proxy.Runner, error) {
 			ctx,
 			family,
 			backend.ipts[family],
-			backend.sysctl,
 			backend.config.SyncPeriod.Duration,
 			backend.config.MinSyncPeriod.Duration,
 			backend.config.Linux.MasqueradeAll,
 			*backend.config.IPTables.LocalhostNodePorts,
-			int(*backend.config.IPTables.MasqueradeBit),
+			backend.masqueradeMark,
+			backend.needConntrackDropRule,
 			backend.localDetectors[family],
 			backend.nodeName,
 			backend.nodeIPs[family],
 			backend.recorder,
 			backend.healthzServer,
-			backend.config.NodePortAddresses,
+			backend.nodePortAddresses[family],
+			backend.nfAcctCounters,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("unable to create %s proxier: %v", family, err)

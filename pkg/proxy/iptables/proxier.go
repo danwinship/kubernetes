@@ -39,14 +39,12 @@ import (
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/tools/events"
-	utilsysctl "k8s.io/component-helpers/node/util/sysctl"
 	"k8s.io/klog/v2"
 	"k8s.io/kubernetes/pkg/proxy"
 	"k8s.io/kubernetes/pkg/proxy/conntrack"
 	"k8s.io/kubernetes/pkg/proxy/healthcheck"
 	"k8s.io/kubernetes/pkg/proxy/metrics"
 	proxyutil "k8s.io/kubernetes/pkg/proxy/util"
-	"k8s.io/kubernetes/pkg/proxy/util/nfacct"
 	"k8s.io/kubernetes/pkg/util/async"
 	utiliptables "k8s.io/kubernetes/pkg/util/iptables"
 )
@@ -87,8 +85,6 @@ const (
 	largeClusterEndpointsThreshold = 1000
 )
 
-const sysctlNFConntrackTCPBeLiberal = "net/netfilter/nf_conntrack_tcp_be_liberal"
-
 // Proxier is an iptables-based proxy
 type Proxier struct {
 	// ipFamily defines the IP family which this proxier is tracking.
@@ -122,7 +118,6 @@ type Proxier struct {
 	masqueradeAll  bool
 	masqueradeMark string
 	conntrack      conntrack.Interface
-	nfacct         nfacct.Interface
 	localDetector  proxyutil.LocalTrafficDetector
 	nodeName       string
 	nodeIP         net.IP
@@ -153,8 +148,9 @@ type Proxier struct {
 	// via localhost.
 	localhostNodePorts bool
 
-	// conntrackTCPLiberal indicates whether the system sets the kernel nf_conntrack_tcp_be_liberal
-	conntrackTCPLiberal bool
+	// needConntrackDropRule indicates whether the system needs a DROP rule to protect
+	// against conntrack problems.
+	needConntrackDropRule bool
 
 	// nodePortAddresses selects the interfaces where nodePort works.
 	nodePortAddresses *proxyutil.NodePortAddresses
@@ -165,7 +161,7 @@ type Proxier struct {
 	logger klog.Logger
 
 	// nfAcctCounters can be used to determine if a counter exist in the nfacct subsystem.
-	nfAcctCounters map[string]bool
+	nfAcctCounters sets.Set[string]
 }
 
 // Proxier implements proxy.Proxier
@@ -175,41 +171,22 @@ var _ proxy.Proxier = &Proxier{}
 func newProxier(ctx context.Context,
 	ipFamily v1.IPFamily,
 	ipt utiliptables.Interface,
-	sysctl utilsysctl.Interface,
 	syncPeriod time.Duration,
 	minSyncPeriod time.Duration,
 	masqueradeAll bool,
 	localhostNodePorts bool,
-	masqueradeBit int,
+	masqueradeMark string,
+	needConntrackDropRule bool,
 	localDetector proxyutil.LocalTrafficDetector,
 	nodeName string,
 	nodeIP net.IP,
 	recorder events.EventRecorder,
 	healthzServer *healthcheck.ProxyHealthServer,
-	nodePortAddressStrings []string,
+	nodePortAddresses *proxyutil.NodePortAddresses,
+	nfAcctCounters sets.Set[string],
 ) (*Proxier, error) {
 	logger := klog.LoggerWithValues(klog.FromContext(ctx), "ipFamily", ipFamily)
-	nodePortAddresses := proxyutil.NewNodePortAddresses(ipFamily, nodePortAddressStrings)
-
-	// Be conservative in what you do, be liberal in what you accept from others.
-	// If it's non-zero, we mark only out of window RST segments as INVALID.
-	// Ref: https://docs.kernel.org/networking/nf_conntrack-sysctl.html
-	conntrackTCPLiberal := false
-	if val, err := sysctl.GetSysctl(sysctlNFConntrackTCPBeLiberal); err == nil && val != 0 {
-		conntrackTCPLiberal = true
-		logger.Info("nf_conntrack_tcp_be_liberal set, not installing DROP rules for INVALID packets")
-	}
-
-	// Generate the masquerade mark to use for SNAT rules.
-	masqueradeValue := 1 << uint(masqueradeBit)
-	masqueradeMark := fmt.Sprintf("%#08x", masqueradeValue)
-	logger.V(2).Info("Using iptables mark for masquerade", "mark", masqueradeMark)
-
 	serviceHealthServer := healthcheck.NewServiceHealthServer(nodeName, recorder, nodePortAddresses, healthzServer)
-	nfacctRunner, err := nfacct.New()
-	if err != nil {
-		logger.Error(err, "Failed to create nfacct runner, nfacct based metrics won't be available")
-	}
 
 	proxier := &Proxier{
 		ipFamily:                 ipFamily,
@@ -223,7 +200,6 @@ func newProxier(ctx context.Context,
 		masqueradeAll:            masqueradeAll,
 		masqueradeMark:           masqueradeMark,
 		conntrack:                conntrack.New(),
-		nfacct:                   nfacctRunner,
 		localDetector:            localDetector,
 		nodeName:                 nodeName,
 		nodeIP:                   nodeIP,
@@ -239,12 +215,9 @@ func newProxier(ctx context.Context,
 		localhostNodePorts:       localhostNodePorts,
 		nodePortAddresses:        nodePortAddresses,
 		networkInterfacer:        proxyutil.RealNetwork{},
-		conntrackTCPLiberal:      conntrackTCPLiberal,
+		needConntrackDropRule:    needConntrackDropRule,
 		logger:                   logger,
-		nfAcctCounters: map[string]bool{
-			metrics.IPTablesCTStateInvalidDroppedNFAcctCounter: false,
-			metrics.LocalhostNodePortAcceptedNFAcctCounter:     false,
-		},
+		nfAcctCounters:           nfAcctCounters,
 	}
 
 	burstSyncs := 2
@@ -800,18 +773,6 @@ func (proxier *Proxier) syncProxyRules() {
 				return
 			}
 		}
-
-		// ensure the nfacct counters
-		if proxier.nfacct != nil {
-			for name := range proxier.nfAcctCounters {
-				if err := proxier.nfacct.Ensure(name); err != nil {
-					proxier.nfAcctCounters[name] = false
-					proxier.logger.Error(err, "Failed to create nfacct counter; the corresponding metric will not be updated", "counter", name)
-				} else {
-					proxier.nfAcctCounters[name] = true
-				}
-			}
-		}
 	}
 
 	//
@@ -1117,7 +1078,7 @@ func (proxier *Proxier) syncProxyRules() {
 				// Jump to the external destination chain.  For better or for
 				// worse, nodeports are not subect to loadBalancerSourceRanges,
 				// and we can't change that.
-				if proxier.localhostNodePorts && proxier.ipFamily == v1.IPv4Protocol && proxier.nfAcctCounters[metrics.LocalhostNodePortAcceptedNFAcctCounter] {
+				if proxier.localhostNodePorts && proxier.ipFamily == v1.IPv4Protocol && proxier.nfAcctCounters.Has(metrics.LocalhostNodePortAcceptedNFAcctCounter) {
 					natRules.Write(
 						"-A", string(kubeNodePortsChain),
 						"-m", "comment", "--comment", svcPortNameString,
@@ -1422,13 +1383,13 @@ func (proxier *Proxier) syncProxyRules() {
 	// unexpected connection reset if nf_conntrack_tcp_be_liberal is not set.
 	// Ref: https://github.com/kubernetes/kubernetes/issues/74839
 	// Ref: https://github.com/kubernetes/kubernetes/issues/117924
-	if !proxier.conntrackTCPLiberal {
+	if proxier.needConntrackDropRule {
 		rule := []string{
 			"-A", string(kubeForwardChain),
 			"-m", "conntrack",
 			"--ctstate", "INVALID",
 		}
-		if proxier.nfAcctCounters[metrics.IPTablesCTStateInvalidDroppedNFAcctCounter] {
+		if proxier.nfAcctCounters.Has(metrics.IPTablesCTStateInvalidDroppedNFAcctCounter) {
 			rule = append(rule,
 				"-m", "nfacct", "--nfacct-name", metrics.IPTablesCTStateInvalidDroppedNFAcctCounter,
 			)

@@ -136,12 +136,13 @@ func NewFakeProxier(ipt utiliptables.Interface) *Proxier {
 		natRules:                 proxyutil.NewLineBuffer(),
 		nodeIP:                   netutils.ParseIPSloppy(testNodeIP),
 		localhostNodePorts:       true,
+		needConntrackDropRule:    true,
 		nodePortAddresses:        proxyutil.NewNodePortAddresses(ipfamily, nil),
 		networkInterfacer:        networkInterfacer,
-		nfAcctCounters: map[string]bool{
-			metrics.IPTablesCTStateInvalidDroppedNFAcctCounter: true,
-			metrics.LocalhostNodePortAcceptedNFAcctCounter:     true,
-		},
+		nfAcctCounters: sets.New(
+			metrics.IPTablesCTStateInvalidDroppedNFAcctCounter,
+			metrics.LocalhostNodePortAcceptedNFAcctCounter,
+		),
 	}
 	p.setInitialized(true)
 	p.syncRunner = async.NewBoundedFrequencyRunner("test-sync-runner", p.syncProxyRules, 0, time.Minute, 1)
@@ -2563,26 +2564,24 @@ func TestDropInvalidRule(t *testing.T) {
 		nfacctEnsured  bool
 		tcpLiberal     bool
 		dropRule       string
-		nfAcctCounters map[string]bool
+		nfAcctCounters sets.Set[string]
 	}{
 		{
 			nfacctEnsured:  false,
 			tcpLiberal:     false,
-			nfAcctCounters: map[string]bool{},
+			nfAcctCounters: nil,
 			dropRule:       "-A KUBE-FORWARD -m conntrack --ctstate INVALID -j DROP",
 		},
 		{
 			nfacctEnsured: true,
 			tcpLiberal:    false,
-			nfAcctCounters: map[string]bool{
-				metrics.IPTablesCTStateInvalidDroppedNFAcctCounter: true,
-			},
+			nfAcctCounters: sets.New(metrics.IPTablesCTStateInvalidDroppedNFAcctCounter),
 			dropRule: fmt.Sprintf("-A KUBE-FORWARD -m conntrack --ctstate INVALID -m nfacct --nfacct-name %s -j DROP", metrics.IPTablesCTStateInvalidDroppedNFAcctCounter),
 		},
 		{
 			nfacctEnsured:  false,
 			tcpLiberal:     true,
-			nfAcctCounters: map[string]bool{},
+			nfAcctCounters: nil,
 			dropRule:       "",
 		},
 	}
@@ -2590,7 +2589,7 @@ func TestDropInvalidRule(t *testing.T) {
 		t.Run(fmt.Sprintf("tcpLiberal is %t and nfacctEnsured is %t", tc.tcpLiberal, tc.nfacctEnsured), func(t *testing.T) {
 			ipt := iptablestest.NewFake()
 			fp := NewFakeProxier(ipt)
-			fp.conntrackTCPLiberal = tc.tcpLiberal
+			fp.needConntrackDropRule = !tc.tcpLiberal
 			fp.nfAcctCounters = tc.nfAcctCounters
 			fp.syncProxyRules()
 

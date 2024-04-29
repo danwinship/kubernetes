@@ -65,6 +65,10 @@ type Backend struct {
 	ipvs   utilipvs.Interface
 	ipset  utilipset.Interface
 	sysctl utilsysctl.Interface
+
+	scheduler      string
+	masqueradeMark string
+	excludeCIDRs   map[v1.IPFamily][]*net.IPNet
 }
 
 // Backend implements proxy.Backend
@@ -88,7 +92,13 @@ func NewBackend(
 	ipvs := utilipvs.New()
 	sysctl := utilsysctl.New()
 
-	if err := canUseIPVSProxier(ctx, ipvs, ipset, config.IPVS.Scheduler); err != nil {
+	scheduler := config.IPVS.Scheduler
+	if len(scheduler) == 0 {
+		logger.Info("IPVS scheduler not specified, defaulting to rr")
+		scheduler = defaultScheduler
+	}
+
+	if err := canUseIPVSProxier(ctx, ipvs, ipset, scheduler); err != nil {
 		return nil, fmt.Errorf("can't use the IPVS proxier: %v", err)
 	}
 	if len(ipts) == 0 {
@@ -100,6 +110,10 @@ func NewBackend(
 	} else if ipts[v1.IPv6Protocol] == nil {
 		logger.Info("No iptables support for family", "ipFamily", v1.IPv6Protocol)
 	}
+
+	// Generate the masquerade mark to use for SNAT rules.
+	masqueradeValue := 1 << uint(*config.IPTables.MasqueradeBit)
+	masqueradeMark := fmt.Sprintf("%#08x", masqueradeValue)
 
 	return &Backend{
 		config:         config,
@@ -113,6 +127,10 @@ func NewBackend(
 		ipvs:   ipvs,
 		ipset:  ipset,
 		sysctl: sysctl,
+
+		scheduler:      scheduler,
+		masqueradeMark: masqueradeMark,
+		excludeCIDRs:   proxyutil.MapCIDRsByIPFamily(config.IPVS.ExcludeCIDRs),
 	}, nil
 }
 
@@ -199,19 +217,15 @@ func (backend *Backend) NewRunner(ctx context.Context) (*proxy.Runner, error) {
 			backend.sysctl,
 			backend.config.SyncPeriod.Duration,
 			backend.config.MinSyncPeriod.Duration,
-			backend.config.IPVS.ExcludeCIDRs,
-			backend.config.IPVS.StrictARP,
-			backend.config.IPVS.TCPTimeout.Duration,
-			backend.config.IPVS.TCPFinTimeout.Duration,
-			backend.config.IPVS.UDPTimeout.Duration,
+			backend.excludeCIDRs[family],
 			backend.config.Linux.MasqueradeAll,
-			int(*backend.config.IPTables.MasqueradeBit),
+			backend.masqueradeMark,
 			backend.localDetectors[family],
 			backend.nodeName,
 			backend.nodeIPs[family],
 			backend.recorder,
 			backend.healthzServer,
-			backend.config.IPVS.Scheduler,
+			backend.scheduler,
 			backend.config.NodePortAddresses,
 		)
 		if err != nil {
@@ -245,10 +259,6 @@ func canUseIPVSProxier(ctx context.Context, ipvs utilipvs.Interface, ipsetver IP
 	}
 	if !checkMinVersion(versionString) {
 		return fmt.Errorf("ipset version: %s is less than min required version: %s", versionString, MinIPSetCheckVersion)
-	}
-
-	if scheduler == "" {
-		scheduler = defaultScheduler
 	}
 
 	// If any virtual server (VS) using the scheduler exist we skip the checks.
