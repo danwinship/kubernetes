@@ -193,22 +193,10 @@ func newProxier(ctx context.Context,
 	recorder events.EventRecorder,
 	healthzServer *healthcheck.ProxierHealthServer,
 	nodePortAddressStrings []string,
-	initOnly bool,
 ) (*Proxier, error) {
 	logger := klog.LoggerWithValues(klog.FromContext(ctx), "ipFamily", ipFamily)
-	nodePortAddresses := proxyutil.NewNodePortAddresses(ipFamily, nodePortAddressStrings)
 
-	if !nodePortAddresses.ContainsIPv4Loopback() {
-		localhostNodePorts = false
-	}
-	if localhostNodePorts {
-		// Set the route_localnet sysctl we need for exposing NodePorts on loopback addresses
-		// Refer to https://issues.k8s.io/90259
-		logger.Info("Setting route_localnet=1 to allow node-ports on localhost; to change this either disable iptables.localhostNodePorts (--iptables-localhost-nodeports) or set nodePortAddresses (--nodeport-addresses) to filter loopback addresses")
-		if err := proxyutil.EnsureSysctl(sysctl, sysctlRouteLocalnet, 1); err != nil {
-			return nil, err
-		}
-	}
+	nodePortAddresses := proxyutil.NewNodePortAddresses(ipFamily, nodePortAddressStrings)
 
 	// Be conservative in what you do, be liberal in what you accept from others.
 	// If it's non-zero, we mark only out of window RST segments as INVALID.
@@ -217,11 +205,6 @@ func newProxier(ctx context.Context,
 	if val, err := sysctl.GetSysctl(sysctlNFConntrackTCPBeLiberal); err == nil && val != 0 {
 		conntrackTCPLiberal = true
 		logger.Info("nf_conntrack_tcp_be_liberal set, not installing DROP rules for INVALID packets")
-	}
-
-	if initOnly {
-		logger.Info("System initialized and --init-only specified")
-		return nil, nil
 	}
 
 	// Generate the masquerade mark to use for SNAT rules.

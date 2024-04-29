@@ -68,6 +68,25 @@ func NewBackend(
 		return nil, fmt.Errorf("iptables is not available on this host")
 	}
 
+	// Figure out if we need to set route_localnet to allow IPv4 localhost NodePorts.
+	// https://issues.k8s.io/90259
+	if iptv4 != nil && localhostNodePorts {
+		nodePortAddresses := proxyutil.NewNodePortAddresses(v1.IPv4Protocol, nodePortAddresses)
+		if !nodePortAddresses.ContainsIPv4Loopback() {
+			localhostNodePorts = false
+		}
+		if localhostNodePorts {
+			logger.Info("Setting route_localnet=1 to allow node-ports on localhost; to change this either disable iptables.localhostNodePorts (--iptables-localhost-nodeports) or set nodePortAddresses (--nodeport-addresses) to filter loopback addresses")
+			if err := proxyutil.EnsureSysctl(sysctl, sysctlRouteLocalnet, 1); err != nil {
+				return nil, fmt.Errorf("cannot set required sysctl for proxy: %v", err)
+			}
+		}
+	}
+
+	if initOnly {
+		return nil, nil
+	}
+
 	var ipv4Proxier, ipv6Proxier proxy.Proxier
 	var err error
 
@@ -75,7 +94,7 @@ func NewBackend(
 		ipv4Proxier, err = newProxier(ctx, v1.IPv4Protocol, iptv4, sysctl,
 			syncPeriod, minSyncPeriod, masqueradeAll, localhostNodePorts, masqueradeBit,
 			localDetectors[v1.IPv4Protocol], hostname, nodeIPs[v1.IPv4Protocol],
-			recorder, healthzServer, nodePortAddresses, initOnly)
+			recorder, healthzServer, nodePortAddresses)
 		if err != nil {
 			return nil, fmt.Errorf("unable to create ipv4 proxier: %v", err)
 		}
@@ -87,7 +106,7 @@ func NewBackend(
 		ipv6Proxier, err = newProxier(ctx, v1.IPv6Protocol, iptv6, sysctl,
 			syncPeriod, minSyncPeriod, masqueradeAll, false, masqueradeBit,
 			localDetectors[v1.IPv6Protocol], hostname, nodeIPs[v1.IPv6Protocol],
-			recorder, healthzServer, nodePortAddresses, initOnly)
+			recorder, healthzServer, nodePortAddresses)
 		if err != nil {
 			return nil, fmt.Errorf("unable to create ipv6 proxier: %v", err)
 		}

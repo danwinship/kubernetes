@@ -41,10 +41,8 @@ import (
 	discovery "k8s.io/api/discovery/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
-	"k8s.io/apimachinery/pkg/util/version"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/tools/events"
-	utilsysctl "k8s.io/component-helpers/node/util/sysctl"
 	"k8s.io/kubernetes/pkg/proxy"
 	"k8s.io/kubernetes/pkg/proxy/conntrack"
 	"k8s.io/kubernetes/pkg/proxy/healthcheck"
@@ -54,7 +52,6 @@ import (
 	proxyutil "k8s.io/kubernetes/pkg/proxy/util"
 	"k8s.io/kubernetes/pkg/util/async"
 	utiliptables "k8s.io/kubernetes/pkg/util/iptables"
-	utilkernel "k8s.io/kubernetes/pkg/util/kernel"
 )
 
 const (
@@ -97,17 +94,6 @@ const (
 	defaultDummyDevice = "kube-ipvs0"
 )
 
-// In IPVS proxy mode, the following flags need to be set
-const (
-	sysctlVSConnTrack             = "net/ipv4/vs/conntrack"
-	sysctlConnReuse               = "net/ipv4/vs/conn_reuse_mode"
-	sysctlExpireNoDestConn        = "net/ipv4/vs/expire_nodest_conn"
-	sysctlExpireQuiescentTemplate = "net/ipv4/vs/expire_quiescent_template"
-	sysctlForward                 = "net/ipv4/ip_forward"
-	sysctlArpIgnore               = "net/ipv4/conf/all/arp_ignore"
-	sysctlArpAnnounce             = "net/ipv4/conf/all/arp_announce"
-)
-
 // Proxier is an ipvs based proxy for connections between a localhost:lport
 // and services that provide the actual backends.
 type Proxier struct {
@@ -144,8 +130,7 @@ type Proxier struct {
 	minSyncPeriod time.Duration
 	// Values are CIDR's to exclude when cleaning up IPVS rules.
 	excludeCIDRs []*net.IPNet
-	// Set to true to set sysctls arp_ignore and arp_announce
-	strictARP      bool
+
 	iptables       utiliptables.Interface
 	ipvs           utilipvs.Interface
 	ipset          utilipset.Interface
@@ -212,15 +197,10 @@ func newProxier(
 	ipt utiliptables.Interface,
 	ipvs utilipvs.Interface,
 	ipset utilipset.Interface,
-	sysctl utilsysctl.Interface,
 	exec utilexec.Interface,
 	syncPeriod time.Duration,
 	minSyncPeriod time.Duration,
 	excludeCIDRs []string,
-	strictARP bool,
-	tcpTimeout time.Duration,
-	tcpFinTimeout time.Duration,
-	udpTimeout time.Duration,
 	masqueradeAll bool,
 	masqueradeBit int,
 	localDetector proxyutil.LocalTrafficDetector,
@@ -230,71 +210,8 @@ func newProxier(
 	healthzServer *healthcheck.ProxierHealthServer,
 	scheduler string,
 	nodePortAddressStrings []string,
-	initOnly bool,
 ) (*Proxier, error) {
 	logger := klog.LoggerWithValues(klog.FromContext(ctx), "ipFamily", ipFamily)
-	// Set the conntrack sysctl we need for
-	if err := proxyutil.EnsureSysctl(sysctl, sysctlVSConnTrack, 1); err != nil {
-		return nil, err
-	}
-
-	kernelVersion, err := utilkernel.GetVersion()
-	if err != nil {
-		return nil, fmt.Errorf("failed to get kernel version: %w", err)
-	}
-
-	if kernelVersion.LessThan(version.MustParseGeneric(utilkernel.IPVSConnReuseModeMinSupportedKernelVersion)) {
-		logger.Error(nil, "Can't set sysctl, kernel version doesn't satisfy minimum version requirements", "sysctl", sysctlConnReuse, "minimumKernelVersion", utilkernel.IPVSConnReuseModeMinSupportedKernelVersion)
-	} else if kernelVersion.AtLeast(version.MustParseGeneric(utilkernel.IPVSConnReuseModeFixedKernelVersion)) {
-		// https://github.com/kubernetes/kubernetes/issues/93297
-		logger.V(2).Info("Left as-is", "sysctl", sysctlConnReuse)
-	} else {
-		// Set the connection reuse mode
-		if err := proxyutil.EnsureSysctl(sysctl, sysctlConnReuse, 0); err != nil {
-			return nil, err
-		}
-	}
-
-	// Set the expire_nodest_conn sysctl we need for
-	if err := proxyutil.EnsureSysctl(sysctl, sysctlExpireNoDestConn, 1); err != nil {
-		return nil, err
-	}
-
-	// Set the expire_quiescent_template sysctl we need for
-	if err := proxyutil.EnsureSysctl(sysctl, sysctlExpireQuiescentTemplate, 1); err != nil {
-		return nil, err
-	}
-
-	// Set the ip_forward sysctl we need for
-	if err := proxyutil.EnsureSysctl(sysctl, sysctlForward, 1); err != nil {
-		return nil, err
-	}
-
-	if strictARP {
-		// Set the arp_ignore sysctl we need for
-		if err := proxyutil.EnsureSysctl(sysctl, sysctlArpIgnore, 1); err != nil {
-			return nil, err
-		}
-
-		// Set the arp_announce sysctl we need for
-		if err := proxyutil.EnsureSysctl(sysctl, sysctlArpAnnounce, 2); err != nil {
-			return nil, err
-		}
-	}
-
-	// Configure IPVS timeouts if any one of the timeout parameters have been set.
-	// This is the equivalent to running ipvsadm --set, a value of 0 indicates the
-	// current system timeout should be preserved
-	if tcpTimeout > 0 || tcpFinTimeout > 0 || udpTimeout > 0 {
-		if err := ipvs.ConfigureTimeouts(tcpTimeout, tcpFinTimeout, udpTimeout); err != nil {
-			logger.Error(err, "Failed to configure IPVS timeouts")
-		}
-	}
-
-	if initOnly {
-		logger.Info("System initialized and --init-only specified")
-		return nil, nil
-	}
 
 	// Generate the masquerade mark to use for SNAT rules.
 	masqueradeValue := 1 << uint(masqueradeBit)

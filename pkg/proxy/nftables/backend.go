@@ -62,7 +62,6 @@ func NewBackend(
 	}
 
 	if initOnly {
-		logger.Info("System initialized and --init-only specified")
 		return nil, nil
 	}
 

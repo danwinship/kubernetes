@@ -376,6 +376,7 @@ func (o *Options) Run(ctx context.Context) error {
 		return err
 	}
 	if o.InitAndExit {
+		klog.FromContext(ctx).Info("System initialized and --init-only specified")
 		return nil
 	}
 
