@@ -52,6 +52,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	utilip "k8s.io/apimachinery/pkg/util/ip"
 	utilnet "k8s.io/apimachinery/pkg/util/net"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
@@ -115,7 +116,6 @@ import (
 	"k8s.io/kubernetes/pkg/volume/util/subpath"
 	"k8s.io/utils/cpuset"
 	"k8s.io/utils/exec"
-	netutils "k8s.io/utils/net"
 )
 
 func init() {
@@ -1275,7 +1275,8 @@ func startKubelet(k kubelet.Bootstrap, podCfg *config.PodConfig, kubeCfg *kubele
 		go k.ListenAndServe(kubeCfg, kubeDeps.TLSOptions, kubeDeps.Auth, kubeDeps.TracerProvider)
 	}
 	if kubeCfg.ReadOnlyPort > 0 {
-		go k.ListenAndServeReadOnly(netutils.ParseIPSloppy(kubeCfg.Address), uint(kubeCfg.ReadOnlyPort))
+		// kubeCfg.Address is already validated
+		go k.ListenAndServeReadOnly(utilip.MustParse[net.IP](kubeCfg.Address), uint(kubeCfg.ReadOnlyPort))
 	}
 	go k.ListenAndServePodResources()
 }

@@ -40,6 +40,7 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	utilip "k8s.io/apimachinery/pkg/util/ip"
 	utilfeature "k8s.io/apiserver/pkg/util/feature"
 	core "k8s.io/client-go/testing"
 	"k8s.io/client-go/tools/record"
@@ -57,7 +58,6 @@ import (
 	"k8s.io/kubernetes/pkg/kubelet/secret"
 	"k8s.io/kubernetes/pkg/kubelet/status"
 	kubetypes "k8s.io/kubernetes/pkg/kubelet/types"
-	netutils "k8s.io/utils/net"
 	"k8s.io/utils/ptr"
 )
 
@@ -4245,7 +4245,7 @@ func TestNodeAddressUpdatesGenerateAPIPodStatusHostNetworkPodIPs(t *testing.T) {
 			defer testKubelet.Cleanup()
 			kl := testKubelet.kubelet
 			for _, ip := range tc.nodeIPs {
-				kl.nodeIPs = append(kl.nodeIPs, netutils.ParseIPSloppy(ip))
+				kl.nodeIPs = append(kl.nodeIPs, utilip.MustParse[net.IP](ip))
 			}
 			kl.nodeLister = testNodeLister{nodes: []*v1.Node{
 				{
@@ -4394,7 +4394,7 @@ func TestGenerateAPIPodStatusPodIPs(t *testing.T) {
 			defer testKubelet.Cleanup()
 			kl := testKubelet.kubelet
 			if tc.nodeIP != "" {
-				kl.nodeIPs = []net.IP{netutils.ParseIPSloppy(tc.nodeIP)}
+				kl.nodeIPs = utilip.MustParseList[net.IP](tc.nodeIP)
 			}
 
 			pod := podWithUIDNameNs("12345", "test-pod", "test-namespace")
@@ -4498,7 +4498,7 @@ func TestSortPodIPs(t *testing.T) {
 			defer testKubelet.Cleanup()
 			kl := testKubelet.kubelet
 			if tc.nodeIP != "" {
-				kl.nodeIPs = []net.IP{netutils.ParseIPSloppy(tc.nodeIP)}
+				kl.nodeIPs = utilip.MustParseList[net.IP](tc.nodeIP)
 			}
 
 			podIPs := kl.sortPodIPs(tc.podIPs)

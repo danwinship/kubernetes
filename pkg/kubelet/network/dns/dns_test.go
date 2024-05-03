@@ -27,11 +27,11 @@ import (
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	utilip "k8s.io/apimachinery/pkg/util/ip"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/client-go/tools/record"
 	runtimeapi "k8s.io/cri-api/pkg/apis/runtime/v1"
 	"k8s.io/kubernetes/pkg/apis/core/validation"
-	netutils "k8s.io/utils/net"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -350,7 +350,9 @@ func TestGetPodDNSType(t *testing.T) {
 	}
 	testClusterDNSDomain := "TEST"
 	clusterNS := "203.0.113.1"
-	testClusterDNS := []net.IP{netutils.ParseIPSloppy(clusterNS)}
+	// FIXME? I had "[]net.IP{utilip.MustParse(clusterNS)}" thinking it would infer
+	// the type from the context, but it doesn't...
+	testClusterDNS := utilip.MustParseList[net.IP](clusterNS)
 
 	configurer := NewConfigurer(recorder, nodeRef, nil, nil, testClusterDNSDomain, "")
 
@@ -454,7 +456,7 @@ func TestGetPodDNS(t *testing.T) {
 	}
 	clusterNS := "203.0.113.1"
 	testClusterDNSDomain := "kubernetes.io"
-	testClusterDNS := []net.IP{netutils.ParseIPSloppy(clusterNS)}
+	testClusterDNS := utilip.MustParseList[net.IP](clusterNS)
 
 	configurer := NewConfigurer(recorder, nodeRef, nil, testClusterDNS, testClusterDNSDomain, "")
 
@@ -578,7 +580,7 @@ func TestGetPodDNSCustom(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	configurer := NewConfigurer(recorder, nodeRef, nil, []net.IP{netutils.ParseIPSloppy(testClusterNameserver)}, testClusterDNSDomain, tmpfile.Name())
+	configurer := NewConfigurer(recorder, nodeRef, nil, utilip.MustParseList[net.IP](testClusterNameserver), testClusterDNSDomain, tmpfile.Name())
 
 	testCases := []struct {
 		desc              string

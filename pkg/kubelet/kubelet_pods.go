@@ -39,6 +39,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
+	utilip "k8s.io/apimachinery/pkg/util/ip"
 	"k8s.io/apimachinery/pkg/util/sets"
 	utilvalidation "k8s.io/apimachinery/pkg/util/validation"
 	utilfeature "k8s.io/apiserver/pkg/util/feature"
@@ -68,7 +69,6 @@ import (
 	"k8s.io/kubernetes/pkg/volume/util/volumepathhandler"
 	volumevalidation "k8s.io/kubernetes/pkg/volume/validation"
 	"k8s.io/kubernetes/third_party/forked/golang/expansion"
-	utilnet "k8s.io/utils/net"
 )
 
 const (
@@ -1852,10 +1852,10 @@ func (kl *Kubelet) generateAPIPodStatus(pod *v1.Pod, podStatus *kubecontainer.Po
 			klog.V(4).InfoS("Cannot get host IPs", "err", err)
 		} else {
 			if s.HostIP != "" {
-				if utilnet.IPFamilyOfString(s.HostIP) != utilnet.IPFamilyOf(hostIPs[0]) {
+				if utilip.IPFamilyOf(s.HostIP) != utilip.IPFamilyOf(hostIPs[0]) {
 					kl.recorder.Eventf(pod, v1.EventTypeWarning, "HostIPsIPFamilyMismatch",
-						"Kubelet detected an IPv%s node IP (%s), but the cloud provider selected an IPv%s node IP (%s); pass an explicit `--node-ip` to kubelet to fix this.",
-						utilnet.IPFamilyOfString(s.HostIP), s.HostIP, utilnet.IPFamilyOf(hostIPs[0]), hostIPs[0].String())
+						"Kubelet detected an %s node IP (%s), but the cloud provider selected an %s node IP (%s); pass an explicit `--node-ip` to kubelet to fix this.",
+						utilip.IPFamilyOf(s.HostIP), s.HostIP, utilip.IPFamilyOf(hostIPs[0]), hostIPs[0].String())
 				}
 			}
 			s.HostIP = hostIPs[0].String()
@@ -1876,7 +1876,7 @@ func (kl *Kubelet) generateAPIPodStatus(pod *v1.Pod, podStatus *kubecontainer.Po
 				}
 				// Secondary IP is not set #105320
 				if len(hostIPs) == 2 && len(s.PodIPs) == 1 {
-					if utilnet.IPFamilyOfString(s.PodIPs[0].IP) != utilnet.IPFamilyOf(hostIPs[1]) {
+					if utilip.IPFamilyOf(s.PodIPs[0].IP) != utilip.IPFamilyOf(hostIPs[1]) {
 						s.PodIPs = append(s.PodIPs, v1.PodIP{IP: hostIPs[1].String()})
 					}
 				}
@@ -1895,22 +1895,22 @@ func (kl *Kubelet) generateAPIPodStatus(pod *v1.Pod, podStatus *kubecontainer.Po
 // and use them for the Pod.Status.PodIPs and the Downward API environment variables
 func (kl *Kubelet) sortPodIPs(podIPs []string) []string {
 	ips := make([]string, 0, 2)
-	var validPrimaryIP, validSecondaryIP func(ip string) bool
-	if len(kl.nodeIPs) == 0 || utilnet.IsIPv4(kl.nodeIPs[0]) {
-		validPrimaryIP = utilnet.IsIPv4String
-		validSecondaryIP = utilnet.IsIPv6String
+	var primaryIPFamily, secondaryIPFamily utilip.IPFamily
+	if len(kl.nodeIPs) == 0 || utilip.IsIPv4(kl.nodeIPs[0]) {
+		primaryIPFamily = utilip.IPv4Protocol
+		secondaryIPFamily = utilip.IPv6Protocol
 	} else {
-		validPrimaryIP = utilnet.IsIPv6String
-		validSecondaryIP = utilnet.IsIPv4String
+		primaryIPFamily = utilip.IPv6Protocol
+		secondaryIPFamily = utilip.IPv4Protocol
 	}
 	for _, ip := range podIPs {
-		if validPrimaryIP(ip) {
+		if utilip.IPFamilyOf(ip) == primaryIPFamily {
 			ips = append(ips, ip)
 			break
 		}
 	}
 	for _, ip := range podIPs {
-		if validSecondaryIP(ip) {
+		if utilip.IPFamilyOf(ip) == secondaryIPFamily {	
 			ips = append(ips, ip)
 			break
 		}

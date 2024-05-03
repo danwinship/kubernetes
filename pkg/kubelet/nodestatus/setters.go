@@ -31,6 +31,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/errors"
+	utilip "k8s.io/apimachinery/pkg/util/ip"
 	utilnet "k8s.io/apimachinery/pkg/util/net"
 	utilfeature "k8s.io/apiserver/pkg/util/feature"
 	cloudprovider "k8s.io/cloud-provider"
@@ -44,7 +45,6 @@ import (
 	kubecontainer "k8s.io/kubernetes/pkg/kubelet/container"
 	"k8s.io/kubernetes/pkg/kubelet/events"
 	"k8s.io/kubernetes/pkg/volume"
-	netutils "k8s.io/utils/net"
 
 	"k8s.io/klog/v2"
 )
@@ -203,7 +203,7 @@ func NodeAddress(nodeIPs []net.IP, // typically Kubelet.nodeIPs
 			// unless nodeIP is "::", in which case it is reversed.
 			if nodeIPSpecified {
 				ipAddr = nodeIP
-			} else if addr := netutils.ParseIPSloppy(hostname); addr != nil {
+			} else if addr, err := utilip.Parse[net.IP](hostname); err == nil {
 				ipAddr = addr
 			} else {
 				var addrs []net.IP

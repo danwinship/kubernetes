@@ -59,7 +59,6 @@ import (
 	kubeletvolume "k8s.io/kubernetes/pkg/kubelet/volumemanager"
 	taintutil "k8s.io/kubernetes/pkg/util/taints"
 	"k8s.io/kubernetes/pkg/volume/util"
-	netutils "k8s.io/utils/net"
 )
 
 const (
@@ -2647,7 +2646,8 @@ func TestValidateNodeIPParam(t *testing.T) {
 		tests = append(tests, successTest)
 	}
 	for _, test := range tests {
-		err := validateNodeIP(netutils.ParseIPSloppy(test.nodeIP))
+		ip, _ := utilip.Parse[net.IP](test.nodeIP)
+		err := validateNodeIP(ip)
 		if test.success {
 			assert.NoError(t, err, "test %s", test.testName)
 		} else {

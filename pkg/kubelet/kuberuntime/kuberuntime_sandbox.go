@@ -25,6 +25,7 @@ import (
 
 	v1 "k8s.io/api/core/v1"
 	kubetypes "k8s.io/apimachinery/pkg/types"
+	utilip "k8s.io/apimachinery/pkg/util/ip"
 	utilfeature "k8s.io/apiserver/pkg/util/feature"
 	runtimeapi "k8s.io/cri-api/pkg/apis/runtime/v1"
 	"k8s.io/klog/v2"
@@ -34,7 +35,6 @@ import (
 	runtimeutil "k8s.io/kubernetes/pkg/kubelet/kuberuntime/util"
 	"k8s.io/kubernetes/pkg/kubelet/util"
 	"k8s.io/kubernetes/pkg/kubelet/util/format"
-	netutils "k8s.io/utils/net"
 )
 
 // createPodSandbox creates a pod sandbox and returns (podSandBoxID, message, error).
@@ -314,8 +314,8 @@ func (m *kubeGenericRuntimeManager) determinePodSandboxIPs(podNamespace, podName
 
 	// pick primary IP
 	if len(podSandbox.Network.Ip) != 0 {
-		if netutils.ParseIPSloppy(podSandbox.Network.Ip) == nil {
-			klog.InfoS("Pod Sandbox reported an unparseable primary IP", "pod", klog.KRef(podNamespace, podName), "IP", podSandbox.Network.Ip)
+		if _, err := utilip.ParseIP(podSandbox.Network.Ip); err != nil {
+			klog.ErrorS(err, "Pod Sandbox reported an unparseable primary IP", "pod", klog.KRef(podNamespace, podName), "IP", podSandbox.Network.Ip)
 			return nil
 		}
 		podIPs = append(podIPs, podSandbox.Network.Ip)
@@ -323,8 +323,8 @@ func (m *kubeGenericRuntimeManager) determinePodSandboxIPs(podNamespace, podName
 
 	// pick additional ips, if cri reported them
 	for _, podIP := range podSandbox.Network.AdditionalIps {
-		if nil == netutils.ParseIPSloppy(podIP.Ip) {
-			klog.InfoS("Pod Sandbox reported an unparseable additional IP", "pod", klog.KRef(podNamespace, podName), "IP", podIP.Ip)
+		if _, err := utilip.ParseIP(podIP.Ip); err != nil {
+			klog.ErrorS(err, "Pod Sandbox reported an unparseable additional IP", "pod", klog.KRef(podNamespace, podName), "IP", podIP.Ip)
 			return nil
 		}
 		podIPs = append(podIPs, podIP.Ip)

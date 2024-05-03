@@ -28,6 +28,7 @@ import (
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	utilip "k8s.io/apimachinery/pkg/util/ip"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/client-go/tools/record"
 	runtimeapi "k8s.io/cri-api/pkg/apis/runtime/v1"
@@ -35,7 +36,6 @@ import (
 	sc "k8s.io/kubernetes/pkg/securitycontext"
 	hashutil "k8s.io/kubernetes/pkg/util/hash"
 	"k8s.io/kubernetes/third_party/forked/golang/expansion"
-	utilsnet "k8s.io/utils/net"
 )
 
 // HandlerRunner runs a lifecycle handler for a container.
@@ -377,7 +377,7 @@ func MakePortMappings(container *v1.Container) (ports []PortMapping) {
 		// https://github.com/kubernetes/kubernetes/issues/82373
 		family := "any"
 		if p.HostIP != "" {
-			if utilsnet.IsIPv6String(p.HostIP) {
+			if utilip.IsIPv6(p.HostIP) {
 				family = "v6"
 			} else {
 				family = "v4"

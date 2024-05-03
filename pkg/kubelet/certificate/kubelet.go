@@ -29,13 +29,14 @@ import (
 	certificates "k8s.io/api/certificates/v1"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
+	utilip "k8s.io/apimachinery/pkg/util/ip"
+	"k8s.io/apimachinery/pkg/util/sets"
 	clientset "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/util/certificate"
 	compbasemetrics "k8s.io/component-base/metrics"
 	"k8s.io/component-base/metrics/legacyregistry"
 	kubeletconfig "k8s.io/kubernetes/pkg/kubelet/apis/config"
 	"k8s.io/kubernetes/pkg/kubelet/metrics"
-	netutils "k8s.io/utils/net"
 )
 
 // NewKubeletServerCertificateManager creates a certificate manager for the kubelet when retrieving a server certificate
@@ -138,8 +139,8 @@ func NewKubeletServerCertificateManager(kubeClient clientset.Interface, kubeCfg 
 }
 
 func addressesToHostnamesAndIPs(addresses []v1.NodeAddress) (dnsNames []string, ips []net.IP) {
-	seenDNSNames := map[string]bool{}
-	seenIPs := map[string]bool{}
+	seenDNSNames := sets.New[string]()
+	seenIPs := make(map[string]net.IP)
 	for _, address := range addresses {
 		if len(address.Address) == 0 {
 			continue
@@ -147,28 +148,26 @@ func addressesToHostnamesAndIPs(addresses []v1.NodeAddress) (dnsNames []string, 
 
 		switch address.Type {
 		case v1.NodeHostName:
-			if ip := netutils.ParseIPSloppy(address.Address); ip != nil {
-				seenIPs[address.Address] = true
+			if ip, err := utilip.Parse[net.IP](address.Address); err == nil {
+				seenIPs[address.Address] = ip
 			} else {
-				seenDNSNames[address.Address] = true
+				seenDNSNames.Insert(address.Address)
 			}
 		case v1.NodeExternalIP, v1.NodeInternalIP:
-			if ip := netutils.ParseIPSloppy(address.Address); ip != nil {
-				seenIPs[address.Address] = true
+			if ip, err := utilip.Parse[net.IP](address.Address); err == nil {
+				seenIPs[address.Address] = ip
 			}
 		case v1.NodeExternalDNS, v1.NodeInternalDNS:
-			seenDNSNames[address.Address] = true
+			seenDNSNames.Insert(address.Address)
 		}
 	}
 
-	for dnsName := range seenDNSNames {
-		dnsNames = append(dnsNames, dnsName)
-	}
-	for ip := range seenIPs {
-		ips = append(ips, netutils.ParseIPSloppy(ip))
+	// return in stable order
+	dnsNames = sets.List(seenDNSNames)
+	for _, ip := range sets.List(sets.KeySet(seenIPs)) {
+		ips = append(ips, seenIPs[ip])
 	}
 
-	// return in stable order
 	sort.Strings(dnsNames)
 	sort.Slice(ips, func(i, j int) bool { return ips[i].String() < ips[j].String() })
 

@@ -35,6 +35,7 @@ import (
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	utilip "k8s.io/apimachinery/pkg/util/ip"
 	"k8s.io/apimachinery/pkg/util/rand"
 	"k8s.io/apimachinery/pkg/util/uuid"
 	utilfeature "k8s.io/apiserver/pkg/util/feature"
@@ -50,7 +51,6 @@ import (
 	"k8s.io/kubernetes/pkg/kubelet/util/sliceutils"
 	"k8s.io/kubernetes/pkg/volume"
 	volumetest "k8s.io/kubernetes/pkg/volume/testing"
-	netutils "k8s.io/utils/net"
 )
 
 const (
@@ -81,7 +81,7 @@ func TestNodeAddress(t *testing.T) {
 	}{
 		{
 			name:   "A single InternalIP",
-			nodeIP: netutils.ParseIPSloppy("10.1.1.1"),
+			nodeIP: utilip.MustParse[net.IP]("10.1.1.1"),
 			nodeAddresses: []v1.NodeAddress{
 				{Type: v1.NodeInternalIP, Address: "10.1.1.1"},
 				{Type: v1.NodeHostName, Address: testKubeletHostname},
@@ -94,7 +94,7 @@ func TestNodeAddress(t *testing.T) {
 		},
 		{
 			name:   "NodeIP is external",
-			nodeIP: netutils.ParseIPSloppy("55.55.55.55"),
+			nodeIP: utilip.MustParse[net.IP]("55.55.55.55"),
 			nodeAddresses: []v1.NodeAddress{
 				{Type: v1.NodeInternalIP, Address: "10.1.1.1"},
 				{Type: v1.NodeExternalIP, Address: "55.55.55.55"},
@@ -110,7 +110,7 @@ func TestNodeAddress(t *testing.T) {
 		{
 			// Accommodating #45201 and #49202
 			name:   "InternalIP and ExternalIP are the same",
-			nodeIP: netutils.ParseIPSloppy("55.55.55.55"),
+			nodeIP: utilip.MustParse[net.IP]("55.55.55.55"),
 			nodeAddresses: []v1.NodeAddress{
 				{Type: v1.NodeInternalIP, Address: "44.44.44.44"},
 				{Type: v1.NodeExternalIP, Address: "44.44.44.44"},
@@ -127,7 +127,7 @@ func TestNodeAddress(t *testing.T) {
 		},
 		{
 			name:   "An Internal/ExternalIP, an Internal/ExternalDNS",
-			nodeIP: netutils.ParseIPSloppy("10.1.1.1"),
+			nodeIP: utilip.MustParse[net.IP]("10.1.1.1"),
 			nodeAddresses: []v1.NodeAddress{
 				{Type: v1.NodeInternalIP, Address: "10.1.1.1"},
 				{Type: v1.NodeExternalIP, Address: "55.55.55.55"},
@@ -146,7 +146,7 @@ func TestNodeAddress(t *testing.T) {
 		},
 		{
 			name:   "An Internal with multiple internal IPs",
-			nodeIP: netutils.ParseIPSloppy("10.1.1.1"),
+			nodeIP: utilip.MustParse[net.IP]("10.1.1.1"),
 			nodeAddresses: []v1.NodeAddress{
 				{Type: v1.NodeInternalIP, Address: "10.1.1.1"},
 				{Type: v1.NodeInternalIP, Address: "10.2.2.2"},
@@ -163,7 +163,7 @@ func TestNodeAddress(t *testing.T) {
 		},
 		{
 			name:   "An InternalIP that isn't valid: should error",
-			nodeIP: netutils.ParseIPSloppy("10.2.2.2"),
+			nodeIP: utilip.MustParse[net.IP]("10.2.2.2"),
 			nodeAddresses: []v1.NodeAddress{
 				{Type: v1.NodeInternalIP, Address: "10.1.1.1"},
 				{Type: v1.NodeExternalIP, Address: "55.55.55.55"},
@@ -196,7 +196,7 @@ func TestNodeAddress(t *testing.T) {
 		},
 		{
 			name:   "cloud reports hostname, nodeIP is set, no override",
-			nodeIP: netutils.ParseIPSloppy("10.1.1.1"),
+			nodeIP: utilip.MustParse[net.IP]("10.1.1.1"),
 			nodeAddresses: []v1.NodeAddress{
 				{Type: v1.NodeInternalIP, Address: "10.1.1.1"},
 				{Type: v1.NodeExternalIP, Address: "55.55.55.55"},
@@ -226,7 +226,7 @@ func TestNodeAddress(t *testing.T) {
 		},
 		{
 			name:              "cloud provider is external and nodeIP specified",
-			nodeIP:            netutils.ParseIPSloppy("10.0.0.1"),
+			nodeIP:            utilip.MustParse[net.IP]("10.0.0.1"),
 			nodeAddresses:     []v1.NodeAddress{},
 			cloudProviderType: cloudProviderExternal,
 			expectedAddresses: []v1.NodeAddress{
@@ -237,7 +237,7 @@ func TestNodeAddress(t *testing.T) {
 		},
 		{
 			name:              "cloud provider is external and nodeIP unspecified",
-			nodeIP:            netutils.ParseIPSloppy("::"),
+			nodeIP:            utilip.MustParse[net.IP]("::"),
 			nodeAddresses:     []v1.NodeAddress{},
 			cloudProviderType: cloudProviderExternal,
 			expectedAddresses: []v1.NodeAddress{},
@@ -280,7 +280,7 @@ func TestNodeAddress(t *testing.T) {
 		},
 		{
 			name:   "cloud doesn't report hostname, nodeIP is set, no override, detected hostname match",
-			nodeIP: netutils.ParseIPSloppy("10.1.1.1"),
+			nodeIP: utilip.MustParse[net.IP]("10.1.1.1"),
 			nodeAddresses: []v1.NodeAddress{
 				{Type: v1.NodeInternalIP, Address: "10.1.1.1"},
 				{Type: v1.NodeExternalIP, Address: "55.55.55.55"},
@@ -296,7 +296,7 @@ func TestNodeAddress(t *testing.T) {
 		},
 		{
 			name:   "cloud doesn't report hostname, nodeIP is set, no override, detected hostname match with same type as nodeIP",
-			nodeIP: netutils.ParseIPSloppy("10.1.1.1"),
+			nodeIP: utilip.MustParse[net.IP]("10.1.1.1"),
 			nodeAddresses: []v1.NodeAddress{
 				{Type: v1.NodeInternalIP, Address: "10.1.1.1"},
 				{Type: v1.NodeInternalIP, Address: testKubeletHostname}, // cloud-reported address value matches detected hostname
@@ -325,7 +325,7 @@ func TestNodeAddress(t *testing.T) {
 		},
 		{
 			name:   "Dual-stack cloud, with nodeIP, different IPv6 formats",
-			nodeIP: netutils.ParseIPSloppy("2600:1f14:1d4:d101::ba3d"),
+			nodeIP: utilip.MustParse[net.IP]("2600:1f14:1d4:d101::ba3d"),
 			nodeAddresses: []v1.NodeAddress{
 				{Type: v1.NodeInternalIP, Address: "10.1.1.1"},
 				{Type: v1.NodeInternalIP, Address: "2600:1f14:1d4:d101:0:0:0:ba3d"},
@@ -367,7 +367,7 @@ func TestNodeAddress(t *testing.T) {
 		},
 		{
 			name:   "Dual-stack cloud, IPv4 first, request IPv4",
-			nodeIP: netutils.ParseIPSloppy("0.0.0.0"),
+			nodeIP: utilip.MustParse[net.IP]("0.0.0.0"),
 			nodeAddresses: []v1.NodeAddress{
 				{Type: v1.NodeInternalIP, Address: "10.1.1.1"},
 				{Type: v1.NodeInternalIP, Address: "fc01:1234::5678"},
@@ -382,7 +382,7 @@ func TestNodeAddress(t *testing.T) {
 		},
 		{
 			name:   "Dual-stack cloud, IPv6 first, request IPv4",
-			nodeIP: netutils.ParseIPSloppy("0.0.0.0"),
+			nodeIP: utilip.MustParse[net.IP]("0.0.0.0"),
 			nodeAddresses: []v1.NodeAddress{
 				{Type: v1.NodeInternalIP, Address: "fc01:1234::5678"},
 				{Type: v1.NodeInternalIP, Address: "10.1.1.1"},
@@ -397,7 +397,7 @@ func TestNodeAddress(t *testing.T) {
 		},
 		{
 			name:   "Dual-stack cloud, IPv4 first, request IPv6",
-			nodeIP: netutils.ParseIPSloppy("::"),
+			nodeIP: utilip.MustParse[net.IP]("::"),
 			nodeAddresses: []v1.NodeAddress{
 				{Type: v1.NodeInternalIP, Address: "10.1.1.1"},
 				{Type: v1.NodeInternalIP, Address: "fc01:1234::5678"},
@@ -412,7 +412,7 @@ func TestNodeAddress(t *testing.T) {
 		},
 		{
 			name:   "Dual-stack cloud, IPv6 first, request IPv6",
-			nodeIP: netutils.ParseIPSloppy("::"),
+			nodeIP: utilip.MustParse[net.IP]("::"),
 			nodeAddresses: []v1.NodeAddress{
 				{Type: v1.NodeInternalIP, Address: "fc01:1234::5678"},
 				{Type: v1.NodeInternalIP, Address: "10.1.1.1"},
@@ -427,7 +427,7 @@ func TestNodeAddress(t *testing.T) {
 		},
 		{
 			name:              "Legacy cloud provider gets nodeIP annotation",
-			nodeIP:            netutils.ParseIPSloppy("10.1.1.1"),
+			nodeIP:            utilip.MustParse[net.IP]("10.1.1.1"),
 			cloudProviderType: cloudProviderLegacy,
 			nodeAddresses: []v1.NodeAddress{
 				{Type: v1.NodeInternalIP, Address: "10.1.1.1"},
@@ -444,7 +444,7 @@ func TestNodeAddress(t *testing.T) {
 		},
 		{
 			name:              "External cloud provider gets nodeIP annotation",
-			nodeIP:            netutils.ParseIPSloppy("10.1.1.1"),
+			nodeIP:            utilip.MustParse[net.IP]("10.1.1.1"),
 			cloudProviderType: cloudProviderExternal,
 			nodeAddresses: []v1.NodeAddress{
 				{Type: v1.NodeInternalIP, Address: "10.1.1.1"},
@@ -461,7 +461,7 @@ func TestNodeAddress(t *testing.T) {
 		},
 		{
 			name:                           "External cloud provider, node address is already set",
-			nodeIP:                         netutils.ParseIPSloppy("10.1.1.1"),
+			nodeIP:                         utilip.MustParse[net.IP]("10.1.1.1"),
 			cloudProviderType:              cloudProviderExternal,
 			nodeAddresses:                  []v1.NodeAddress{existingNodeAddress},
 			expectedAddresses:              []v1.NodeAddress{existingNodeAddress},
@@ -470,7 +470,7 @@ func TestNodeAddress(t *testing.T) {
 		},
 		{
 			name:              "No cloud provider does not get nodeIP annotation",
-			nodeIP:            netutils.ParseIPSloppy("10.1.1.1"),
+			nodeIP:            utilip.MustParse[net.IP]("10.1.1.1"),
 			cloudProviderType: cloudProviderNone,
 			nodeAddresses: []v1.NodeAddress{
 				{Type: v1.NodeInternalIP, Address: "10.1.1.1"},
@@ -485,7 +485,7 @@ func TestNodeAddress(t *testing.T) {
 		},
 		{
 			name:              "Stale nodeIP annotation is removed when not using cloud provider",
-			nodeIP:            netutils.ParseIPSloppy("10.1.1.1"),
+			nodeIP:            utilip.MustParse[net.IP]("10.1.1.1"),
 			cloudProviderType: cloudProviderNone,
 			nodeAddresses: []v1.NodeAddress{
 				{Type: v1.NodeInternalIP, Address: "10.1.1.1"},
@@ -521,7 +521,7 @@ func TestNodeAddress(t *testing.T) {
 		},
 		{
 			name:              "Incorrect nodeIP annotation is fixed",
-			nodeIP:            netutils.ParseIPSloppy("10.1.1.1"),
+			nodeIP:            utilip.MustParse[net.IP]("10.1.1.1"),
 			cloudProviderType: cloudProviderExternal,
 			nodeAddresses: []v1.NodeAddress{
 				{Type: v1.NodeInternalIP, Address: "10.1.1.1"},
@@ -544,8 +544,8 @@ func TestNodeAddress(t *testing.T) {
 			// IPs" etc because we won't have gotten this far with an invalid
 			// config like that.
 			name:              "Dual-stack cloud, with dual-stack nodeIPs",
-			nodeIP:            netutils.ParseIPSloppy("2600:1f14:1d4:d101::ba3d"),
-			secondaryNodeIP:   netutils.ParseIPSloppy("10.1.1.2"),
+			nodeIP:            utilip.MustParse[net.IP]("2600:1f14:1d4:d101::ba3d"),
+			secondaryNodeIP:   utilip.MustParse[net.IP]("10.1.1.2"),
 			cloudProviderType: cloudProviderExternal,
 			nodeAddresses: []v1.NodeAddress{
 				{Type: v1.NodeInternalIP, Address: "10.1.1.1"},
@@ -565,8 +565,8 @@ func TestNodeAddress(t *testing.T) {
 		},
 		{
 			name:              "Upgrade to cloud dual-stack nodeIPs",
-			nodeIP:            netutils.ParseIPSloppy("10.1.1.1"),
-			secondaryNodeIP:   netutils.ParseIPSloppy("2600:1f14:1d4:d101::ba3d"),
+			nodeIP:            utilip.MustParse[net.IP]("10.1.1.1"),
+			secondaryNodeIP:   utilip.MustParse[net.IP]("2600:1f14:1d4:d101::ba3d"),
 			cloudProviderType: cloudProviderExternal,
 			nodeAddresses: []v1.NodeAddress{
 				{Type: v1.NodeInternalIP, Address: "10.1.1.1"},
@@ -588,7 +588,7 @@ func TestNodeAddress(t *testing.T) {
 		},
 		{
 			name:              "Downgrade from cloud dual-stack nodeIPs",
-			nodeIP:            netutils.ParseIPSloppy("10.1.1.1"),
+			nodeIP:            utilip.MustParse[net.IP]("10.1.1.1"),
 			cloudProviderType: cloudProviderExternal,
 			nodeAddresses: []v1.NodeAddress{
 				{Type: v1.NodeInternalIP, Address: "10.1.1.1"},
@@ -688,7 +688,7 @@ func TestNodeAddress_NoCloudProvider(t *testing.T) {
 	}{
 		{
 			name:    "Single --node-ip",
-			nodeIPs: []net.IP{netutils.ParseIPSloppy("10.1.1.1")},
+			nodeIPs: utilip.MustParseList[net.IP]("10.1.1.1"),
 			expectedAddresses: []v1.NodeAddress{
 				{Type: v1.NodeInternalIP, Address: "10.1.1.1"},
 				{Type: v1.NodeHostName, Address: testKubeletHostname},
@@ -696,12 +696,12 @@ func TestNodeAddress_NoCloudProvider(t *testing.T) {
 		},
 		{
 			name:        "Invalid single --node-ip (using loopback)",
-			nodeIPs:     []net.IP{netutils.ParseIPSloppy("127.0.0.1")},
+			nodeIPs:     utilip.MustParseList[net.IP]("127.0.0.1"),
 			shouldError: true,
 		},
 		{
 			name:    "Dual --node-ips",
-			nodeIPs: []net.IP{netutils.ParseIPSloppy("10.1.1.1"), netutils.ParseIPSloppy("fd01::1234")},
+			nodeIPs: utilip.MustParseList[net.IP]("10.1.1.1", "fd01::1234"),
 			expectedAddresses: []v1.NodeAddress{
 				{Type: v1.NodeInternalIP, Address: "10.1.1.1"},
 				{Type: v1.NodeInternalIP, Address: "fd01::1234"},
@@ -710,7 +710,7 @@ func TestNodeAddress_NoCloudProvider(t *testing.T) {
 		},
 		{
 			name:        "Dual --node-ips but with invalid secondary IP (using multicast IP)",
-			nodeIPs:     []net.IP{netutils.ParseIPSloppy("10.1.1.1"), netutils.ParseIPSloppy("224.0.0.0")},
+			nodeIPs:     utilip.MustParseList[net.IP]("10.1.1.1", "224.0.0.0"),
 			shouldError: true,
 		},
 	}

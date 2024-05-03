@@ -26,6 +26,7 @@ import (
 
 	v1 "k8s.io/api/core/v1"
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
+	utilip "k8s.io/apimachinery/pkg/util/ip"
 	utilvalidation "k8s.io/apimachinery/pkg/util/validation"
 	"k8s.io/client-go/tools/record"
 	runtimeapi "k8s.io/cri-api/pkg/apis/runtime/v1"
@@ -35,7 +36,6 @@ import (
 
 	"k8s.io/klog/v2"
 	utilio "k8s.io/utils/io"
-	utilnet "k8s.io/utils/net"
 )
 
 var (
@@ -428,7 +428,7 @@ func (c *Configurer) GetPodDNS(pod *v1.Pod) (*runtimeapi.DNSConfig, error) {
 		// this documented behavior.
 		if c.ResolverConfig == "" {
 			for _, nodeIP := range c.nodeIPs {
-				if utilnet.IsIPv6(nodeIP) {
+				if utilip.IsIPv6(nodeIP) {
 					dnsConfig.Servers = append(dnsConfig.Servers, "::1")
 				} else {
 					dnsConfig.Servers = append(dnsConfig.Servers, "127.0.0.1")

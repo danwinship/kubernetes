@@ -41,13 +41,13 @@ import (
 	"k8s.io/client-go/informers"
 
 	"k8s.io/mount-utils"
-	netutils "k8s.io/utils/net"
 
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
+	utilip "k8s.io/apimachinery/pkg/util/ip"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -491,11 +491,12 @@ func NewMainKubelet(kubeCfg *kubeletconfiginternal.KubeletConfiguration,
 		}
 	}
 
+	// Can't use utilip.ParseIPs here because we want to ignore errors
 	clusterDNS := make([]net.IP, 0, len(kubeCfg.ClusterDNS))
 	for _, ipEntry := range kubeCfg.ClusterDNS {
-		ip := netutils.ParseIPSloppy(ipEntry)
-		if ip == nil {
-			klog.InfoS("Invalid clusterDNS IP", "IP", ipEntry)
+		ip, err := utilip.Parse[net.IP](ipEntry)
+		if err != nil {
+			klog.ErrorS(err, "Invalid clusterDNS IP", "IP", ipEntry)
 		} else {
 			clusterDNS = append(clusterDNS, ip)
 		}
