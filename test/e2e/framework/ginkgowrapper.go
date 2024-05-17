@@ -17,6 +17,7 @@ limitations under the License.
 package framework
 
 import (
+	"cmp"
 	"fmt"
 	"path"
 	"reflect"
@@ -46,7 +47,7 @@ type Environment string
 // https://github.com/kubernetes/enhancements/tree/master/keps/sig-testing/3041-node-conformance-and-features#nodefeature.
 type NodeFeature string
 
-type Valid[T comparable] struct {
+type Valid[T cmp.Ordered] struct {
 	items  sets.Set[T]
 	frozen bool
 }
@@ -255,7 +256,7 @@ var (
 
 // validateSpecs checks that the test specs were registered as intended.
 func validateSpecs(specs types.SpecReports) {
-	checked := sets.New[call]()
+	checked := sets.CNew[call]()
 
 	for _, spec := range specs {
 		for i, text := range spec.ContainerHierarchyTexts {

@@ -64,7 +64,7 @@ type Plugin[H any] struct {
 	client            kubernetes.Interface
 	restMapper        meta.RESTMapper
 	dynamicClient     dynamic.Interface
-	excludedResources sets.Set[schema.GroupResource]
+	excludedResources sets.CSet[schema.GroupResource]
 	stopCh            <-chan struct{}
 	authorizer        authorizer.Authorizer
 	enabled           bool
@@ -92,7 +92,7 @@ func NewPlugin[H any](
 		dispatcherFactory: dispatcherFactory,
 
 		// always exclude admission/mutating policies and bindings
-		excludedResources: sets.New(admissionResources...),
+		excludedResources: sets.CNew(admissionResources...),
 	}
 }
 

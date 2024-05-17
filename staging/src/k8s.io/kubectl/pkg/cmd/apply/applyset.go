@@ -118,7 +118,7 @@ type ApplySet struct {
 	client resource.RESTClient
 }
 
-var builtinApplySetParentGVRs = sets.New[schema.GroupVersionResource](
+var builtinApplySetParentGVRs = sets.CNew[schema.GroupVersionResource](
 	defaultApplySetParentGVR,
 	schema.GroupVersionResource{Version: "v1", Resource: "configmaps"},
 )
@@ -206,7 +206,7 @@ func (a *ApplySet) labelForCustomParentCRDs() *metav1.LabelSelector {
 	}
 }
 
-func (a *ApplySet) getAllowedCustomResourceParents(ctx context.Context, client dynamic.Interface) (sets.Set[schema.GroupVersionResource], error) {
+func (a *ApplySet) getAllowedCustomResourceParents(ctx context.Context, client dynamic.Interface) (sets.CSet[schema.GroupVersionResource], error) {
 	opts := metav1.ListOptions{
 		LabelSelector: metav1.FormatLabelSelector(a.labelForCustomParentCRDs()),
 	}
@@ -218,7 +218,7 @@ func (a *ApplySet) getAllowedCustomResourceParents(ctx context.Context, client d
 	if err != nil {
 		return nil, err
 	}
-	set := sets.New[schema.GroupVersionResource]()
+	set := sets.CNew[schema.GroupVersionResource]()
 	for i := range list.Items {
 		// Custom resources must be named `<names.plural>.<group>`
 		// and are served under `/apis/<group>/<version>/.../<plural>`
@@ -482,11 +482,11 @@ func (a *ApplySet) buildParentPatch(mode ApplySetUpdateMode) *metav1.PartialObje
 		// If the apply succeeded but pruning failed, the set of group resources that
 		// the ApplySet should track is the superset of the previous and current resources.
 		// This ensures that the resources that failed to be pruned are not orphaned from the set.
-		grSuperset := sets.KeySet(a.currentResources).Union(sets.KeySet(a.updatedResources))
+		grSuperset := sets.KeyCSet(a.currentResources).Union(sets.KeyCSet(a.updatedResources))
 		newGKsAnnotation = generateKindsAnnotation(grSuperset)
 		newNsAnnotation = generateNamespacesAnnotation(a.currentNamespaces.Union(a.updatedNamespaces), a.parentRef.Namespace)
 	case updateToLatestSet:
-		newGKsAnnotation = generateKindsAnnotation(sets.KeySet(a.updatedResources))
+		newGKsAnnotation = generateKindsAnnotation(sets.KeyCSet(a.updatedResources))
 		newNsAnnotation = generateNamespacesAnnotation(a.updatedNamespaces, a.parentRef.Namespace)
 	}
 
@@ -516,7 +516,7 @@ func generateNamespacesAnnotation(namespaces sets.Set[string], skip string) stri
 	return strings.Join(nsList, ",")
 }
 
-func generateKindsAnnotation(resources sets.Set[schema.GroupKind]) string {
+func generateKindsAnnotation(resources sets.CSet[schema.GroupKind]) string {
 	var gks []string
 	for gk := range resources {
 		gks = append(gks, gk.String())

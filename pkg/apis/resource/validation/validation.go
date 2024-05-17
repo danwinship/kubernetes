@@ -139,8 +139,8 @@ func ValidateClaimStatusUpdate(resourceClaim, oldClaim *resource.ResourceClaim) 
 			// Items may be removed from ReservedFor while the claim is meant to be deallocated,
 			// but not added.
 			if resourceClaim.DeletionTimestamp != nil || resourceClaim.Status.DeallocationRequested {
-				oldSet := sets.New(oldClaim.Status.ReservedFor...)
-				newSet := sets.New(resourceClaim.Status.ReservedFor...)
+				oldSet := sets.CNew(oldClaim.Status.ReservedFor...)
+				newSet := sets.CNew(resourceClaim.Status.ReservedFor...)
 				newItems := newSet.Difference(oldSet)
 				if len(newItems) > 0 {
 					allErrs = append(allErrs, field.Forbidden(fldPath.Child("reservedFor"), "new entries may not be added while `deallocationRequested` or `deletionTimestamp` are set"))
@@ -271,7 +271,7 @@ func validateResourceClaimUserReference(ref resource.ResourceClaimConsumerRefere
 // validateSliceIsASet ensures that a slice contains no duplicates and does not exceed a certain maximum size.
 func validateSliceIsASet[T comparable](slice []T, maxSize int, validateItem func(item T, fldPath *field.Path) field.ErrorList, fldPath *field.Path) field.ErrorList {
 	var allErrs field.ErrorList
-	allItems := sets.New[T]()
+	allItems := sets.CNew[T]()
 	for i, item := range slice {
 		idxPath := fldPath.Index(i)
 		if allItems.Has(item) {

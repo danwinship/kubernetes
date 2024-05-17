@@ -20,6 +20,7 @@ limitations under the License.
 package synctrack
 
 import (
+	"cmp"
 	"sync"
 	"sync/atomic"
 
@@ -27,7 +28,7 @@ import (
 )
 
 // AsyncTracker helps propagate HasSynced in the face of multiple worker threads.
-type AsyncTracker[T comparable] struct {
+type AsyncTracker[T cmp.Ordered] struct {
 	UpstreamHasSynced func() bool
 
 	lock    sync.Mutex

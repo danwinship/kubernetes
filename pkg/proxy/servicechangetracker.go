@@ -116,7 +116,7 @@ type ServicePortMap map[ServicePortName]ServicePort
 type UpdateServiceMapResult struct {
 	// UpdatedServices lists the names of all services added/updated/deleted since the
 	// last Update.
-	UpdatedServices sets.Set[types.NamespacedName]
+	UpdatedServices sets.CSet[types.NamespacedName]
 
 	// DeletedUDPClusterIPs holds stale (no longer assigned to a Service) Service IPs
 	// that had UDP ports. Callers can use this to abort timeout-waits or clear
@@ -178,7 +178,7 @@ func (sm ServicePortMap) Update(sct *ServiceChangeTracker) UpdateServiceMapResul
 	defer sct.lock.Unlock()
 
 	result := UpdateServiceMapResult{
-		UpdatedServices:      sets.New[types.NamespacedName](),
+		UpdatedServices:      sets.CNew[types.NamespacedName](),
 		DeletedUDPClusterIPs: sets.New[string](),
 	}
 

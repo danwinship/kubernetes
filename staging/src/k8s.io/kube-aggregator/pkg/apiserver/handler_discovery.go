@@ -520,7 +520,7 @@ func (dm *discoveryManager) Run(stopCh <-chan struct{}, discoverySyncedCh chan<-
 // Takes a snapshot of all currently used services by known APIServices and
 // purges the cache entries of those not present in the snapshot.
 func (dm *discoveryManager) removeUnusedServices() {
-	usedServiceKeys := sets.Set[serviceKey]{}
+	usedServiceKeys := sets.CSet[serviceKey]{}
 
 	func() {
 		dm.servicesLock.Lock()

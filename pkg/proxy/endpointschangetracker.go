@@ -177,7 +177,7 @@ type endpointsChange struct {
 type UpdateEndpointsMapResult struct {
 	// UpdatedServices lists the names of all services with added/updated/deleted
 	// endpoints since the last Update.
-	UpdatedServices sets.Set[types.NamespacedName]
+	UpdatedServices sets.CSet[types.NamespacedName]
 
 	// DeletedUDPEndpoints identifies UDP endpoints that have just been deleted.
 	// Existing conntrack NAT entries pointing to these endpoints must be deleted to
@@ -204,7 +204,7 @@ type EndpointsMap map[ServicePortName][]Endpoint
 // changes map.
 func (em EndpointsMap) Update(ect *EndpointsChangeTracker) UpdateEndpointsMapResult {
 	result := UpdateEndpointsMapResult{
-		UpdatedServices:        sets.New[types.NamespacedName](),
+		UpdatedServices:        sets.CNew[types.NamespacedName](),
 		DeletedUDPEndpoints:    make([]ServiceEndpoint, 0),
 		NewlyActiveUDPServices: make([]ServicePortName, 0),
 		LastChangeTriggerTimes: make(map[types.NamespacedName][]time.Time),

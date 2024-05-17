@@ -99,7 +99,7 @@ type queue struct {
 	nextDispatchR fcrequest.SeatSeconds
 
 	// requestsExecuting is the set of requests executing in the real world.
-	requestsExecuting sets.Set[*request]
+	requestsExecuting sets.CSet[*request]
 
 	// index is the position of this queue among those in its queueSet.
 	index int

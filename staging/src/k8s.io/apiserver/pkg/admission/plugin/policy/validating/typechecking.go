@@ -267,7 +267,7 @@ func (c *TypeChecker) paramsGVK(policy *v1.ValidatingAdmissionPolicy) schema.Gro
 // typesToCheck extracts a list of GVKs that needs type checking from the policy
 // the result is sorted in the order of Group, Version, and Kind
 func (c *TypeChecker) typesToCheck(p *v1.ValidatingAdmissionPolicy) []schema.GroupVersionKind {
-	gvks := sets.New[schema.GroupVersionKind]()
+	gvks := sets.CNew[schema.GroupVersionKind]()
 	if p.Spec.MatchConstraints == nil || len(p.Spec.MatchConstraints.ResourceRules) == 0 {
 		return nil
 	}

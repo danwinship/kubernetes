@@ -136,7 +136,7 @@ type queueSet struct {
 
 	// requestsExecutingSet is the set of requests executing in the real world IF
 	// there are no queues; otherwise the requests are tracked in the queues.
-	requestsExecutingSet sets.Set[*request]
+	requestsExecutingSet sets.CSet[*request]
 
 	// totSeatsInUse is the number of total "seats" in use by all the
 	// request(s) that are currently executing in this queueset.
@@ -219,7 +219,7 @@ func (qsc *queueSetCompleter) Complete(dCfg fq.DispatchingConfig) fq.QueueSet {
 			qCfg:                     qsc.qCfg,
 			currentR:                 0,
 			lastRealTime:             qsc.factory.clock.Now(),
-			requestsExecutingSet:     sets.New[*request](),
+			requestsExecutingSet:     sets.CNew[*request](),
 		}
 		qs.promiseFactory = qsc.factory.promiseFactoryFactory(qs)
 	}
@@ -231,7 +231,7 @@ func (qsc *queueSetCompleter) Complete(dCfg fq.DispatchingConfig) fq.QueueSet {
 func createQueues(n, baseIndex int) []*queue {
 	fqqueues := make([]*queue, n)
 	for i := 0; i < n; i++ {
-		fqqueues[i] = &queue{index: baseIndex + i, requestsWaiting: newRequestFIFO(), requestsExecuting: sets.New[*request]()}
+		fqqueues[i] = &queue{index: baseIndex + i, requestsWaiting: newRequestFIFO(), requestsExecuting: sets.CNew[*request]()}
 	}
 	return fqqueues
 }
