@@ -20,7 +20,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"strings"
 
 	v1 "k8s.io/api/core/v1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
@@ -28,61 +27,14 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/strategicpatch"
 	corev1 "k8s.io/client-go/kubernetes/typed/core/v1"
-	netutils "k8s.io/utils/net/v2"
 )
 
-/*
-This file is duplicated from "k8s.io/kubernetes/pkg/api/v1/service/util.go"
-in order for in-tree cloud providers to not depend on internal packages.
-*/
-
 const (
-	defaultLoadBalancerSourceRanges = "0.0.0.0/0"
-
 	// LoadBalancerCleanupFinalizer is the finalizer added to load balancer
 	// services to ensure the Service resource is not fully deleted until
 	// the correlating load balancer resources are deleted.
 	LoadBalancerCleanupFinalizer = "service.kubernetes.io/load-balancer-cleanup"
 )
-
-// IsAllowAll checks whether the netutils.IPNet allows traffic from 0.0.0.0/0
-func IsAllowAll(ipnets netutils.IPNetSet) bool {
-	for _, s := range ipnets.StringSlice() {
-		if s == "0.0.0.0/0" {
-			return true
-		}
-	}
-	return false
-}
-
-// GetLoadBalancerSourceRanges first try to parse and verify LoadBalancerSourceRanges field from a service.
-// If the field is not specified, turn to parse and verify the AnnotationLoadBalancerSourceRangesKey annotation from a service,
-// extracting the source ranges to allow, and if not present returns a default (allow-all) value.
-func GetLoadBalancerSourceRanges(service *v1.Service) (netutils.IPNetSet, error) {
-	var ipnets netutils.IPNetSet
-	var err error
-	// if SourceRange field is specified, ignore sourceRange annotation
-	if len(service.Spec.LoadBalancerSourceRanges) > 0 {
-		specs := service.Spec.LoadBalancerSourceRanges
-		ipnets, err = netutils.ParseIPNets(specs...)
-
-		if err != nil {
-			return nil, fmt.Errorf("service.Spec.LoadBalancerSourceRanges: %v is not valid. Expecting a list of IP ranges. For example, 10.0.0.0/24. Error msg: %v", specs, err)
-		}
-	} else {
-		val := service.Annotations[v1.AnnotationLoadBalancerSourceRangesKey]
-		val = strings.TrimSpace(val)
-		if val == "" {
-			val = defaultLoadBalancerSourceRanges
-		}
-		specs := strings.Split(val, ",")
-		ipnets, err = netutils.ParseIPNets(specs...)
-		if err != nil {
-			return nil, fmt.Errorf("%s: %s is not valid. Expecting a comma-separated list of source IP ranges. For example, 10.0.0.0/24,192.168.2.0/24", v1.AnnotationLoadBalancerSourceRangesKey, val)
-		}
-	}
-	return ipnets, nil
-}
 
 // GetServiceHealthCheckPathPort returns the path and nodePort programmed into the Cloud LB Health Check
 func GetServiceHealthCheckPathPort(service *v1.Service) (string, int32) {
