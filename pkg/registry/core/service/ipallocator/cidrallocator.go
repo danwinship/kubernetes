@@ -312,7 +312,7 @@ func (c *MetaAllocator) syncAllocators() error {
 func (c *MetaAllocator) getAllocator(ip net.IP, ready bool) (*Allocator, error) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	address := servicecidr.IPToAddr(ip)
+	address := netutils.AddrFromIP(ip)
 	// use the first allocator that contains the address
 	for cidr, item := range c.allocators {
 		prefix, err := netip.ParsePrefix(cidr)

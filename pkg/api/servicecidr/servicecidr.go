@@ -24,6 +24,7 @@ import (
 	networkingv1 "k8s.io/api/networking/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	networkinglisters "k8s.io/client-go/listers/networking/v1"
+	netutils "k8s.io/utils/net/v2"
 )
 
 // OverlapsPrefix return the list of ServiceCIDR that overlaps with the prefix passed as argument
@@ -68,7 +69,7 @@ func ContainsPrefix(serviceCIDRLister networkinglisters.ServiceCIDRLister, prefi
 
 // ContainsIP return the list of ServiceCIDR that contains the IP address passed as argument
 func ContainsIP(serviceCIDRLister networkinglisters.ServiceCIDRLister, ip net.IP) []*networkingv1.ServiceCIDR {
-	address := IPToAddr(ip)
+	address := netutils.AddrFromIP(ip)
 	return ContainsAddress(serviceCIDRLister, address)
 }
 
@@ -139,20 +140,4 @@ func broadcastAddress(subnet netip.Prefix) (netip.Addr, error) {
 		return netip.Addr{}, fmt.Errorf("invalid address %v", bytes)
 	}
 	return addr, nil
-}
-
-// IPToAddr converts a net.IP to a netip.Addr
-// if the net.IP is not valid it returns an empty netip.Addr{}
-func IPToAddr(ip net.IP) netip.Addr {
-	// https://pkg.go.dev/net/netip#AddrFromSlice can return an IPv4 in IPv6 format
-	// so we have to check the IP family to return exactly the format that we want
-	// address, _ := netip.AddrFromSlice(net.ParseIPSloppy(192.168.0.1)) returns
-	// an address like ::ffff:192.168.0.1/32
-	bytes := ip.To4()
-	if bytes == nil {
-		bytes = ip.To16()
-	}
-	// AddrFromSlice returns Addr{}, false if the input is invalid.
-	address, _ := netip.AddrFromSlice(bytes)
-	return address
 }

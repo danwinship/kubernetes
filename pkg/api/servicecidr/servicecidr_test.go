@@ -26,7 +26,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	networkinglisters "k8s.io/client-go/listers/networking/v1"
 	"k8s.io/client-go/tools/cache"
-	netutils "k8s.io/utils/net/v2"
 )
 
 func newServiceCIDR(name, primary, secondary string) *networkingv1.ServiceCIDR {
@@ -642,43 +641,6 @@ func Test_PrefixContainIP(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			if got := PrefixContainsIP(tt.prefix, tt.ip); got != tt.want {
 				t.Errorf("prefixContainIP() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
-func TestIPToAddr(t *testing.T) {
-	tests := []struct {
-		name string
-		ip   string
-		want netip.Addr
-	}{
-		{
-			name: "IPv4",
-			ip:   "192.168.2.2",
-			want: netip.MustParseAddr("192.168.2.2"),
-		},
-		{
-			name: "IPv6",
-			ip:   "2001:db8::2",
-			want: netip.MustParseAddr("2001:db8::2"),
-		},
-		{
-			name: "IPv4 in IPv6",
-			ip:   "::ffff:192.168.0.1",
-			want: netip.MustParseAddr("192.168.0.1"),
-		},
-		{
-			name: "invalid",
-			ip:   "invalid_ip",
-			want: netip.Addr{},
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			ip := netutils.ParseIPSloppy(tt.ip)
-			if got := IPToAddr(ip); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("IPToAddr() = %v, want %v", got, tt.want)
 			}
 		})
 	}
