@@ -86,8 +86,8 @@ func getLoopbackAddress(family netutils.IPFamily) string {
 	addrs, err := net.InterfaceAddrs()
 	if err == nil {
 		for _, address := range addrs {
-			if ipnet, ok := address.(*net.IPNet); ok && ipnet.IP.IsLoopback() && netutils.IPFamilyOfCIDR(ipnet) == family {
-				return ipnet.IP.String()
+			if ip := netutils.IPFromInterfaceAddr(address); ip != nil && ip.IsLoopback() && netutils.IPFamilyOf(ip) == family {
+				return ip.String()
 			}
 		}
 	}

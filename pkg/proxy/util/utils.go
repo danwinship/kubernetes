@@ -73,16 +73,8 @@ func ShouldSkipService(service *v1.Service) bool {
 func AddressSet(isValid func(ip net.IP) bool, addrs []net.Addr) sets.Set[string] {
 	ips := sets.New[string]()
 	for _, a := range addrs {
-		var ip net.IP
-		switch v := a.(type) {
-		case *net.IPAddr:
-			ip = v.IP
-		case *net.IPNet:
-			ip = v.IP
-		default:
-			continue
-		}
-		if isValid(ip) {
+		ip := netutils.IPFromInterfaceAddr(a)
+		if ip != nil && isValid(ip) {
 			ips.Insert(ip.String())
 		}
 	}

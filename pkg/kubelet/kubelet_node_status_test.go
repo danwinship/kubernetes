@@ -2710,14 +2710,8 @@ func TestValidateNodeIPParam(t *testing.T) {
 		assert.Errorf(t, err, "Unable to obtain a list of the node's unicast interface addresses.")
 	}
 	for _, addr := range addrs {
-		var ip net.IP
-		switch v := addr.(type) {
-		case *net.IPNet:
-			ip = v.IP
-		case *net.IPAddr:
-			ip = v.IP
-		}
-		if ip.IsLoopback() || ip.IsLinkLocalUnicast() {
+		ip := netutils.IPFromInterfaceAddr(addr)
+		if ip == nil || ip.IsLoopback() || ip.IsLinkLocalUnicast() {
 			continue
 		}
 		successTest := test{

@@ -1845,7 +1845,7 @@ func (r *localHostMacProvider) GetHostMac(nodeIP net.IP) string {
 	for _, inter := range interfaces {
 		addresses, _ := inter.Addrs()
 		for _, addr := range addresses {
-			addrIP, _, _ := netutils.ParseCIDRSloppy(addr.String())
+			addrIP := netutils.IPFromInterfaceAddr(addr)
 			if addrIP.String() == nodeIP.String() {
 				klog.V(2).InfoS("Record Host MAC address", "addr", inter.HardwareAddr)
 				hostMac = inter.HardwareAddr.String()

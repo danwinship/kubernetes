@@ -45,6 +45,7 @@ import (
 	"k8s.io/kubernetes/pkg/kubelet/nodestatus"
 	taintutil "k8s.io/kubernetes/pkg/util/taints"
 	volutil "k8s.io/kubernetes/pkg/volume/util"
+	netutils "k8s.io/utils/net/v2"
 )
 
 // registerWithAPIServer registers the node with the cluster master. It is safe
@@ -735,13 +736,7 @@ func validateNodeIP(nodeIP net.IP) error {
 		return err
 	}
 	for _, addr := range addrs {
-		var ip net.IP
-		switch v := addr.(type) {
-		case *net.IPNet:
-			ip = v.IP
-		case *net.IPAddr:
-			ip = v.IP
-		}
+		ip := netutils.IPFromInterfaceAddr(addr)
 		if ip != nil && ip.Equal(nodeIP) {
 			return nil
 		}
