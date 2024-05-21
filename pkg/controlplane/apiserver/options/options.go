@@ -36,7 +36,7 @@ import (
 	"k8s.io/component-base/metrics"
 	"k8s.io/component-base/zpages/flagz"
 	"k8s.io/klog/v2"
-	netutil "k8s.io/utils/net"
+	netutils "k8s.io/utils/net"
 
 	"k8s.io/kubernetes/pkg/apis/authentication/validation"
 	_ "k8s.io/kubernetes/pkg/features"
@@ -370,13 +370,13 @@ func ServiceIPRange(passedServiceClusterIPRange net.IPNet) (net.IPNet, net.IP, e
 		serviceClusterIPRange = kubeoptions.DefaultServiceIPCIDR
 	}
 
-	size := min(netutil.RangeSize(&serviceClusterIPRange), 1<<16)
+	size := min(netutils.RangeSize(&serviceClusterIPRange), 1<<16)
 	if size < 8 {
 		return net.IPNet{}, net.IP{}, fmt.Errorf("the service cluster IP range must be at least %d IP addresses", 8)
 	}
 
 	// Select the first valid IP from ServiceClusterIPRange to use as the GenericAPIServer service IP.
-	apiServerServiceIP, err := netutil.GetIndexedIP(&serviceClusterIPRange, 1)
+	apiServerServiceIP, err := netutils.GetIndexedIP(&serviceClusterIPRange, 1)
 	if err != nil {
 		return net.IPNet{}, net.IP{}, err
 	}

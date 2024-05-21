@@ -35,7 +35,7 @@ import (
 	e2eskipper "k8s.io/kubernetes/test/e2e/framework/skipper"
 	"k8s.io/kubernetes/test/e2e/network/common"
 	admissionapi "k8s.io/pod-security-admission/api"
-	utilnet "k8s.io/utils/net"
+	netutils "k8s.io/utils/net"
 )
 
 const (
@@ -1001,7 +1001,7 @@ var _ = common.SIGDescribe("Netpol", func() {
 			pod := podList.Items[0]
 
 			hostMask := 32
-			if utilnet.IsIPv6String(pod.Status.PodIP) {
+			if netutils.IsIPv6String(pod.Status.PodIP) {
 				hostMask = 128
 			}
 			podServerCIDR := fmt.Sprintf("%s/%d", pod.Status.PodIP, hostMask)
@@ -1033,7 +1033,7 @@ var _ = common.SIGDescribe("Netpol", func() {
 
 			podServerAllowCIDR := makeLargeCIDRForIP(podB.Status.PodIP)
 			hostMask := 32
-			if utilnet.IsIPv6String(podB.Status.PodIP) {
+			if netutils.IsIPv6String(podB.Status.PodIP) {
 				hostMask = 128
 			}
 			podServerExceptList := []string{fmt.Sprintf("%s/%d", podB.Status.PodIP, hostMask)}
@@ -1066,7 +1066,7 @@ var _ = common.SIGDescribe("Netpol", func() {
 
 			podServerAllowCIDR := makeLargeCIDRForIP(podB.Status.PodIP)
 			hostMask := 32
-			if utilnet.IsIPv6String(podB.Status.PodIP) {
+			if netutils.IsIPv6String(podB.Status.PodIP) {
 				hostMask = 128
 			}
 			podServerExceptList := []string{fmt.Sprintf("%s/%d", podB.Status.PodIP, hostMask)}
@@ -1467,7 +1467,7 @@ func initializeResources(ctx context.Context, f *framework.Framework, protocols 
 // makeLargeCIDRForIP returns a CIDR that matches the given IP and many many many other
 // IPs. (Specifically, it returns the /4 that contains the IP.)
 func makeLargeCIDRForIP(ip string) string {
-	podIP := utilnet.ParseIPSloppy(ip)
+	podIP := netutils.ParseIPSloppy(ip)
 	if ip4 := podIP.To4(); ip4 != nil {
 		podIP = ip4
 	}

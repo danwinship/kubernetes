@@ -30,7 +30,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/sets"
 	endpointutil "k8s.io/endpointslice/util"
 	"k8s.io/klog/v2"
-	utilnet "k8s.io/utils/net"
+	netutils "k8s.io/utils/net"
 	"k8s.io/utils/ptr"
 )
 
@@ -107,8 +107,8 @@ func getEndpointAddresses(podStatus v1.PodStatus, service *v1.Service, addressTy
 
 	for _, podIP := range podStatus.PodIPs {
 		// We parse and restringify the pod IP in case it is in an irregular format.
-		ip := utilnet.ParseIPSloppy(podIP.IP)
-		isIPv6PodIP := utilnet.IsIPv6(ip)
+		ip := netutils.ParseIPSloppy(podIP.IP)
+		isIPv6PodIP := netutils.IsIPv6(ip)
 		if isIPv6PodIP && addressType == discovery.AddressTypeIPv6 {
 			addresses = append(addresses, ip.String())
 		}
@@ -315,7 +315,7 @@ func getAddressTypesForService(logger klog.Logger, service *v1.Service) sets.Set
 
 	if len(service.Spec.ClusterIP) > 0 && service.Spec.ClusterIP != v1.ClusterIPNone { // headfull
 		addrType := discovery.AddressTypeIPv4
-		if utilnet.IsIPv6String(service.Spec.ClusterIP) {
+		if netutils.IsIPv6String(service.Spec.ClusterIP) {
 			addrType = discovery.AddressTypeIPv6
 		}
 		serviceSupportedAddresses.Insert(addrType)

@@ -27,7 +27,7 @@ import (
 
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/klog/v2"
-	utilsnet "k8s.io/utils/net"
+	netutils "k8s.io/utils/net"
 
 	kubeadmapi "k8s.io/kubernetes/cmd/kubeadm/app/apis/kubeadm"
 	kubeadmconstants "k8s.io/kubernetes/cmd/kubeadm/app/constants"
@@ -231,7 +231,7 @@ func getAPIServerCommand(cfg *kubeadmapi.ClusterConfiguration, localAPIEndpoint 
 		// Default to etcd static pod on localhost
 		// localhost IP family should be the same that the AdvertiseAddress
 		etcdLocalhostAddress := "127.0.0.1"
-		if utilsnet.IsIPv6String(localAPIEndpoint.AdvertiseAddress) {
+		if netutils.IsIPv6String(localAPIEndpoint.AdvertiseAddress) {
 			etcdLocalhostAddress = "::1"
 		}
 		defaultArguments = kubeadmapi.SetArgValues(defaultArguments, "etcd-servers", fmt.Sprintf("https://%s", net.JoinHostPort(etcdLocalhostAddress, strconv.Itoa(kubeadmconstants.EtcdListenClientPort))), 1)

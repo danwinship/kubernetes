@@ -41,7 +41,7 @@ import (
 	clientset "k8s.io/client-go/kubernetes"
 	clientretry "k8s.io/client-go/util/retry"
 	"k8s.io/kubernetes/test/e2e/framework"
-	netutil "k8s.io/utils/net"
+	netutils "k8s.io/utils/net"
 )
 
 const (
@@ -262,10 +262,10 @@ func GetAddressesByTypeAndFamily(node *v1.Node, addressType v1.NodeAddressType, 
 		if nodeAddress.Address == "" {
 			continue
 		}
-		if family == v1.IPv6Protocol && netutil.IsIPv6String(nodeAddress.Address) {
+		if family == v1.IPv6Protocol && netutils.IsIPv6String(nodeAddress.Address) {
 			ips = append(ips, nodeAddress.Address)
 		}
-		if family == v1.IPv4Protocol && !netutil.IsIPv6String(nodeAddress.Address) {
+		if family == v1.IPv4Protocol && !netutils.IsIPv6String(nodeAddress.Address) {
 			ips = append(ips, nodeAddress.Address)
 		}
 	}

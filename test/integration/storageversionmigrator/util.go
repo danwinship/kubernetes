@@ -69,7 +69,7 @@ import (
 	"k8s.io/kubernetes/test/integration/framework"
 	"k8s.io/kubernetes/test/utils"
 	"k8s.io/kubernetes/test/utils/kubeconfig"
-	utilnet "k8s.io/utils/net"
+	netutils "k8s.io/utils/net"
 	"k8s.io/utils/ptr"
 )
 
@@ -1018,7 +1018,7 @@ func (svm *svmTest) setupServerCert(t *testing.T) *certContext {
 		&cert.Config{
 			CommonName: "127.0.0.1",
 			AltNames: cert.AltNames{
-				IPs: []net.IP{utilnet.ParseIPSloppy("127.0.0.1")},
+				IPs: []net.IP{netutils.ParseIPSloppy("127.0.0.1")},
 			},
 			Usages: []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
 		},

@@ -28,7 +28,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/strategicpatch"
 	corev1 "k8s.io/client-go/kubernetes/typed/core/v1"
-	utilnet "k8s.io/utils/net"
+	netutils "k8s.io/utils/net"
 )
 
 /*
@@ -45,8 +45,8 @@ const (
 	LoadBalancerCleanupFinalizer = "service.kubernetes.io/load-balancer-cleanup"
 )
 
-// IsAllowAll checks whether the utilnet.IPNet allows traffic from 0.0.0.0/0
-func IsAllowAll(ipnets utilnet.IPNetSet) bool {
+// IsAllowAll checks whether the netutils.IPNet allows traffic from 0.0.0.0/0
+func IsAllowAll(ipnets netutils.IPNetSet) bool {
 	for _, s := range ipnets.StringSlice() {
 		if s == "0.0.0.0/0" {
 			return true
@@ -58,13 +58,13 @@ func IsAllowAll(ipnets utilnet.IPNetSet) bool {
 // GetLoadBalancerSourceRanges first try to parse and verify LoadBalancerSourceRanges field from a service.
 // If the field is not specified, turn to parse and verify the AnnotationLoadBalancerSourceRangesKey annotation from a service,
 // extracting the source ranges to allow, and if not present returns a default (allow-all) value.
-func GetLoadBalancerSourceRanges(service *v1.Service) (utilnet.IPNetSet, error) {
-	var ipnets utilnet.IPNetSet
+func GetLoadBalancerSourceRanges(service *v1.Service) (netutils.IPNetSet, error) {
+	var ipnets netutils.IPNetSet
 	var err error
 	// if SourceRange field is specified, ignore sourceRange annotation
 	if len(service.Spec.LoadBalancerSourceRanges) > 0 {
 		specs := service.Spec.LoadBalancerSourceRanges
-		ipnets, err = utilnet.ParseIPNets(specs...)
+		ipnets, err = netutils.ParseIPNets(specs...)
 
 		if err != nil {
 			return nil, fmt.Errorf("service.Spec.LoadBalancerSourceRanges: %v is not valid. Expecting a list of IP ranges. For example, 10.0.0.0/24. Error msg: %v", specs, err)
@@ -76,7 +76,7 @@ func GetLoadBalancerSourceRanges(service *v1.Service) (utilnet.IPNetSet, error) 
 			val = defaultLoadBalancerSourceRanges
 		}
 		specs := strings.Split(val, ",")
-		ipnets, err = utilnet.ParseIPNets(specs...)
+		ipnets, err = netutils.ParseIPNets(specs...)
 		if err != nil {
 			return nil, fmt.Errorf("%s: %s is not valid. Expecting a comma-separated list of source IP ranges. For example, 10.0.0.0/24,192.168.2.0/24", v1.AnnotationLoadBalancerSourceRangesKey, val)
 		}

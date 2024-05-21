@@ -85,7 +85,7 @@ import (
 	"k8s.io/kube-openapi/pkg/spec3"
 	"k8s.io/kube-openapi/pkg/validation/spec"
 	"k8s.io/utils/clock"
-	utilsnet "k8s.io/utils/net"
+	netutils "k8s.io/utils/net"
 
 	// install apis
 	_ "k8s.io/apiserver/pkg/apis/apiserver/install"
@@ -1154,7 +1154,7 @@ func (s *SecureServingInfo) HostPort() (string, int, error) {
 	if err != nil {
 		return "", 0, fmt.Errorf("failed to get port from listener address %q: %v", addr, err)
 	}
-	port, err := utilsnet.ParsePort(portStr, true)
+	port, err := netutils.ParsePort(portStr, true)
 	if err != nil {
 		return "", 0, fmt.Errorf("invalid non-numeric port %q", portStr)
 	}

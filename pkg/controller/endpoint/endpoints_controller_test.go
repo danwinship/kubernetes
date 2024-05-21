@@ -46,7 +46,7 @@ import (
 	api "k8s.io/kubernetes/pkg/apis/core"
 	controllerpkg "k8s.io/kubernetes/pkg/controller"
 	"k8s.io/kubernetes/test/utils/ktesting"
-	utilnet "k8s.io/utils/net"
+	netutils "k8s.io/utils/net"
 	"k8s.io/utils/ptr"
 )
 
@@ -1595,7 +1595,7 @@ func TestPodToEndpointAddressForService(t *testing.T) {
 				return
 			}
 
-			if utilnet.IsIPv6String(epa.IP) != (tc.expectedEndpointFamily == ipv6) {
+			if netutils.IsIPv6String(epa.IP) != (tc.expectedEndpointFamily == ipv6) {
 				t.Fatalf("IP: expected %s, got: %s", tc.expectedEndpointFamily, epa.IP)
 			}
 			if strings.HasPrefix(epa.IP, "0") {

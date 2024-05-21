@@ -38,7 +38,7 @@ import (
 	sc "k8s.io/kubernetes/pkg/securitycontext"
 	hashutil "k8s.io/kubernetes/pkg/util/hash"
 	"k8s.io/kubernetes/third_party/forked/golang/expansion"
-	utilsnet "k8s.io/utils/net"
+	netutils "k8s.io/utils/net"
 )
 
 // HandlerRunner runs a lifecycle handler for a container.
@@ -381,7 +381,7 @@ func MakePortMappings(container *v1.Container) (ports []PortMapping) {
 		// https://github.com/kubernetes/kubernetes/issues/82373
 		family := "any"
 		if p.HostIP != "" {
-			if utilsnet.IsIPv6String(p.HostIP) {
+			if netutils.IsIPv6String(p.HostIP) {
 				family = "v6"
 			} else {
 				family = "v4"

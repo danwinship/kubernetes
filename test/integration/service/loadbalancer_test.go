@@ -37,7 +37,7 @@ import (
 	controllersmetrics "k8s.io/component-base/metrics/prometheus/controllers"
 	kubeapiservertesting "k8s.io/kubernetes/cmd/kube-apiserver/app/testing"
 	"k8s.io/kubernetes/test/integration/framework"
-	"k8s.io/utils/net"
+	netutils "k8s.io/utils/net"
 	"k8s.io/utils/ptr"
 )
 
@@ -722,7 +722,7 @@ func Test_ServiceLoadBalancerIPMode(t *testing.T) {
 			defer framework.DeleteNamespaceOrDie(client, ns, t)
 
 			controller, cloud, informer := newServiceController(t, client)
-			cloud.ExternalIP = net.ParseIPSloppy(tc.externalIP)
+			cloud.ExternalIP = netutils.ParseIPSloppy(tc.externalIP)
 			cloud.BalancerIPMode = tc.expectedIngress.IPMode
 
 			ctx, cancel := context.WithCancel(context.Background())

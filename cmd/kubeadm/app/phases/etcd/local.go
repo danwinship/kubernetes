@@ -31,7 +31,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/version"
 	clientset "k8s.io/client-go/kubernetes"
 	"k8s.io/klog/v2"
-	utilsnet "k8s.io/utils/net"
+	netutils "k8s.io/utils/net"
 
 	kubeadmapi "k8s.io/kubernetes/cmd/kubeadm/app/apis/kubeadm"
 	kubeadmconstants "k8s.io/kubernetes/cmd/kubeadm/app/constants"
@@ -201,7 +201,7 @@ func GetEtcdPodSpec(cfg *kubeadmapi.ClusterConfiguration, endpoint *kubeadmapi.A
 	componentHealthCheckTimeout := kubeadmapi.GetActiveTimeouts().ControlPlaneComponentHealthCheck
 
 	// probeHostname returns the correct localhost IP address family based on the endpoint AdvertiseAddress
-	probeHostname, probePort, probeScheme := staticpodutil.GetEtcdProbeEndpoint(&cfg.Etcd, utilsnet.IsIPv6String(endpoint.AdvertiseAddress))
+	probeHostname, probePort, probeScheme := staticpodutil.GetEtcdProbeEndpoint(&cfg.Etcd, netutils.IsIPv6String(endpoint.AdvertiseAddress))
 	return staticpodutil.ComponentPod(
 		v1.Container{
 			Name:            kubeadmconstants.Etcd,
@@ -243,7 +243,7 @@ func GetEtcdPodSpec(cfg *kubeadmapi.ClusterConfiguration, endpoint *kubeadmapi.A
 func getEtcdCommand(cfg *kubeadmapi.ClusterConfiguration, endpoint *kubeadmapi.APIEndpoint, nodeName string, initialCluster []etcdutil.Member) []string {
 	// localhost IP family should be the same that the AdvertiseAddress
 	etcdLocalhostAddress := "127.0.0.1"
-	if utilsnet.IsIPv6String(endpoint.AdvertiseAddress) {
+	if netutils.IsIPv6String(endpoint.AdvertiseAddress) {
 		etcdLocalhostAddress = "::1"
 	}
 	defaultArguments := []kubeadmapi.Arg{

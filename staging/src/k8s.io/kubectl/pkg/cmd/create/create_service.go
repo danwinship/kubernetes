@@ -38,7 +38,7 @@ import (
 	"k8s.io/kubectl/pkg/util"
 	"k8s.io/kubectl/pkg/util/i18n"
 	"k8s.io/kubectl/pkg/util/templates"
-	utilsnet "k8s.io/utils/net"
+	netutils "k8s.io/utils/net"
 )
 
 // NewCmdCreateService is a macro command to create a new service
@@ -387,7 +387,7 @@ func NewCmdCreateServiceExternalName(f cmdutil.Factory, ioStreams genericiooptio
 func parsePorts(portString string) (int32, intstr.IntOrString, error) {
 	portStringSlice := strings.Split(portString, ":")
 
-	port, err := utilsnet.ParsePort(portStringSlice[0], true)
+	port, err := netutils.ParsePort(portStringSlice[0], true)
 	if err != nil {
 		return 0, intstr.FromInt32(0), err
 	}

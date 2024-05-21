@@ -23,7 +23,7 @@ import (
 	"fmt"
 
 	"k8s.io/apimachinery/pkg/util/sets"
-	"k8s.io/utils/net"
+	netutils "k8s.io/utils/net"
 )
 
 // FakeNetlinkHandle mock implementation of proxy NetlinkHandle
@@ -172,7 +172,7 @@ func (h *FakeNetlinkHandle) SetLocalAddresses(dev string, ips ...string) error {
 }
 
 func (h *FakeNetlinkHandle) isValidForSet(ipString string) bool {
-	ip := net.ParseIPSloppy(ipString)
+	ip := netutils.ParseIPSloppy(ipString)
 	if h.IsIPv6 != (ip.To4() == nil) {
 		return false
 	}

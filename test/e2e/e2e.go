@@ -46,7 +46,7 @@ import (
 	e2enode "k8s.io/kubernetes/test/e2e/framework/node"
 	e2epod "k8s.io/kubernetes/test/e2e/framework/pod"
 	e2ereporters "k8s.io/kubernetes/test/e2e/reporters"
-	utilnet "k8s.io/utils/net"
+	netutils "k8s.io/utils/net"
 
 	clientset "k8s.io/client-go/kubernetes"
 	// ensure auth plugins are loaded
@@ -122,7 +122,7 @@ func getDefaultClusterIPFamily(ctx context.Context, c clientset.Interface) strin
 		framework.Failf("Failed to get kubernetes service ClusterIP: %v", err)
 	}
 
-	if utilnet.IsIPv6String(svc.Spec.ClusterIP) {
+	if netutils.IsIPv6String(svc.Spec.ClusterIP) {
 		return "ipv6"
 	}
 	return "ipv4"

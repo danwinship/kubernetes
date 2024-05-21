@@ -26,7 +26,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	corev1client "k8s.io/client-go/kubernetes/typed/core/v1"
 	discoveryclient "k8s.io/client-go/kubernetes/typed/discovery/v1"
-	utilnet "k8s.io/utils/net"
+	netutils "k8s.io/utils/net"
 )
 
 // EndpointsAdapter provides a simple interface for reading and writing both
@@ -153,7 +153,7 @@ func getEndpointsFromAddresses(addresses []corev1.EndpointAddress, addressType d
 	isIPv6AddressType := addressType == discovery.AddressTypeIPv6
 
 	for _, address := range addresses {
-		if utilnet.IsIPv6String(address.IP) == isIPv6AddressType {
+		if netutils.IsIPv6String(address.IP) == isIPv6AddressType {
 			endpoints = append(endpoints, endpointFromAddress(address, ready))
 		}
 	}
@@ -183,7 +183,7 @@ func allAddressesIPv6(addresses []corev1.EndpointAddress) bool {
 	}
 
 	for _, address := range addresses {
-		if !utilnet.IsIPv6String(address.IP) {
+		if !netutils.IsIPv6String(address.IP) {
 			return false
 		}
 	}

@@ -28,7 +28,7 @@ import (
 	utilfeature "k8s.io/apiserver/pkg/util/feature"
 	"k8s.io/klog/v2"
 	"k8s.io/kubernetes/pkg/features"
-	utilnet "k8s.io/utils/net"
+	netutils "k8s.io/utils/net"
 )
 
 // EndpointSliceCache is used as a cache of EndpointSlice information.
@@ -228,7 +228,7 @@ func (cache *EndpointSliceCache) addEndpoints(svcPortName *ServicePortName, port
 			}
 		}
 
-		endpointIP := utilnet.ParseIPSloppy(endpoint.Addresses[0]).String()
+		endpointIP := netutils.ParseIPSloppy(endpoint.Addresses[0]).String()
 		endpointInfo := newBaseEndpointInfo(endpointIP, portNum, isLocal,
 			ready, serving, terminating, zoneHints, nodeHints)
 

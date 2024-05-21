@@ -44,7 +44,7 @@ import (
 	svcreg "k8s.io/kubernetes/pkg/registry/core/service"
 	"k8s.io/kubernetes/pkg/registry/core/service/ipallocator"
 	"k8s.io/kubernetes/pkg/registry/core/service/portallocator"
-	netutil "k8s.io/utils/net"
+	netutils "k8s.io/utils/net"
 	"sigs.k8s.io/structured-merge-diff/v6/fieldpath"
 )
 
@@ -315,7 +315,7 @@ func (r *REST) defaultOnReadIPFamilies(service *api.Service) {
 		// Headful: init ipFamilies from clusterIPs.
 		service.Spec.IPFamilies = make([]api.IPFamily, len(service.Spec.ClusterIPs))
 		for idx, ip := range service.Spec.ClusterIPs {
-			if netutil.IsIPv6String(ip) {
+			if netutils.IsIPv6String(ip) {
 				service.Spec.IPFamilies[idx] = api.IPv6Protocol
 			} else {
 				service.Spec.IPFamilies[idx] = api.IPv4Protocol

@@ -21,7 +21,7 @@ import (
 	"os"
 	"time"
 
-	netutil "k8s.io/utils/net"
+	netutils "k8s.io/utils/net"
 
 	"k8s.io/klog/v2"
 	"k8s.io/mount-utils"
@@ -304,7 +304,7 @@ func getVolumeSource(spec *volume.Spec) (*v1.NFSVolumeSource, bool, error) {
 }
 
 func getServerFromSource(source *v1.NFSVolumeSource) string {
-	if netutil.IsIPv6String(source.Server) {
+	if netutils.IsIPv6String(source.Server) {
 		return fmt.Sprintf("[%s]", source.Server)
 	}
 	return source.Server

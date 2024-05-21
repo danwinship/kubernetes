@@ -36,7 +36,7 @@ import (
 
 	"k8s.io/klog/v2"
 	utilio "k8s.io/utils/io"
-	utilnet "k8s.io/utils/net"
+	netutils "k8s.io/utils/net"
 )
 
 var (
@@ -430,7 +430,7 @@ func (c *Configurer) GetPodDNS(ctx context.Context, pod *v1.Pod) (*runtimeapi.DN
 		// this documented behavior.
 		if c.ResolverConfig == "" {
 			for _, nodeIP := range c.nodeIPs {
-				if utilnet.IsIPv6(nodeIP) {
+				if netutils.IsIPv6(nodeIP) {
 					dnsConfig.Servers = append(dnsConfig.Servers, "::1")
 				} else {
 					dnsConfig.Servers = append(dnsConfig.Servers, "127.0.0.1")

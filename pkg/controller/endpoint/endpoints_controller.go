@@ -47,7 +47,7 @@ import (
 	helper "k8s.io/kubernetes/pkg/apis/core/v1/helper"
 	"k8s.io/kubernetes/pkg/controller"
 	utillabels "k8s.io/kubernetes/pkg/util/labels"
-	utilnet "k8s.io/utils/net"
+	netutils "k8s.io/utils/net"
 )
 
 const (
@@ -226,8 +226,8 @@ func podToEndpointAddressForService(svc *v1.Service, pod *v1.Pod) (*v1.EndpointA
 	// Find an IP that matches the family. We parse and restringify the IP in case the
 	// value on the Pod is in an irregular format.
 	for _, podIP := range pod.Status.PodIPs {
-		ip := utilnet.ParseIPSloppy(podIP.IP)
-		if wantIPv6 == utilnet.IsIPv6(ip) {
+		ip := netutils.ParseIPSloppy(podIP.IP)
+		if wantIPv6 == netutils.IsIPv6(ip) {
 			endpointIP = ip.String()
 			break
 		}

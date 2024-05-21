@@ -62,7 +62,7 @@ import (
 	"k8s.io/kubernetes/test/integration/framework"
 	utilsoidc "k8s.io/kubernetes/test/utils/oidc"
 	"k8s.io/kubernetes/test/utils/oidc/handlers"
-	utilsnet "k8s.io/utils/net"
+	netutils "k8s.io/utils/net"
 )
 
 const (
@@ -239,7 +239,7 @@ jwt:
 				tempDir := t.TempDir()
 				certFilePath := filepath.Join(tempDir, "localhost_127.0.0.1_.crt")
 
-				_, _, wantErr := certutil.GenerateSelfSignedCertKeyWithFixtures("localhost", []net.IP{utilsnet.ParseIPSloppy("127.0.0.1")}, nil, tempDir)
+				_, _, wantErr := certutil.GenerateSelfSignedCertKeyWithFixtures("localhost", []net.IP{netutils.ParseIPSloppy("127.0.0.1")}, nil, tempDir)
 				require.NoError(t, wantErr)
 
 				return configureClientWithEmptyIDToken(t, restCfg, caCert, certFilePath, oidcServerURL, oidcServerTokenURL)
@@ -2109,7 +2109,7 @@ func generateCert(t *testing.T) (cert, key []byte, certFilePath, keyFilePath str
 	certFilePath = filepath.Join(tempDir, "localhost_127.0.0.1_.crt")
 	keyFilePath = filepath.Join(tempDir, "localhost_127.0.0.1_.key")
 
-	cert, key, err := certutil.GenerateSelfSignedCertKeyWithFixtures("localhost", []net.IP{utilsnet.ParseIPSloppy("127.0.0.1")}, nil, tempDir)
+	cert, key, err := certutil.GenerateSelfSignedCertKeyWithFixtures("localhost", []net.IP{netutils.ParseIPSloppy("127.0.0.1")}, nil, tempDir)
 	require.NoError(t, err)
 
 	return cert, key, certFilePath, keyFilePath

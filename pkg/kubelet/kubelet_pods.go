@@ -71,7 +71,7 @@ import (
 	"k8s.io/kubernetes/pkg/volume/util/volumepathhandler"
 	volumevalidation "k8s.io/kubernetes/pkg/volume/validation"
 	"k8s.io/kubernetes/third_party/forked/golang/expansion"
-	utilnet "k8s.io/utils/net"
+	netutils "k8s.io/utils/net"
 )
 
 const (
@@ -1979,10 +1979,10 @@ func (kl *Kubelet) generateAPIPodStatus(pod *v1.Pod, podStatus *kubecontainer.Po
 			klog.V(4).InfoS("Cannot get host IPs", "err", err)
 		} else {
 			if s.HostIP != "" {
-				if utilnet.IPFamilyOfString(s.HostIP) != utilnet.IPFamilyOf(hostIPs[0]) {
+				if netutils.IPFamilyOfString(s.HostIP) != netutils.IPFamilyOf(hostIPs[0]) {
 					kl.recorder.Eventf(pod, v1.EventTypeWarning, "HostIPsIPFamilyMismatch",
 						"Kubelet detected an IPv%s node IP (%s), but the cloud provider selected an IPv%s node IP (%s); pass an explicit `--node-ip` to kubelet to fix this.",
-						utilnet.IPFamilyOfString(s.HostIP), s.HostIP, utilnet.IPFamilyOf(hostIPs[0]), hostIPs[0].String())
+						netutils.IPFamilyOfString(s.HostIP), s.HostIP, netutils.IPFamilyOf(hostIPs[0]), hostIPs[0].String())
 				}
 			}
 			s.HostIP = hostIPs[0].String()
@@ -2001,7 +2001,7 @@ func (kl *Kubelet) generateAPIPodStatus(pod *v1.Pod, podStatus *kubecontainer.Po
 				}
 				// Secondary IP is not set #105320
 				if len(hostIPs) == 2 && len(s.PodIPs) == 1 {
-					if utilnet.IPFamilyOfString(s.PodIPs[0].IP) != utilnet.IPFamilyOf(hostIPs[1]) {
+					if netutils.IPFamilyOfString(s.PodIPs[0].IP) != netutils.IPFamilyOf(hostIPs[1]) {
 						s.PodIPs = append(s.PodIPs, v1.PodIP{IP: hostIPs[1].String()})
 					}
 				}
@@ -2021,24 +2021,24 @@ func (kl *Kubelet) generateAPIPodStatus(pod *v1.Pod, podStatus *kubecontainer.Po
 func (kl *Kubelet) sortPodIPs(podIPs []string) []string {
 	ips := make([]string, 0, 2)
 	var validPrimaryIP, validSecondaryIP func(ip net.IP) bool
-	if len(kl.nodeIPs) == 0 || utilnet.IsIPv4(kl.nodeIPs[0]) {
-		validPrimaryIP = utilnet.IsIPv4
-		validSecondaryIP = utilnet.IsIPv6
+	if len(kl.nodeIPs) == 0 || netutils.IsIPv4(kl.nodeIPs[0]) {
+		validPrimaryIP = netutils.IsIPv4
+		validSecondaryIP = netutils.IsIPv6
 	} else {
-		validPrimaryIP = utilnet.IsIPv6
-		validSecondaryIP = utilnet.IsIPv4
+		validPrimaryIP = netutils.IsIPv6
+		validSecondaryIP = netutils.IsIPv4
 	}
 
 	// We parse and re-stringify the IPs in case the values from CRI use an irregular format.
 	for _, ipStr := range podIPs {
-		ip := utilnet.ParseIPSloppy(ipStr)
+		ip := netutils.ParseIPSloppy(ipStr)
 		if validPrimaryIP(ip) {
 			ips = append(ips, ip.String())
 			break
 		}
 	}
 	for _, ipStr := range podIPs {
-		ip := utilnet.ParseIPSloppy(ipStr)
+		ip := netutils.ParseIPSloppy(ipStr)
 		if validSecondaryIP(ip) {
 			ips = append(ips, ip.String())
 			break

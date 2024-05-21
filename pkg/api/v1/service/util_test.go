@@ -21,7 +21,7 @@ import (
 	"testing"
 
 	v1 "k8s.io/api/core/v1"
-	utilnet "k8s.io/utils/net"
+	netutils "k8s.io/utils/net"
 )
 
 func TestGetLoadBalancerSourceRanges(t *testing.T) {
@@ -49,7 +49,7 @@ func TestGetLoadBalancerSourceRanges(t *testing.T) {
 	checkError("10.0.0.1/32, ")
 	checkError("10.0.0.1")
 
-	checkOK := func(v string) utilnet.IPNetSet {
+	checkOK := func(v string) netutils.IPNetSet {
 		t.Helper()
 		annotations := make(map[string]string)
 		annotations[v1.AnnotationLoadBalancerSourceRangesKey] = v
@@ -115,7 +115,7 @@ func TestGetLoadBalancerSourceRanges(t *testing.T) {
 func TestAllowAll(t *testing.T) {
 	checkAllowAll := func(allowAll bool, cidrs ...string) {
 		t.Helper()
-		ipnets, err := utilnet.ParseIPNets(cidrs...)
+		ipnets, err := netutils.ParseIPNets(cidrs...)
 		if err != nil {
 			t.Errorf("Unexpected error parsing cidrs: %v", cidrs)
 		}
