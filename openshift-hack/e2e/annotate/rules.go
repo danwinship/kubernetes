@@ -217,12 +217,28 @@ var (
 			// Internet access required
 			`\[sig-network\] Networking should provide Internet connection for containers`,
 		},
+		"[Skipped:alibabacloud]": {
+			// LoadBalancer tests in 1.31 require explicit platform-specific skips
+			// https://issues.redhat.com/browse/OCPBUGS-38840
+			`\[Feature:LoadBalancer\]`,
+		},
+		"[Skipped:aws]": {
+			// LoadBalancer tests in 1.31 require explicit platform-specific skips
+			// https://issues.redhat.com/browse/OCPBUGS-38840
+			`\[sig-network\] LoadBalancers \[Feature:LoadBalancer\] .* UDP`,
+			`\[sig-network\] LoadBalancers \[Feature:LoadBalancer\] .* session affinity`,
+		},
 		"[Skipped:azure]": {
 			"Networking should provide Internet connection for containers", // Azure does not allow ICMP traffic to internet.
 			// Azure CSI migration changed how we treat regions without zones.
 			// See https://bugzilla.redhat.com/bugzilla/show_bug.cgi?id=2066865
 			`\[sig-storage\] In-tree Volumes \[Driver: azure-disk\] \[Testpattern: Dynamic PV \(immediate binding\)\] topology should provision a volume and schedule a pod with AllowedTopologies`,
 			`\[sig-storage\] In-tree Volumes \[Driver: azure-disk\] \[Testpattern: Dynamic PV \(delayed binding\)\] topology should provision a volume and schedule a pod with AllowedTopologies`,
+		},
+		"[Skipped:baremetal]": {
+			// LoadBalancer tests in 1.31 require explicit platform-specific skips
+			// https://issues.redhat.com/browse/OCPBUGS-38840
+			`\[Feature:LoadBalancer\]`,
 		},
 		"[Skipped:gce]": {
 			// Requires creation of a different compute instance in a different zone and is not compatible with volumeBindingMode of WaitForFirstConsumer which we use in 4.x
@@ -253,6 +269,37 @@ var (
 			`\[HPA\] Horizontal pod autoscaling \(scale resource: Custom Metrics from Stackdriver\)`,
 			`\[Feature:CustomMetricsAutoscaling\]`,
 		},
+		"[Skipped:ibmcloud]": {
+			// LoadBalancer tests in 1.31 require explicit platform-specific skips
+			// https://issues.redhat.com/browse/OCPBUGS-38840
+			`\[Feature:LoadBalancer\]`,
+		},
+		"[Skipped:kubevirt]": {
+			// LoadBalancer tests in 1.31 require explicit platform-specific skips
+			// https://issues.redhat.com/browse/OCPBUGS-38840
+			`\[Feature:LoadBalancer\]`,
+		},
+		"[Skipped:nutanix]": {
+			// LoadBalancer tests in 1.31 require explicit platform-specific skips
+			// https://issues.redhat.com/browse/OCPBUGS-38840
+			`\[Feature:LoadBalancer\]`,
+		},
+		"[Skipped:openstack]": {
+			// LoadBalancer tests in 1.31 require explicit platform-specific skips
+			// https://issues.redhat.com/browse/OCPBUGS-38840
+			`\[Feature:LoadBalancer\]`,
+		},
+		"[Skipped:ovirt]": {
+			// LoadBalancer tests in 1.31 require explicit platform-specific skips
+			// https://issues.redhat.com/browse/OCPBUGS-38840
+			`\[Feature:LoadBalancer\]`,
+		},
+		"[Skipped:vsphere]": {
+			// LoadBalancer tests in 1.31 require explicit platform-specific skips
+			// https://issues.redhat.com/browse/OCPBUGS-38840
+			`\[Feature:LoadBalancer\]`,
+		},
+
 		"[sig-node]": {
 			`\[NodeConformance\]`,
 			`NodeLease`,

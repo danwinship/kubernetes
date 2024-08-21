@@ -1105,39 +1105,39 @@ var Annotations = map[string]string{
 
 	"[sig-network] KubeProxy should update metric for tracking accepted packets destined for localhost nodeports": " [Suite:openshift/conformance/parallel] [Suite:k8s]",
 
-	"[sig-network] LoadBalancers ExternalTrafficPolicy: Local [Feature:LoadBalancer] [Slow] should handle updates to ExternalTrafficPolicy field": " [Suite:k8s]",
+	"[sig-network] LoadBalancers ExternalTrafficPolicy: Local [Feature:LoadBalancer] [Slow] should handle updates to ExternalTrafficPolicy field": " [Skipped:alibabacloud] [Skipped:baremetal] [Skipped:ibmcloud] [Skipped:kubevirt] [Skipped:nutanix] [Skipped:openstack] [Skipped:ovirt] [Skipped:vsphere] [Suite:k8s]",
 
-	"[sig-network] LoadBalancers ExternalTrafficPolicy: Local [Feature:LoadBalancer] [Slow] should only target nodes with endpoints": " [Suite:k8s]",
+	"[sig-network] LoadBalancers ExternalTrafficPolicy: Local [Feature:LoadBalancer] [Slow] should only target nodes with endpoints": " [Skipped:alibabacloud] [Skipped:baremetal] [Skipped:ibmcloud] [Skipped:kubevirt] [Skipped:nutanix] [Skipped:openstack] [Skipped:ovirt] [Skipped:vsphere] [Suite:k8s]",
 
-	"[sig-network] LoadBalancers ExternalTrafficPolicy: Local [Feature:LoadBalancer] [Slow] should work for type=LoadBalancer": " [Suite:k8s]",
+	"[sig-network] LoadBalancers ExternalTrafficPolicy: Local [Feature:LoadBalancer] [Slow] should work for type=LoadBalancer": " [Skipped:alibabacloud] [Skipped:baremetal] [Skipped:ibmcloud] [Skipped:kubevirt] [Skipped:nutanix] [Skipped:openstack] [Skipped:ovirt] [Skipped:vsphere] [Suite:k8s]",
 
-	"[sig-network] LoadBalancers ExternalTrafficPolicy: Local [Feature:LoadBalancer] [Slow] should work from pods": " [Suite:k8s]",
+	"[sig-network] LoadBalancers ExternalTrafficPolicy: Local [Feature:LoadBalancer] [Slow] should work from pods": " [Skipped:alibabacloud] [Skipped:baremetal] [Skipped:ibmcloud] [Skipped:kubevirt] [Skipped:nutanix] [Skipped:openstack] [Skipped:ovirt] [Skipped:vsphere] [Suite:k8s]",
 
-	"[sig-network] LoadBalancers [Feature:LoadBalancer] should be able to change the type and ports of a TCP service [Slow]": " [Suite:k8s]",
+	"[sig-network] LoadBalancers [Feature:LoadBalancer] should be able to change the type and ports of a TCP service [Slow]": " [Skipped:alibabacloud] [Skipped:baremetal] [Skipped:ibmcloud] [Skipped:kubevirt] [Skipped:nutanix] [Skipped:openstack] [Skipped:ovirt] [Skipped:vsphere] [Suite:k8s]",
 
-	"[sig-network] LoadBalancers [Feature:LoadBalancer] should be able to change the type and ports of a UDP service [Slow]": " [Suite:k8s]",
+	"[sig-network] LoadBalancers [Feature:LoadBalancer] should be able to change the type and ports of a UDP service [Slow]": " [Skipped:alibabacloud] [Skipped:aws] [Skipped:baremetal] [Skipped:ibmcloud] [Skipped:kubevirt] [Skipped:nutanix] [Skipped:openstack] [Skipped:ovirt] [Skipped:vsphere] [Suite:k8s]",
 
-	"[sig-network] LoadBalancers [Feature:LoadBalancer] should be able to create LoadBalancer Service without NodePort and change it [Slow]": " [Suite:k8s]",
+	"[sig-network] LoadBalancers [Feature:LoadBalancer] should be able to create LoadBalancer Service without NodePort and change it [Slow]": " [Skipped:alibabacloud] [Skipped:baremetal] [Skipped:ibmcloud] [Skipped:kubevirt] [Skipped:nutanix] [Skipped:openstack] [Skipped:ovirt] [Skipped:vsphere] [Suite:k8s]",
 
-	"[sig-network] LoadBalancers [Feature:LoadBalancer] should be able to preserve UDP traffic when server pod cycles for a LoadBalancer service on different nodes": " [Suite:openshift/conformance/parallel] [Suite:k8s]",
+	"[sig-network] LoadBalancers [Feature:LoadBalancer] should be able to preserve UDP traffic when server pod cycles for a LoadBalancer service on different nodes": " [Skipped:alibabacloud] [Skipped:aws] [Skipped:baremetal] [Skipped:ibmcloud] [Skipped:kubevirt] [Skipped:nutanix] [Skipped:openstack] [Skipped:ovirt] [Skipped:vsphere] [Suite:openshift/conformance/parallel] [Suite:k8s]",
 
-	"[sig-network] LoadBalancers [Feature:LoadBalancer] should be able to preserve UDP traffic when server pod cycles for a LoadBalancer service on the same nodes": " [Suite:openshift/conformance/parallel] [Suite:k8s]",
+	"[sig-network] LoadBalancers [Feature:LoadBalancer] should be able to preserve UDP traffic when server pod cycles for a LoadBalancer service on the same nodes": " [Skipped:alibabacloud] [Skipped:aws] [Skipped:baremetal] [Skipped:ibmcloud] [Skipped:kubevirt] [Skipped:nutanix] [Skipped:openstack] [Skipped:ovirt] [Skipped:vsphere] [Suite:openshift/conformance/parallel] [Suite:k8s]",
 
-	"[sig-network] LoadBalancers [Feature:LoadBalancer] should be able to switch session affinity for LoadBalancer service with Cluster traffic policy [Slow] [LinuxOnly]": " [Suite:k8s]",
+	"[sig-network] LoadBalancers [Feature:LoadBalancer] should be able to switch session affinity for LoadBalancer service with Cluster traffic policy [Slow] [LinuxOnly]": " [Skipped:alibabacloud] [Skipped:aws] [Skipped:baremetal] [Skipped:ibmcloud] [Skipped:kubevirt] [Skipped:nutanix] [Skipped:openstack] [Skipped:ovirt] [Skipped:vsphere] [Suite:k8s]",
 
-	"[sig-network] LoadBalancers [Feature:LoadBalancer] should be able to switch session affinity for LoadBalancer service with Local traffic policy [Slow] [LinuxOnly]": " [Suite:k8s]",
+	"[sig-network] LoadBalancers [Feature:LoadBalancer] should be able to switch session affinity for LoadBalancer service with Local traffic policy [Slow] [LinuxOnly]": " [Skipped:alibabacloud] [Skipped:aws] [Skipped:baremetal] [Skipped:ibmcloud] [Skipped:kubevirt] [Skipped:nutanix] [Skipped:openstack] [Skipped:ovirt] [Skipped:vsphere] [Suite:k8s]",
 
-	"[sig-network] LoadBalancers [Feature:LoadBalancer] should handle load balancer cleanup finalizer for service [Slow]": " [Suite:k8s]",
+	"[sig-network] LoadBalancers [Feature:LoadBalancer] should handle load balancer cleanup finalizer for service [Slow]": " [Skipped:alibabacloud] [Skipped:baremetal] [Skipped:ibmcloud] [Skipped:kubevirt] [Skipped:nutanix] [Skipped:openstack] [Skipped:ovirt] [Skipped:vsphere] [Suite:k8s]",
 
-	"[sig-network] LoadBalancers [Feature:LoadBalancer] should have session affinity work for LoadBalancer service with Cluster traffic policy [Slow] [LinuxOnly]": " [Suite:k8s]",
+	"[sig-network] LoadBalancers [Feature:LoadBalancer] should have session affinity work for LoadBalancer service with Cluster traffic policy [Slow] [LinuxOnly]": " [Skipped:alibabacloud] [Skipped:aws] [Skipped:baremetal] [Skipped:ibmcloud] [Skipped:kubevirt] [Skipped:nutanix] [Skipped:openstack] [Skipped:ovirt] [Skipped:vsphere] [Suite:k8s]",
 
-	"[sig-network] LoadBalancers [Feature:LoadBalancer] should have session affinity work for LoadBalancer service with Local traffic policy [Slow] [LinuxOnly]": " [Suite:k8s]",
+	"[sig-network] LoadBalancers [Feature:LoadBalancer] should have session affinity work for LoadBalancer service with Local traffic policy [Slow] [LinuxOnly]": " [Skipped:alibabacloud] [Skipped:aws] [Skipped:baremetal] [Skipped:ibmcloud] [Skipped:kubevirt] [Skipped:nutanix] [Skipped:openstack] [Skipped:ovirt] [Skipped:vsphere] [Suite:k8s]",
 
-	"[sig-network] LoadBalancers [Feature:LoadBalancer] should not have connectivity disruption during rolling update with externalTrafficPolicy=Cluster [Slow]": " [Suite:k8s]",
+	"[sig-network] LoadBalancers [Feature:LoadBalancer] should not have connectivity disruption during rolling update with externalTrafficPolicy=Cluster [Slow]": " [Skipped:alibabacloud] [Skipped:baremetal] [Skipped:ibmcloud] [Skipped:kubevirt] [Skipped:nutanix] [Skipped:openstack] [Skipped:ovirt] [Skipped:vsphere] [Suite:k8s]",
 
-	"[sig-network] LoadBalancers [Feature:LoadBalancer] should not have connectivity disruption during rolling update with externalTrafficPolicy=Local [Slow]": " [Suite:k8s]",
+	"[sig-network] LoadBalancers [Feature:LoadBalancer] should not have connectivity disruption during rolling update with externalTrafficPolicy=Local [Slow]": " [Skipped:alibabacloud] [Skipped:baremetal] [Skipped:ibmcloud] [Skipped:kubevirt] [Skipped:nutanix] [Skipped:openstack] [Skipped:ovirt] [Skipped:vsphere] [Suite:k8s]",
 
-	"[sig-network] LoadBalancers [Feature:LoadBalancer] should only allow access from service loadbalancer source ranges [Slow]": " [Suite:k8s]",
+	"[sig-network] LoadBalancers [Feature:LoadBalancer] should only allow access from service loadbalancer source ranges [Slow]": " [Skipped:alibabacloud] [Skipped:baremetal] [Skipped:ibmcloud] [Skipped:kubevirt] [Skipped:nutanix] [Skipped:openstack] [Skipped:ovirt] [Skipped:vsphere] [Suite:k8s]",
 
 	"[sig-network] Netpol API should support creating NetworkPolicy API operations": " [Suite:openshift/conformance/parallel] [Suite:k8s]",
 
