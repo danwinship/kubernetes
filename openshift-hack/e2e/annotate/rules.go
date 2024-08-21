@@ -128,10 +128,6 @@ var (
 			`\[sig-network\] Networking Granular Checks: Services should function for service endpoints using hostNetwork`,
 			`\[sig-network\] Networking Granular Checks: Services should function for pod-Service\(hostNetwork\)`,
 
-			// https://issues.redhat.com/browse/OCPBUGS-7125
-			`\[sig-network\] LoadBalancers should be able to preserve UDP traffic when server pod cycles for a LoadBalancer service on different nodes`,
-			`\[sig-network\] LoadBalancers should be able to preserve UDP traffic when server pod cycles for a LoadBalancer service on the same nodes`,
-
 			// https://bugzilla.redhat.com/show_bug.cgi?id=1952460
 			`\[sig-network\] Firewall rule control plane should not expose well-known ports`,
 
