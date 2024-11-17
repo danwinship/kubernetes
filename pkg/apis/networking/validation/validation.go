@@ -408,7 +408,7 @@ func ValidateIngressLoadBalancerStatus(status, oldStatus *networking.IngressLoad
 			for _, msg := range validation.IsDNS1123Subdomain(ingress.Hostname) {
 				allErrs = append(allErrs, field.Invalid(idxPath.Child("hostname"), ingress.Hostname, msg))
 			}
-			if isIP := (netutils.ParseIPSloppy(ingress.Hostname) != nil); isIP {
+			if isIP := (netutils.IPFamilyOf(ingress.Hostname) != netutils.IPFamilyUnknown); isIP {
 				allErrs = append(allErrs, field.Invalid(idxPath.Child("hostname"), ingress.Hostname, "must be a DNS name, not an IP address"))
 			}
 		}
@@ -422,7 +422,7 @@ func validateIngressRules(ingressRules []networking.IngressRule, fldPath *field.
 	for i, ih := range ingressRules {
 		wildcardHost := false
 		if len(ih.Host) > 0 {
-			if isIP := (netutils.ParseIPSloppy(ih.Host) != nil); isIP {
+			if isIP := (netutils.IPFamilyOf(ih.Host) != netutils.IPFamilyUnknown); isIP {
 				allErrs = append(allErrs, field.Invalid(fldPath.Index(i).Child("host"), ih.Host, "must be a DNS name, not an IP address"))
 			}
 			// TODO: Ports and ips are allowed in the host part of a url

@@ -31,6 +31,7 @@ import (
 	"golang.org/x/sys/unix"
 
 	"k8s.io/klog/v2"
+	netutils "k8s.io/utils/net/v2"
 )
 
 // runner implements ipvs.Interface.
@@ -271,7 +272,7 @@ func toIPVSService(vs *VirtualServer) (*libipvs.Service, error) {
 		Timeout:   vs.Timeout,
 	}
 
-	if ip4 := vs.Address.To4(); ip4 != nil {
+	if netutils.IsIPv4(vs.Address) {
 		ipvsSvc.AddressFamily = unix.AF_INET
 		ipvsSvc.Netmask = 0xffffffff
 	} else {

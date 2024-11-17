@@ -714,7 +714,7 @@ func (kl *Kubelet) defaultNodeStatusFuncs() []func(context.Context, *v1.Node) er
 // Validate given node IP belongs to the current host
 func validateNodeIP(nodeIP net.IP) error {
 	// Honor IP limitations set in setNodeStatus()
-	if netutils.IsIPv6(nodeIP) && nodeIP.To16() == nil {
+	if netutils.IPFamilyOf(nodeIP) == netutils.IPFamilyUnknown {
 		return fmt.Errorf("nodeIP must be a valid IP address")
 	}
 	if nodeIP.IsLoopback() {

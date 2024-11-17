@@ -46,7 +46,7 @@ func NewNodePortAddresses(family v1.IPFamily, cidrStrings []string) *NodePortAdd
 
 	// Filter CIDRs to correct family
 	for _, str := range cidrStrings {
-		if (family == v1.IPv4Protocol) == netutils.IsIPv4CIDR(str) {
+		if netutils.IPFamilyOfCIDR(str) == netutils.IPFamily(family) {
 			npa.cidrStrings = append(npa.cidrStrings, str)
 		}
 	}

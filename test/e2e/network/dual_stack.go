@@ -697,7 +697,7 @@ func validateServiceAndClusterIPFamily(svc *v1.Service, expectedIPFamilies []v1.
 	}
 
 	for idx, family := range svc.Spec.IPFamilies {
-		if (family == v1.IPv6Protocol) != netutils.IsIPv6(svc.Spec.ClusterIPs[idx]) {
+		if netutils.IPFamilyOf(svc.Spec.ClusterIPs[idx]) != netutils.IPFamily(family) {
 			framework.Failf("service %s/%s assigned ips at [%v]:%v does not match family:%v", svc.Namespace, svc.Name, idx, svc.Spec.ClusterIPs[idx], family)
 		}
 	}

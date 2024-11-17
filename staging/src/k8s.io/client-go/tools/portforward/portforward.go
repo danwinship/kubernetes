@@ -141,7 +141,7 @@ func parseAddresses(addressesToParse []string) ([]listenAddress, error) {
 			}
 		} else if netutils.IsIPv4(address) {
 			parsed[address] = listenAddress{address: address, protocol: "tcp4", failureMode: "any"}
-		} else if netutils.ParseIPSloppy(address) != nil {
+		} else if netutils.IsIPv6(address) {
 			parsed[address] = listenAddress{address: address, protocol: "tcp6", failureMode: "any"}
 		} else {
 			return nil, fmt.Errorf("%s is not a valid IP", address)
