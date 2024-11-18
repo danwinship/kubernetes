@@ -48,7 +48,6 @@ import (
 	"k8s.io/kubernetes/pkg/proxy"
 	"k8s.io/kubernetes/pkg/proxy/conntrack"
 	"k8s.io/kubernetes/pkg/proxy/healthcheck"
-	"k8s.io/kubernetes/pkg/proxy/metaproxier"
 	"k8s.io/kubernetes/pkg/proxy/metrics"
 	proxyutil "k8s.io/kubernetes/pkg/proxy/util"
 	"k8s.io/kubernetes/pkg/proxy/util/nfacct"
@@ -96,7 +95,7 @@ const (
 const sysctlRouteLocalnet = "net/ipv4/conf/all/route_localnet"
 const sysctlNFConntrackTCPBeLiberal = "net/netfilter/nf_conntrack_tcp_be_liberal"
 
-// NewDualStackProxier creates a MetaProxier instance, with IPv4 and IPv6 proxies.
+// NewDualStackProxier creates a new dual-stack IPTables proxier
 func NewDualStackProxier(
 	ctx context.Context,
 	ipt [2]utiliptables.Interface,
@@ -134,7 +133,7 @@ func NewDualStackProxier(
 	if initOnly {
 		return nil, nil
 	}
-	return metaproxier.NewMetaProxier(ipv4Proxier, ipv6Proxier), nil
+	return proxy.NewBackend(ipv4Proxier, ipv6Proxier), nil
 }
 
 // Proxier is an iptables based proxy for connections between a localhost:lport

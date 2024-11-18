@@ -45,7 +45,6 @@ import (
 	"k8s.io/kubernetes/pkg/proxy/apis/config"
 	proxyconfig "k8s.io/kubernetes/pkg/proxy/config"
 	"k8s.io/kubernetes/pkg/proxy/healthcheck"
-	"k8s.io/kubernetes/pkg/proxy/metaproxier"
 	"k8s.io/kubernetes/pkg/proxy/metrics"
 	proxyutil "k8s.io/kubernetes/pkg/proxy/util"
 	"k8s.io/kubernetes/pkg/util/async"
@@ -807,6 +806,7 @@ func NewProxier(
 	return proxier, nil
 }
 
+// NewDualStackProxier returns a new dual-stack winkernel proxier.
 func NewDualStackProxier(
 	syncPeriod time.Duration,
 	minSyncPeriod time.Duration,
@@ -836,7 +836,7 @@ func NewDualStackProxier(
 
 	// Return a meta-proxier that dispatch calls between the two
 	// single-stack proxier instances
-	return metaproxier.NewMetaProxier(ipv4Proxier, ipv6Proxier), nil
+	return proxy.NewBackend(ipv4Proxier, ipv6Proxier), nil
 }
 
 // CleanupLeftovers removes all hns rules created by the Proxier

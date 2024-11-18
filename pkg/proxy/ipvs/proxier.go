@@ -50,7 +50,6 @@ import (
 	"k8s.io/kubernetes/pkg/proxy/healthcheck"
 	utilipset "k8s.io/kubernetes/pkg/proxy/ipvs/ipset"
 	utilipvs "k8s.io/kubernetes/pkg/proxy/ipvs/util"
-	"k8s.io/kubernetes/pkg/proxy/metaproxier"
 	"k8s.io/kubernetes/pkg/proxy/metrics"
 	proxyutil "k8s.io/kubernetes/pkg/proxy/util"
 	"k8s.io/kubernetes/pkg/util/async"
@@ -109,7 +108,7 @@ const (
 	sysctlArpAnnounce             = "net/ipv4/conf/all/arp_announce"
 )
 
-// NewDualStackProxier returns a new Proxier for dual-stack operation
+// NewDualStackProxier returns a new dual-stack IPVS proxier
 func NewDualStackProxier(
 	ctx context.Context,
 	ipt [2]utiliptables.Interface,
@@ -157,9 +156,7 @@ func NewDualStackProxier(
 		return nil, nil
 	}
 
-	// Return a meta-proxier that dispatch calls between the two
-	// single-stack proxier instances
-	return metaproxier.NewMetaProxier(ipv4Proxier, ipv6Proxier), nil
+	return proxy.NewBackend(ipv4Proxier, ipv6Proxier), nil
 }
 
 // Proxier is an ipvs based proxy for connections between a localhost:lport

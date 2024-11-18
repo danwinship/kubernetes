@@ -50,7 +50,6 @@ import (
 	"k8s.io/kubernetes/pkg/proxy"
 	"k8s.io/kubernetes/pkg/proxy/conntrack"
 	"k8s.io/kubernetes/pkg/proxy/healthcheck"
-	"k8s.io/kubernetes/pkg/proxy/metaproxier"
 	"k8s.io/kubernetes/pkg/proxy/metrics"
 	proxyutil "k8s.io/kubernetes/pkg/proxy/util"
 	"k8s.io/kubernetes/pkg/util/async"
@@ -105,7 +104,7 @@ const (
 	masqueradingChain = "masquerading"
 )
 
-// NewDualStackProxier creates a MetaProxier instance, with IPv4 and IPv6 proxies.
+// NewDualStackProxier creates a new dual-stack NFTables proxier.
 func NewDualStackProxier(
 	ctx context.Context,
 	syncPeriod time.Duration,
@@ -139,7 +138,7 @@ func NewDualStackProxier(
 	if initOnly {
 		return nil, nil
 	}
-	return metaproxier.NewMetaProxier(ipv4Proxier, ipv6Proxier), nil
+	return proxy.NewBackend(ipv4Proxier, ipv6Proxier), nil
 }
 
 // Proxier is an nftables based proxy
