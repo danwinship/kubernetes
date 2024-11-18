@@ -158,10 +158,10 @@ func (s *ProxyServer) platformCheckSupported(ctx context.Context) (ipv4Supported
 	return
 }
 
-// createProxier creates the proxy.Provider
-func (s *ProxyServer) createProxier(ctx context.Context, config *proxyconfigapi.KubeProxyConfiguration, dualStack, initOnly bool) (proxy.Provider, error) {
+// createProxier creates the proxy.Proxier
+func (s *ProxyServer) createProxier(ctx context.Context, config *proxyconfigapi.KubeProxyConfiguration, dualStack, initOnly bool) (proxy.Proxier, error) {
 	logger := klog.FromContext(ctx)
-	var proxier proxy.Provider
+	var proxier proxy.Proxier
 	var err error
 
 	localDetectors := getLocalDetectors(logger, s.PrimaryIPFamily, config, s.podCIDRs)

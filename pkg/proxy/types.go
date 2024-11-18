@@ -24,14 +24,14 @@ import (
 	"k8s.io/kubernetes/pkg/proxy/config"
 )
 
-// Provider is the interface provided by proxier implementations.
-type Provider interface {
+// Proxier is the interface provided by proxier implementations.
+type Proxier interface {
 	config.EndpointSliceHandler
 	config.ServiceHandler
 	config.NodeHandler
 	config.ServiceCIDRHandler
 
-	// Sync immediately synchronizes the Provider's current state to proxy rules.
+	// Sync immediately synchronizes the Proxier's current state to proxy rules.
 	Sync()
 	// SyncLoop runs periodic work.
 	// This is expected to run as a goroutine or as the main loop of the app.

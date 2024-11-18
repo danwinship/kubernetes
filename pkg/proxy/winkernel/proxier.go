@@ -665,10 +665,10 @@ type closeable interface {
 	Close() error
 }
 
-// Proxier implements proxy.Provider
-var _ proxy.Provider = &Proxier{}
+// Proxier implements proxy.Proxier
+var _ proxy.Proxier = &Proxier{}
 
-// NewProxier returns a new Proxier
+// NewProxier returns a new single-stack winkernel proxier.
 func NewProxier(
 	ipFamily v1.IPFamily,
 	syncPeriod time.Duration,
@@ -816,7 +816,7 @@ func NewDualStackProxier(
 	healthzServer *healthcheck.ProxierHealthServer,
 	healthzBindAddress string,
 	config config.KubeProxyWinkernelConfiguration,
-) (proxy.Provider, error) {
+) (proxy.Proxier, error) {
 
 	// Create an ipv4 instance of the single-stack proxier
 	ipv4Proxier, err := NewProxier(v1.IPv4Protocol, syncPeriod, minSyncPeriod,

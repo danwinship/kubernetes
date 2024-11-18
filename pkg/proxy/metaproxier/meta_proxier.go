@@ -26,24 +26,24 @@ import (
 
 type metaProxier struct {
 	// actual, wrapped
-	ipv4Proxier proxy.Provider
+	ipv4Proxier proxy.Proxier
 	// actual, wrapped
-	ipv6Proxier proxy.Provider
+	ipv6Proxier proxy.Proxier
 	// TODO(imroc): implement node handler for meta proxier.
 	config.NoopNodeHandler
 }
 
 // NewMetaProxier returns a dual-stack "meta-proxier". Proxier API
-// calls will be dispatched to the ProxyProvider instances depending
+// calls will be dispatched to the Proxier instances depending
 // on address family.
-func NewMetaProxier(ipv4Proxier, ipv6Proxier proxy.Provider) proxy.Provider {
-	return proxy.Provider(&metaProxier{
+func NewMetaProxier(ipv4Proxier, ipv6Proxier proxy.Proxier) proxy.Proxier {
+	return proxy.Proxier(&metaProxier{
 		ipv4Proxier: ipv4Proxier,
 		ipv6Proxier: ipv6Proxier,
 	})
 }
 
-// Sync immediately synchronizes the ProxyProvider's current state to
+// Sync immediately synchronizes the Proxier's current state to
 // proxy rules.
 func (proxier *metaProxier) Sync() {
 	proxier.ipv4Proxier.Sync()

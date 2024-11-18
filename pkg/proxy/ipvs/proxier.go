@@ -134,7 +134,7 @@ func NewDualStackProxier(
 	scheduler string,
 	nodePortAddresses []string,
 	initOnly bool,
-) (proxy.Provider, error) {
+) (proxy.Proxier, error) {
 	// Create an ipv4 instance of the single-stack proxier
 	ipv4Proxier, err := NewProxier(ctx, v1.IPv4Protocol, ipt[0], ipvs, ipset, sysctl,
 		exec, syncPeriod, minSyncPeriod, filterCIDRs(false, excludeCIDRs), strictARP,
@@ -256,14 +256,10 @@ type Proxier struct {
 	logger klog.Logger
 }
 
-// Proxier implements proxy.Provider
-var _ proxy.Provider = &Proxier{}
+// Proxier implements proxy.Proxier
+var _ proxy.Proxier = &Proxier{}
 
-// NewProxier returns a new Proxier given an iptables and ipvs Interface instance.
-// Because of the iptables and ipvs logic, it is assumed that there is only a single Proxier active on a machine.
-// An error will be returned if it fails to update or acquire the initial lock.
-// Once a proxier is created, it will keep iptables and ipvs rules up to date in the background and
-// will not terminate if a particular iptables or ipvs call fails.
+// NewProxier returns a new single-stack IPVS proxier.
 func NewProxier(
 	ctx context.Context,
 	ipFamily v1.IPFamily,

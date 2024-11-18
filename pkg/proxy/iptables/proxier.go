@@ -114,7 +114,7 @@ func NewDualStackProxier(
 	healthzServer *healthcheck.ProxierHealthServer,
 	nodePortAddresses []string,
 	initOnly bool,
-) (proxy.Provider, error) {
+) (proxy.Proxier, error) {
 	// Create an ipv4 instance of the single-stack proxier
 	ipv4Proxier, err := NewProxier(ctx, v1.IPv4Protocol, ipt[0], sysctl,
 		exec, syncPeriod, minSyncPeriod, masqueradeAll, localhostNodePorts, masqueradeBit,
@@ -217,14 +217,10 @@ type Proxier struct {
 	nfAcctCounters map[string]bool
 }
 
-// Proxier implements proxy.Provider
-var _ proxy.Provider = &Proxier{}
+// Proxier implements proxy.Proxier
+var _ proxy.Proxier = &Proxier{}
 
-// NewProxier returns a new Proxier given an iptables Interface instance.
-// Because of the iptables logic, it is assumed that there is only a single Proxier active on a machine.
-// An error will be returned if iptables fails to update or acquire the initial lock.
-// Once a proxier is created, it will keep iptables up to date in the background and
-// will not terminate if a particular iptables call fails.
+// NewProxier returns a new single-stack IPTables proxier.
 func NewProxier(ctx context.Context,
 	ipFamily v1.IPFamily,
 	ipt utiliptables.Interface,
