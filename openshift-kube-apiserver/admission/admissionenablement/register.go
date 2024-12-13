@@ -19,6 +19,7 @@ import (
 	"k8s.io/kubernetes/openshift-kube-apiserver/admission/customresourcevalidation/customresourcevalidationregistration"
 	"k8s.io/kubernetes/openshift-kube-apiserver/admission/network/externalipranger"
 	"k8s.io/kubernetes/openshift-kube-apiserver/admission/network/restrictedendpoints"
+	"k8s.io/kubernetes/openshift-kube-apiserver/admission/network/servicecidr"
 	ingressadmission "k8s.io/kubernetes/openshift-kube-apiserver/admission/route"
 	"k8s.io/kubernetes/openshift-kube-apiserver/admission/route/hostassignment"
 	projectnodeenv "k8s.io/kubernetes/openshift-kube-apiserver/admission/scheduler/nodeenv"
@@ -43,6 +44,7 @@ func RegisterOpenshiftKubeAdmissionPlugins(plugins *admission.Plugins) {
 	sccadmission.RegisterSCCExecRestrictions(plugins)
 	externalipranger.RegisterExternalIP(plugins)
 	restrictedendpoints.RegisterRestrictedEndpoints(plugins)
+	servicecidr.RegisterServiceCIDR(plugins)
 	csiinlinevolumesecurity.Register(plugins)
 }
 
@@ -69,6 +71,7 @@ var (
 		"scheduling.openshift.io/OriginPodNodeEnvironment",
 		"network.openshift.io/ExternalIPRanger",
 		"network.openshift.io/RestrictedEndpointsAdmission",
+		"network.openshift.io/ServiceCIDRAdmission",
 		imagepolicyapiv1.PluginName, // "image.openshift.io/ImagePolicy"
 		"security.openshift.io/SecurityContextConstraint",
 		"security.openshift.io/SCCExecRestrictions",
