@@ -806,39 +806,6 @@ func NewProxier(
 	return proxier, nil
 }
 
-// NewDualStackProxier returns a new dual-stack winkernel proxier.
-func NewDualStackProxier(
-	syncPeriod time.Duration,
-	minSyncPeriod time.Duration,
-	hostname string,
-	nodeIPs map[v1.IPFamily]net.IP,
-	recorder events.EventRecorder,
-	healthzServer *healthcheck.ProxierHealthServer,
-	healthzBindAddress string,
-	config config.KubeProxyWinkernelConfiguration,
-) (proxy.Proxier, error) {
-
-	// Create an ipv4 instance of the single-stack proxier
-	ipv4Proxier, err := NewProxier(v1.IPv4Protocol, syncPeriod, minSyncPeriod,
-		hostname, nodeIPs[v1.IPv4Protocol], recorder, healthzServer,
-		healthzBindAddress, config)
-
-	if err != nil {
-		return nil, fmt.Errorf("unable to create ipv4 proxier: %v, hostname: %s, nodeIP:%v", err, hostname, nodeIPs[v1.IPv4Protocol])
-	}
-
-	ipv6Proxier, err := NewProxier(v1.IPv6Protocol, syncPeriod, minSyncPeriod,
-		hostname, nodeIPs[v1.IPv6Protocol], recorder, healthzServer,
-		healthzBindAddress, config)
-	if err != nil {
-		return nil, fmt.Errorf("unable to create ipv6 proxier: %v, hostname: %s, nodeIP:%v", err, hostname, nodeIPs[v1.IPv6Protocol])
-	}
-
-	// Return a meta-proxier that dispatch calls between the two
-	// single-stack proxier instances
-	return proxy.NewBackend(ipv4Proxier, ipv6Proxier), nil
-}
-
 // CleanupLeftovers removes all hns rules created by the Proxier
 // It returns true if an error was encountered. Errors are logged.
 func CleanupLeftovers() (encounteredError bool) {
