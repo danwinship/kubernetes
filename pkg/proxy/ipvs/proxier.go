@@ -26,7 +26,6 @@ import (
 	"fmt"
 	"io"
 	"net"
-	"os/exec"
 	"reflect"
 	"strconv"
 	"strings"
@@ -483,7 +482,7 @@ func getFirstColumn(r io.Reader) ([]string, error) {
 	return words, nil
 }
 
-// CleanupIptablesLeftovers removes all iptables rules and chains created by the Proxier
+// cleanupIptablesLeftovers removes all iptables rules and chains created by the Proxier
 // It returns true if an error was encountered. Errors are logged.
 func cleanupIptablesLeftovers(ctx context.Context, ipt utiliptables.Interface) (encounteredError bool) {
 	logger := klog.FromContext(ctx)
@@ -522,24 +521,6 @@ func cleanupIptablesLeftovers(ctx context.Context, ipt utiliptables.Interface) (
 	}
 
 	return encounteredError
-}
-
-// CleanupLeftovers clean up all ipvs and iptables rules created by ipvs Proxier.
-func CleanupLeftovers(ctx context.Context) (encounteredError bool) {
-	// libipvs.New() will log errors if the "ip_vs" kernel module (or the "modprobe"
-	// binary) is not available. Logging an extra error is fine if we were actually
-	// trying to run the ipvs proxier, but it's confusing to see when just doing
-	// best-effort cleanup (eg, when starting the nftables proxier), so we do the same
-	// check libipvs does here, and bail out without calling libipvs if it fails.
-	if _, err := exec.Command("modprobe", "-va", "ip_vs").CombinedOutput(); err != nil {
-		return false
-	}
-
-	ipts := utiliptables.NewDualStack()
-	ipsetInterface := utilipset.New()
-	ipvsInterface := utilipvs.New()
-
-	return cleanupLeftovers(ctx, ipvsInterface, ipts, ipsetInterface)
 }
 
 func cleanupLeftovers(ctx context.Context, ipvs utilipvs.Interface, ipts map[v1.IPFamily]utiliptables.Interface, ipset utilipset.Interface) (encounteredError bool) {

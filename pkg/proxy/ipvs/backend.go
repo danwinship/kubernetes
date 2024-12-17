@@ -23,6 +23,7 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"os/exec"
 
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/version"
@@ -263,4 +264,22 @@ func canUseIPVSProxier(ctx context.Context, ipvs utilipvs.Interface, ipsetver IP
 	}
 
 	return nil
+}
+
+// CleanupLeftovers clean up all ipvs and iptables rules created by ipvs Proxier.
+func CleanupLeftovers(ctx context.Context) (encounteredError bool) {
+	// libipvs.New() will log errors if the "ip_vs" kernel module (or the "modprobe"
+	// binary) is not available. Logging an extra error is fine if we were actually
+	// trying to run the ipvs proxier, but it's confusing to see when just doing
+	// best-effort cleanup (eg, when starting the nftables proxier), so we do the same
+	// check libipvs does here, and bail out without calling libipvs if it fails.
+	if _, err := exec.Command("modprobe", "-va", "ip_vs").CombinedOutput(); err != nil {
+		return false
+	}
+
+	ipts := utiliptables.NewDualStack()
+	ipsetInterface := utilipset.New()
+	ipvsInterface := utilipvs.New()
+
+	return cleanupLeftovers(ctx, ipvsInterface, ipts, ipsetInterface)
 }

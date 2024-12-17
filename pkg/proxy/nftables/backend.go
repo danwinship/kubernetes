@@ -28,6 +28,7 @@ import (
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/version"
 	"k8s.io/client-go/tools/events"
+	"k8s.io/klog/v2"
 	"k8s.io/kubernetes/pkg/proxy"
 	kubeproxyconfig "k8s.io/kubernetes/pkg/proxy/apis/config"
 	"k8s.io/kubernetes/pkg/proxy/healthcheck"
@@ -131,4 +132,27 @@ func getNFTablesInterface(ipFamily v1.IPFamily) (knftables.Interface, error) {
 	}
 
 	return nft, nil
+}
+
+// CleanupLeftovers removes all nftables rules and chains created by the Proxier
+// It returns true if an error was encountered. Errors are logged.
+func CleanupLeftovers(ctx context.Context) bool {
+	logger := klog.FromContext(ctx)
+	var encounteredError bool
+
+	for _, family := range []knftables.Family{knftables.IPv4Family, knftables.IPv6Family} {
+		nft, err := knftables.New(family, kubeProxyTable)
+		if err != nil {
+			continue
+		}
+		tx := nft.NewTransaction()
+		tx.Delete(&knftables.Table{})
+		err = nft.Run(ctx, tx)
+		if err != nil && !knftables.IsNotFound(err) {
+			logger.Error(err, "Error cleaning up nftables rules")
+			encounteredError = true
+		}
+	}
+
+	return encounteredError
 }
