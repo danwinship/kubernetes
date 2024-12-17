@@ -52,6 +52,15 @@ type Backend interface {
 	// NewProxier creates the proxy.Proxier for a Backend. (Assumes Init() has been
 	// called.)
 	NewProxier(ctx context.Context, primaryIPFamily v1.IPFamily, nodeName string, nodeIPs map[v1.IPFamily]net.IP, recorder events.EventRecorder, healthzServer *healthcheck.ProxyHealthServer, localDetectors map[v1.IPFamily]proxyutil.LocalTrafficDetector) (Proxier, error)
+
+	// Cleanup cleans up state left behind by a previous run of the Backend, either
+	// because the user is switching backends, or because they ran --cleanup. If force
+	// is true, then it should clean up everything, unconditionally. Otherwise, it
+	// should only clean up state that is guaranteed to not interfere with the current
+	// backend according to config. The return value indicates whether any errors
+	// occurred. (Unlike the other methods, this *does not* require that Init() has
+	// been called.)
+	Cleanup(ctx context.Context, config *proxyconfigapi.KubeProxyConfiguration, force bool) bool
 }
 
 // Backends gives the set of available backends

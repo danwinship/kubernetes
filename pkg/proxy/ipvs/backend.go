@@ -249,3 +249,23 @@ func (backend *Backend) NewProxier(
 
 	return proxier, nil
 }
+
+// Cleanup cleans up state left behind by a previous run of the Backend, either because
+// the user is switching backends, or because they ran --cleanup. (It *does not* get
+// called for a given Backend when restarting in the same mode.) If force is true, then it
+// should clean up everything, unconditionally. Otherwise, it should only clean up state
+// that is guaranteed to not interfere with the current backend according to config. The
+// return value indicates whether any errors occurred. (Unlike the other methods, this
+// *does not* require that Init() has been called.)
+func (backend *Backend) Cleanup(ctx context.Context, config *proxyconfigapi.KubeProxyConfiguration, force bool) bool {
+	// Don't clean up our iptables rules if kube-proxy is starting in iptables mode,
+	// because the ipvs and iptables backends use some of the same chain names, and we
+	// don't want to accidentally clean up the iptables backend's iptables rules. (In
+	// theory we could clean up just the IPVS stuff, but for historical reasons, we
+	// don't bother trying.)
+	if config.Mode == proxyconfigapi.ProxyModeIPTables && !force {
+		return false
+	}
+
+	return CleanupLeftovers(ctx)
+}

@@ -367,11 +367,24 @@ func (o *Options) Run(ctx context.Context) error {
 		return o.writeConfigFile()
 	}
 
-	err := platformCleanup(ctx, o.config.Mode, o.CleanupAndExit)
-	if o.CleanupAndExit {
-		return err
+	// Clean up stale proxy state. To avoid disrupting traffic during a restart, we
+	// skip calling Cleanup on the currently-configured backend, unless the user
+	// explicitly requested "kube-proxy --cleanup".
+	encounteredError := false
+	for name, backend := range proxy.Backends {
+		if name == o.config.Mode && !o.CleanupAndExit {
+			continue
+		}
+		encounteredError = backend.Cleanup(ctx, o.config, o.CleanupAndExit) || encounteredError
 	}
-	// We ignore err otherwise; the cleanup is best-effort, and the backends will have
+
+	if o.CleanupAndExit {
+		if encounteredError {
+			return fmt.Errorf("encountered an error during cleanup")
+		}
+		return nil
+	}
+	// We ignore errors otherwise; the cleanup is best-effort, and the backends will have
 	// logged messages if they failed in interesting ways.
 
 	proxyServer, err := newProxyServer(ctx, o.config, o.master, o.InitAndExit, o.flagz)
