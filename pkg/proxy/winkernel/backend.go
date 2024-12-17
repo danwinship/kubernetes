@@ -26,6 +26,7 @@ import (
 
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/tools/events"
+	"k8s.io/klog/v2"
 	"k8s.io/kubernetes/pkg/proxy"
 	proxyconfigapi "k8s.io/kubernetes/pkg/proxy/apis/config"
 	"k8s.io/kubernetes/pkg/proxy/healthcheck"
@@ -127,4 +128,19 @@ func (backend *Backend) NewProxier(
 	}
 
 	return proxier, nil
+}
+
+// Cleanup cleans up state left behind by a previous run of the Backend, either because
+// the user is switching backends, or because they ran --cleanup. (It *does not* get
+// called for a given Backend when restarting in the same mode.) If force is true, then it
+// should clean up everything, unconditionally. Otherwise, it should only clean up state
+// that is guaranteed to not interfere with the current backend according to config. The
+// return value indicates whether any errors occurred. (Unlike the other methods, this
+// *does not* require that Init() has been called.)
+func (backend *Backend) Cleanup(ctx context.Context, config *proxyconfigapi.KubeProxyConfiguration, force bool) bool {
+	if force {
+		klog.FromContext(ctx).Error(nil, "--cleanup is not implemented on Windows")
+		return true
+	}
+	return false
 }

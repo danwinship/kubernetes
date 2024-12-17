@@ -23,7 +23,6 @@ package app
 
 import (
 	"context"
-	"errors"
 	"net"
 
 	// Enable pprof HTTP handlers.
@@ -53,14 +52,6 @@ func (s *ProxyServer) platformSetup(ctx context.Context) error {
 		s.NodeIPs[v1.IPv6Protocol] = net.IPv6zero
 	} else {
 		s.NodeIPs[v1.IPv4Protocol] = net.IPv4zero
-	}
-	return nil
-}
-
-// platformCleanup removes stale kube-proxy rules that can be safely removed.
-func platformCleanup(ctx context.Context, mode proxyconfigapi.ProxyMode, cleanupAndExit bool) error {
-	if cleanupAndExit {
-		return errors.New("--cleanup-and-exit is not implemented on Windows")
 	}
 	return nil
 }

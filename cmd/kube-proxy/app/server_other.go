@@ -42,8 +42,3 @@ var unsupportedError = fmt.Errorf(runtime.GOOS + "/" + runtime.GOARCH + "is unsu
 func (s *ProxyServer) platformSetup(ctx context.Context) error {
 	return unsupportedError
 }
-
-// platformCleanup removes stale kube-proxy rules that can be safely removed.
-func platformCleanup(ctx context.Context, mode proxyconfigapi.ProxyMode, cleanupAndExit bool) error {
-	return unsupportedError
-}

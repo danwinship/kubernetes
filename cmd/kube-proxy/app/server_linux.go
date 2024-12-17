@@ -23,7 +23,6 @@ package app
 
 import (
 	"context"
-	"errors"
 	goruntime "runtime"
 	"time"
 
@@ -33,10 +32,12 @@ import (
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/klog/v2"
 	proxyconfigapi "k8s.io/kubernetes/pkg/proxy/apis/config"
-	"k8s.io/kubernetes/pkg/proxy/iptables"
-	"k8s.io/kubernetes/pkg/proxy/ipvs"
-	"k8s.io/kubernetes/pkg/proxy/nftables"
 	proxyutil "k8s.io/kubernetes/pkg/proxy/util"
+
+	// Register the Linux proxy backends.
+	_ "k8s.io/kubernetes/pkg/proxy/iptables"
+	_ "k8s.io/kubernetes/pkg/proxy/ipvs"
+	_ "k8s.io/kubernetes/pkg/proxy/nftables"
 )
 
 // platformApplyDefaults is called after parsing command-line flags and/or reading the
@@ -66,11 +67,6 @@ func (s *ProxyServer) platformSetup(ctx context.Context) error {
 	s.localDetectors = getLocalDetectors(ctx, s.PrimaryIPFamily, s.Config, s.podCIDRs)
 
 	return nil
-}
-
-// isIPTablesBased checks whether mode is based on iptables rather than nftables
-func isIPTablesBased(mode proxyconfigapi.ProxyMode) bool {
-	return mode == proxyconfigapi.ProxyModeIPTables || mode == proxyconfigapi.ProxyModeIPVS
 }
 
 func (s *ProxyServer) setupConntrack(ctx context.Context, ct Conntracker) error {
@@ -196,28 +192,4 @@ func getLocalDetectors(ctx context.Context, primaryIPFamily v1.IPFamily, config 
 	}
 
 	return localDetectors
-}
-
-// platformCleanup removes stale kube-proxy rules that can be safely removed. If
-// cleanupAndExit is true, it will attempt to remove rules from all known kube-proxy
-// modes. If it is false, it will only remove rules that are definitely not in use by the
-// currently-configured mode.
-func platformCleanup(ctx context.Context, mode proxyconfigapi.ProxyMode, cleanupAndExit bool) error {
-	var encounteredError bool
-
-	// Clean up iptables and ipvs rules if switching to nftables, or if cleanupAndExit
-	if !isIPTablesBased(mode) || cleanupAndExit {
-		encounteredError = iptables.CleanupLeftovers(ctx) || encounteredError
-		encounteredError = ipvs.CleanupLeftovers(ctx) || encounteredError
-	}
-
-	// Clean up nftables rules when switching to iptables or ipvs, or if cleanupAndExit
-	if isIPTablesBased(mode) || cleanupAndExit {
-		encounteredError = nftables.CleanupLeftovers(ctx) || encounteredError
-	}
-
-	if encounteredError {
-		return errors.New("encountered an error while tearing down rules")
-	}
-	return nil
 }
