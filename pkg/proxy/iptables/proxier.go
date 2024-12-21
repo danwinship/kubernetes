@@ -89,46 +89,6 @@ const (
 
 const sysctlNFConntrackTCPBeLiberal = "net/netfilter/nf_conntrack_tcp_be_liberal"
 
-// NewDualStackProxier creates a meta proxier with IPv4 and IPv6 proxies.
-func NewDualStackProxier(
-	ctx context.Context,
-	ipts map[v1.IPFamily]utiliptables.Interface,
-	sysctl utilsysctl.Interface,
-	syncPeriod time.Duration,
-	minSyncPeriod time.Duration,
-	masqueradeAll bool,
-	localhostNodePorts bool,
-	masqueradeBit int,
-	localDetectors map[v1.IPFamily]proxyutil.LocalTrafficDetector,
-	nodeName string,
-	nodeIPs map[v1.IPFamily]net.IP,
-	recorder events.EventRecorder,
-	healthzServer *healthcheck.ProxyHealthServer,
-	nodePortAddresses []string,
-) (proxy.Proxier, error) {
-	// Create an ipv4 instance of the single-stack proxier
-	ipv4Proxier, err := NewProxier(ctx, v1.IPv4Protocol, ipts[v1.IPv4Protocol], sysctl,
-		syncPeriod, minSyncPeriod, masqueradeAll, localhostNodePorts, masqueradeBit,
-		localDetectors[v1.IPv4Protocol], nodeName, nodeIPs[v1.IPv4Protocol],
-		recorder, healthzServer, nodePortAddresses)
-	if err != nil {
-		return nil, fmt.Errorf("unable to create ipv4 proxier: %v", err)
-	}
-
-	ipv6Proxier, err := NewProxier(ctx, v1.IPv6Protocol, ipts[v1.IPv6Protocol], sysctl,
-		syncPeriod, minSyncPeriod, masqueradeAll, false, masqueradeBit,
-		localDetectors[v1.IPv6Protocol], nodeName, nodeIPs[v1.IPv6Protocol],
-		recorder, healthzServer, nodePortAddresses)
-	if err != nil {
-		return nil, fmt.Errorf("unable to create ipv6 proxier: %v", err)
-	}
-
-	runner := proxy.NewRunner()
-	runner.AddProxier(v1.IPv4Protocol, ipv4Proxier)
-	runner.AddProxier(v1.IPv6Protocol, ipv6Proxier)
-	return runner, nil
-}
-
 // Proxier is an iptables-based proxy
 type Proxier struct {
 	// ipFamily defines the IP family which this proxier is tracking.
@@ -211,8 +171,8 @@ type Proxier struct {
 // Proxier implements proxy.Proxier
 var _ proxy.Proxier = &Proxier{}
 
-// NewProxier returns a new single-stack IPTables proxier.
-func NewProxier(ctx context.Context,
+// newProxier returns a new single-stack IPTables proxier.
+func newProxier(ctx context.Context,
 	ipFamily v1.IPFamily,
 	ipt utiliptables.Interface,
 	sysctl utilsysctl.Interface,

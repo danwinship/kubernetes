@@ -98,43 +98,6 @@ const (
 	masqueradingChain = "masquerading"
 )
 
-// NewDualStackProxier creates a meta proxier with IPv4 and IPv6 proxies.
-func NewDualStackProxier(
-	ctx context.Context,
-	syncPeriod time.Duration,
-	minSyncPeriod time.Duration,
-	masqueradeAll bool,
-	masqueradeBit int,
-	localDetectors map[v1.IPFamily]proxyutil.LocalTrafficDetector,
-	nodeName string,
-	nodeIPs map[v1.IPFamily]net.IP,
-	recorder events.EventRecorder,
-	healthzServer *healthcheck.ProxyHealthServer,
-	nodePortAddresses []string,
-) (proxy.Proxier, error) {
-	// Create an ipv4 instance of the single-stack proxier
-	ipv4Proxier, err := NewProxier(ctx, v1.IPv4Protocol,
-		syncPeriod, minSyncPeriod, masqueradeAll, masqueradeBit,
-		localDetectors[v1.IPv4Protocol], nodeName, nodeIPs[v1.IPv4Protocol],
-		recorder, healthzServer, nodePortAddresses)
-	if err != nil {
-		return nil, fmt.Errorf("unable to create ipv4 proxier: %v", err)
-	}
-
-	ipv6Proxier, err := NewProxier(ctx, v1.IPv6Protocol,
-		syncPeriod, minSyncPeriod, masqueradeAll, masqueradeBit,
-		localDetectors[v1.IPv6Protocol], nodeName, nodeIPs[v1.IPv6Protocol],
-		recorder, healthzServer, nodePortAddresses)
-	if err != nil {
-		return nil, fmt.Errorf("unable to create ipv6 proxier: %v", err)
-	}
-
-	runner := proxy.NewRunner()
-	runner.AddProxier(v1.IPv4Protocol, ipv4Proxier)
-	runner.AddProxier(v1.IPv6Protocol, ipv6Proxier)
-	return runner, nil
-}
-
 // Proxier is an nftables-based proxy
 type Proxier struct {
 	// ipFamily defines the IP family which this proxier is tracking.
@@ -203,8 +166,8 @@ type Proxier struct {
 // Proxier implements proxy.Proxier
 var _ proxy.Proxier = &Proxier{}
 
-// NewProxier returns a new single-stack NFTables proxier.
-func NewProxier(ctx context.Context,
+// newProxier returns a new single-stack NFTables proxier.
+func newProxier(ctx context.Context,
 	ipFamily v1.IPFamily,
 	syncPeriod time.Duration,
 	minSyncPeriod time.Duration,

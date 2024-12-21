@@ -55,7 +55,7 @@ func NewHollowProxy(
 			},
 
 			Client:      client,
-			Proxier:     proxy.NewRunner(),
+			Runner:      proxy.NewRunner(),
 			Broadcaster: broadcaster,
 			Recorder:    recorder,
 			NodeRef: &v1.ObjectReference{

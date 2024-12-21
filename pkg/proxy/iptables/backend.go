@@ -40,7 +40,7 @@ const sysctlRouteLocalnet = "net/ipv4/conf/all/route_localnet"
 // Backend implements the IPTables backend
 type Backend struct {
 	config            *kubeproxyconfig.KubeProxyConfiguration
-	hostname          string
+	nodeName          string
 	nodeIPs           map[v1.IPFamily]net.IP
 	recorder          events.EventRecorder
 	healthzServer     *healthcheck.ProxyHealthServer
@@ -59,17 +59,25 @@ func NewBackend(
 	ctx context.Context,
 	config *kubeproxyconfig.KubeProxyConfiguration,
 	primaryIPFamily v1.IPFamily,
-	hostname string,
+	nodeName string,
 	nodeIPs map[v1.IPFamily]net.IP,
 	recorder events.EventRecorder,
 	healthzServer *healthcheck.ProxyHealthServer,
 	localDetectors map[v1.IPFamily]proxyutil.LocalTrafficDetector,
 ) (*Backend, error) {
+	logger := klog.FromContext(ctx)
+
 	ipts := utiliptables.NewDualStack()
 	sysctl := utilsysctl.New()
 
 	if len(ipts) == 0 {
 		return nil, fmt.Errorf("iptables is not available on this host")
+	} else if ipts[primaryIPFamily] == nil {
+		return nil, fmt.Errorf("no iptables support for primary IP family %q", primaryIPFamily)
+	} else if ipts[v1.IPv4Protocol] == nil {
+		logger.Info("No iptables support for family", "ipFamily", v1.IPv4Protocol)
+	} else if ipts[v1.IPv6Protocol] == nil {
+		logger.Info("No iptables support for family", "ipFamily", v1.IPv6Protocol)
 	}
 
 	nodePortAddresses := map[v1.IPFamily]*proxyutil.NodePortAddresses{
@@ -79,7 +87,7 @@ func NewBackend(
 
 	return &Backend{
 		config:            config,
-		hostname:          hostname,
+		nodeName:          nodeName,
 		nodeIPs:           nodeIPs,
 		recorder:          recorder,
 		healthzServer:     healthzServer,
@@ -89,6 +97,10 @@ func NewBackend(
 		ipts:   ipts,
 		sysctl: sysctl,
 	}, nil
+}
+
+func (backend *Backend) DualStackSupported() bool {
+	return len(backend.ipts) == 2
 }
 
 func (backend *Backend) PrivilegedInit(ctx context.Context) error {
@@ -106,6 +118,34 @@ func (backend *Backend) PrivilegedInit(ctx context.Context) error {
 	}
 
 	return nil
+}
+
+func (backend *Backend) NewRunner(ctx context.Context) (*proxy.Runner, error) {
+	r := proxy.NewRunner()
+	for family := range backend.ipts {
+		proxier, err := newProxier(
+			ctx,
+			family,
+			backend.ipts[family],
+			backend.sysctl,
+			backend.config.SyncPeriod.Duration,
+			backend.config.MinSyncPeriod.Duration,
+			backend.config.Linux.MasqueradeAll,
+			*backend.config.IPTables.LocalhostNodePorts,
+			int(*backend.config.IPTables.MasqueradeBit),
+			backend.localDetectors[family],
+			backend.nodeName,
+			backend.nodeIPs[family],
+			backend.recorder,
+			backend.healthzServer,
+			backend.config.NodePortAddresses,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("unable to create %s proxier: %v", family, err)
+		}
+		r.AddProxier(family, proxier)
+	}
+	return r, nil
 }
 
 // CleanupLeftovers removes all iptables rules and chains created by the Backend.

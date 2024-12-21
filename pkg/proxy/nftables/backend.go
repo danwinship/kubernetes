@@ -40,7 +40,7 @@ import (
 // Backend implements the NFTables backend
 type Backend struct {
 	config         *kubeproxyconfig.KubeProxyConfiguration
-	hostname       string
+	nodeName       string
 	nodeIPs        map[v1.IPFamily]net.IP
 	recorder       events.EventRecorder
 	healthzServer  *healthcheck.ProxyHealthServer
@@ -57,35 +57,74 @@ func NewBackend(
 	ctx context.Context,
 	config *kubeproxyconfig.KubeProxyConfiguration,
 	primaryIPFamily v1.IPFamily,
-	hostname string,
+	nodeName string,
 	nodeIPs map[v1.IPFamily]net.IP,
 	recorder events.EventRecorder,
 	healthzServer *healthcheck.ProxyHealthServer,
 	localDetectors map[v1.IPFamily]proxyutil.LocalTrafficDetector,
 ) (*Backend, error) {
-	nftv4, err := getNFTablesInterface(v1.IPv4Protocol)
+	logger := klog.FromContext(ctx)
+
+	nft, err := getNFTablesInterface(v1.IPv4Protocol)
 	if err != nil {
 		return nil, fmt.Errorf("no nftables support on this host: %w", err)
 	}
-	nftv6, _ := getNFTablesInterface(v1.IPv6Protocol)
+
+	nfts := map[v1.IPFamily]knftables.Interface{
+		v1.IPv4Protocol: nft,
+	}
+	nft, err = getNFTablesInterface(v1.IPv6Protocol)
+	if err == nil {
+		nfts[v1.IPv6Protocol] = nft
+	} else if primaryIPFamily == v1.IPv6Protocol {
+			return nil, fmt.Errorf("no nftables support for primary IP family %q: %v", primaryIPFamily, err)
+	} else {
+		logger.Info("No nftables support for family", "ipFamily", v1.IPv6Protocol, "error", err)
+	}
 
 	return &Backend{
 		config:         config,
-		hostname:       hostname,
+		nodeName:       nodeName,
 		nodeIPs:        nodeIPs,
 		recorder:       recorder,
 		healthzServer:  healthzServer,
 		localDetectors: localDetectors,
 
-		nfts: map[v1.IPFamily]knftables.Interface{
-			v1.IPv4Protocol: nftv4,
-			v1.IPv6Protocol: nftv6,
-		},
+		nfts: nfts,
 	}, nil
+}
+
+func (backend *Backend) DualStackSupported() bool {
+	return len(backend.nfts) == 2
 }
 
 func (backend *Backend) PrivilegedInit(ctx context.Context) error {
 	return nil
+}
+
+func (backend *Backend) NewRunner(ctx context.Context) (*proxy.Runner, error) {
+	r := proxy.NewRunner()
+	for family := range backend.nfts {
+		proxier, err := newProxier(
+			ctx,
+			family,
+			backend.config.SyncPeriod.Duration,
+			backend.config.MinSyncPeriod.Duration,
+			backend.config.Linux.MasqueradeAll,
+			int(*backend.config.NFTables.MasqueradeBit),
+			backend.localDetectors[family],
+			backend.nodeName,
+			backend.nodeIPs[family],
+			backend.recorder,
+			backend.healthzServer,
+			backend.config.NodePortAddresses,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("unable to create %s proxier: %v", family, err)
+		}
+		r.AddProxier(family, proxier)
+	}
+	return r, nil
 }
 
 // Create a knftables.Interface and check if we can use the nftables proxy mode on this host.

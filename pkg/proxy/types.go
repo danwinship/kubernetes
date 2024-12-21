@@ -27,12 +27,19 @@ import (
 
 // Backend represents an entire proxy backend (e.g., nftables, winkernel).
 type Backend interface {
+	// DualStackSupported is true if the Backend supports dual-stack proxying on this
+	// host.
+	DualStackSupported() bool
+
 	// PrivilegedInit performs any host initialization steps that require full root
 	// privileges, *if they have not already been performed*. When using
 	// `--init-only`, this will be called first from a privileged kube-proxy process,
 	// and then a second time from an unprivileged kube-proxy process; the second call
 	// must not return an error if the first call correctly initialized everything.
 	PrivilegedInit(ctx context.Context) error
+
+	// NewRunner creates the proxy.Runner for a Backend
+	NewRunner(ctx context.Context) (*Runner, error)
 }
 
 // Proxier is the interface to a specific proxy implementation. A Backend may wrap one or

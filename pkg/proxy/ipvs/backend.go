@@ -55,7 +55,7 @@ const (
 // Backend implements the IPVS backend
 type Backend struct {
 	config         *kubeproxyconfig.KubeProxyConfiguration
-	hostname       string
+	nodeName       string
 	nodeIPs        map[v1.IPFamily]net.IP
 	recorder       events.EventRecorder
 	healthzServer  *healthcheck.ProxyHealthServer
@@ -75,12 +75,14 @@ func NewBackend(
 	ctx context.Context,
 	config *kubeproxyconfig.KubeProxyConfiguration,
 	primaryIPFamily v1.IPFamily,
-	hostname string,
+	nodeName string,
 	nodeIPs map[v1.IPFamily]net.IP,
 	recorder events.EventRecorder,
 	healthzServer *healthcheck.ProxyHealthServer,
 	localDetectors map[v1.IPFamily]proxyutil.LocalTrafficDetector,
 ) (*Backend, error) {
+	logger := klog.FromContext(ctx)
+
 	ipts := utiliptables.NewDualStack()
 	ipset := utilipset.New()
 	ipvs := utilipvs.New()
@@ -91,11 +93,17 @@ func NewBackend(
 	}
 	if len(ipts) == 0 {
 		return nil, fmt.Errorf("iptables (required for ipvs backend) is not available on this host")
+	} else if ipts[primaryIPFamily] == nil {
+		return nil, fmt.Errorf("no iptables support for primary IP family %q", primaryIPFamily)
+	} else if ipts[v1.IPv4Protocol] == nil {
+		logger.Info("No iptables support for family", "ipFamily", v1.IPv4Protocol)
+	} else if ipts[v1.IPv6Protocol] == nil {
+		logger.Info("No iptables support for family", "ipFamily", v1.IPv6Protocol)
 	}
 
 	return &Backend{
 		config:         config,
-		hostname:       hostname,
+		nodeName:       nodeName,
 		nodeIPs:        nodeIPs,
 		recorder:       recorder,
 		healthzServer:  healthzServer,
@@ -106,6 +114,10 @@ func NewBackend(
 		ipset:  ipset,
 		sysctl: sysctl,
 	}, nil
+}
+
+func (backend *Backend) DualStackSupported() bool {
+	return len(backend.ipts) == 2
 }
 
 func (backend *Backend) PrivilegedInit(ctx context.Context) error {
@@ -173,6 +185,41 @@ func (backend *Backend) PrivilegedInit(ctx context.Context) error {
 	}
 
 	return nil
+}
+
+func (backend *Backend) NewRunner(ctx context.Context) (*proxy.Runner, error) {
+	r := proxy.NewRunner()
+	for family := range backend.ipts {
+		proxier, err := newProxier(
+			ctx,
+			family,
+			backend.ipts[family],
+			backend.ipvs,
+			backend.ipset,
+			backend.sysctl,
+			backend.config.SyncPeriod.Duration,
+			backend.config.MinSyncPeriod.Duration,
+			backend.config.IPVS.ExcludeCIDRs,
+			backend.config.IPVS.StrictARP,
+			backend.config.IPVS.TCPTimeout.Duration,
+			backend.config.IPVS.TCPFinTimeout.Duration,
+			backend.config.IPVS.UDPTimeout.Duration,
+			backend.config.Linux.MasqueradeAll,
+			int(*backend.config.IPTables.MasqueradeBit),
+			backend.localDetectors[family],
+			backend.nodeName,
+			backend.nodeIPs[family],
+			backend.recorder,
+			backend.healthzServer,
+			backend.config.IPVS.Scheduler,
+			backend.config.NodePortAddresses,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("unable to create %s proxier: %v", family, err)
+		}
+		r.AddProxier(family, proxier)
+	}
+	return r, nil
 }
 
 // canUseIPVSProxier checks if we can use the ipvs Proxier.

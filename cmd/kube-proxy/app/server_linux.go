@@ -39,17 +39,13 @@ import (
 	clientset "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/cache"
 	toolswatch "k8s.io/client-go/tools/watch"
-	utilsysctl "k8s.io/component-helpers/node/util/sysctl"
 	"k8s.io/klog/v2"
 	"k8s.io/kubernetes/pkg/proxy"
 	proxyconfigapi "k8s.io/kubernetes/pkg/proxy/apis/config"
 	"k8s.io/kubernetes/pkg/proxy/iptables"
 	"k8s.io/kubernetes/pkg/proxy/ipvs"
-	utilipset "k8s.io/kubernetes/pkg/proxy/ipvs/ipset"
-	utilipvs "k8s.io/kubernetes/pkg/proxy/ipvs/util"
 	"k8s.io/kubernetes/pkg/proxy/nftables"
 	proxyutil "k8s.io/kubernetes/pkg/proxy/util"
-	utiliptables "k8s.io/kubernetes/pkg/util/iptables"
 )
 
 // timeoutForNodePodCIDR is the time to wait for allocators to assign a PodCIDR to the
@@ -83,35 +79,6 @@ func (s *ProxyServer) platformSetup(ctx context.Context) error {
 // isIPTablesBased checks whether mode is based on iptables rather than nftables
 func isIPTablesBased(mode proxyconfigapi.ProxyMode) bool {
 	return mode == proxyconfigapi.ProxyModeIPTables || mode == proxyconfigapi.ProxyModeIPVS
-}
-
-// platformCheckSupported is called immediately before creating the Proxier, to check
-// what IP families are supported (and whether the configuration is usable at all).
-func (s *ProxyServer) platformCheckSupported(ctx context.Context) (ipv4Supported, ipv6Supported, dualStackSupported bool, err error) {
-	logger := klog.FromContext(ctx)
-
-	if isIPTablesBased(s.Config.Mode) {
-		ipts := utiliptables.NewDualStack()
-		ipv4Supported = ipts[v1.IPv4Protocol] != nil
-		ipv6Supported = ipts[v1.IPv6Protocol] != nil
-
-		if !ipv4Supported && !ipv6Supported {
-			err = fmt.Errorf("iptables is not available on this host")
-		} else if !ipv4Supported {
-			logger.Info("No iptables support for family", "ipFamily", v1.IPv4Protocol)
-		} else if !ipv6Supported {
-			logger.Info("No iptables support for family", "ipFamily", v1.IPv6Protocol)
-		}
-	} else {
-		// Assume support for both families.
-		// FIXME: figure out how to check for kernel IPv6 support using nft
-		ipv4Supported, ipv6Supported = true, true
-	}
-
-	// The Linux proxies can always support dual-stack if they can support both IPv4
-	// and IPv6.
-	dualStackSupported = ipv4Supported && ipv6Supported
-	return
 }
 
 // createBackend creates the proxy.Backend
@@ -158,165 +125,6 @@ func (s *ProxyServer) createBackend(ctx context.Context) (proxy.Backend, error) 
 
 	// (can't happen, due to validation)
 	return nil, fmt.Errorf("unknown backend type %q", s.Config.Mode)
-}
-
-// createProxier creates the Proxier
-func (s *ProxyServer) createProxier(ctx context.Context, config *proxyconfigapi.KubeProxyConfiguration, dualStack bool) (proxy.Proxier, error) {
-	logger := klog.FromContext(ctx)
-	var proxier proxy.Proxier
-	var err error
-
-	localDetectors := getLocalDetectors(logger, s.PrimaryIPFamily, config, s.podCIDRs)
-
-	if config.Mode == proxyconfigapi.ProxyModeIPTables {
-		ipts := utiliptables.NewDualStack()
-
-		if dualStack {
-			// TODO this has side effects that should only happen when Run() is invoked.
-			proxier, err = iptables.NewDualStackProxier(
-				ctx,
-				ipts,
-				utilsysctl.New(),
-				config.SyncPeriod.Duration,
-				config.MinSyncPeriod.Duration,
-				config.Linux.MasqueradeAll,
-				*config.IPTables.LocalhostNodePorts,
-				int(*config.IPTables.MasqueradeBit),
-				localDetectors,
-				s.NodeName,
-				s.NodeIPs,
-				s.Recorder,
-				s.HealthzServer,
-				config.NodePortAddresses,
-			)
-		} else {
-			// Create a single-stack proxier if and only if the node does not support dual-stack (i.e, no iptables support).
-
-			// TODO this has side effects that should only happen when Run() is invoked.
-			proxier, err = iptables.NewProxier(
-				ctx,
-				s.PrimaryIPFamily,
-				ipts[s.PrimaryIPFamily],
-				utilsysctl.New(),
-				config.SyncPeriod.Duration,
-				config.MinSyncPeriod.Duration,
-				config.Linux.MasqueradeAll,
-				*config.IPTables.LocalhostNodePorts,
-				int(*config.IPTables.MasqueradeBit),
-				localDetectors[s.PrimaryIPFamily],
-				s.NodeName,
-				s.NodeIPs[s.PrimaryIPFamily],
-				s.Recorder,
-				s.HealthzServer,
-				config.NodePortAddresses,
-			)
-		}
-
-		if err != nil {
-			return nil, fmt.Errorf("unable to create proxier: %v", err)
-		}
-	} else if config.Mode == proxyconfigapi.ProxyModeIPVS {
-		ipsetInterface := utilipset.New()
-		ipvsInterface := utilipvs.New()
-		ipts := utiliptables.NewDualStack()
-
-		logger.Info("Using ipvs Proxier")
-		if dualStack {
-			proxier, err = ipvs.NewDualStackProxier(
-				ctx,
-				ipts,
-				ipvsInterface,
-				ipsetInterface,
-				utilsysctl.New(),
-				config.SyncPeriod.Duration,
-				config.MinSyncPeriod.Duration,
-				config.IPVS.ExcludeCIDRs,
-				config.IPVS.StrictARP,
-				config.IPVS.TCPTimeout.Duration,
-				config.IPVS.TCPFinTimeout.Duration,
-				config.IPVS.UDPTimeout.Duration,
-				config.Linux.MasqueradeAll,
-				int(*config.IPTables.MasqueradeBit),
-				localDetectors,
-				s.NodeName,
-				s.NodeIPs,
-				s.Recorder,
-				s.HealthzServer,
-				config.IPVS.Scheduler,
-				config.NodePortAddresses,
-			)
-		} else {
-			proxier, err = ipvs.NewProxier(
-				ctx,
-				s.PrimaryIPFamily,
-				ipts[s.PrimaryIPFamily],
-				ipvsInterface,
-				ipsetInterface,
-				utilsysctl.New(),
-				config.SyncPeriod.Duration,
-				config.MinSyncPeriod.Duration,
-				config.IPVS.ExcludeCIDRs,
-				config.IPVS.StrictARP,
-				config.IPVS.TCPTimeout.Duration,
-				config.IPVS.TCPFinTimeout.Duration,
-				config.IPVS.UDPTimeout.Duration,
-				config.Linux.MasqueradeAll,
-				int(*config.IPTables.MasqueradeBit),
-				localDetectors[s.PrimaryIPFamily],
-				s.NodeName,
-				s.NodeIPs[s.PrimaryIPFamily],
-				s.Recorder,
-				s.HealthzServer,
-				config.IPVS.Scheduler,
-				config.NodePortAddresses,
-			)
-		}
-		if err != nil {
-			return nil, fmt.Errorf("unable to create proxier: %v", err)
-		}
-	} else if config.Mode == proxyconfigapi.ProxyModeNFTables {
-		logger.Info("Using nftables Proxier")
-
-		if dualStack {
-			// TODO this has side effects that should only happen when Run() is invoked.
-			proxier, err = nftables.NewDualStackProxier(
-				ctx,
-				config.SyncPeriod.Duration,
-				config.MinSyncPeriod.Duration,
-				config.Linux.MasqueradeAll,
-				int(*config.NFTables.MasqueradeBit),
-				localDetectors,
-				s.NodeName,
-				s.NodeIPs,
-				s.Recorder,
-				s.HealthzServer,
-				config.NodePortAddresses,
-			)
-		} else {
-			// Create a single-stack proxier if and only if the node does not support dual-stack
-			// TODO this has side effects that should only happen when Run() is invoked.
-			proxier, err = nftables.NewProxier(
-				ctx,
-				s.PrimaryIPFamily,
-				config.SyncPeriod.Duration,
-				config.MinSyncPeriod.Duration,
-				config.Linux.MasqueradeAll,
-				int(*config.NFTables.MasqueradeBit),
-				localDetectors[s.PrimaryIPFamily],
-				s.NodeName,
-				s.NodeIPs[s.PrimaryIPFamily],
-				s.Recorder,
-				s.HealthzServer,
-				config.NodePortAddresses,
-			)
-		}
-
-		if err != nil {
-			return nil, fmt.Errorf("unable to create proxier: %v", err)
-		}
-	}
-
-	return proxier, nil
 }
 
 func (s *ProxyServer) setupConntrack(ctx context.Context, ct Conntracker) error {

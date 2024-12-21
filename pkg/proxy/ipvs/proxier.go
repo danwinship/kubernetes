@@ -93,55 +93,6 @@ const (
 	defaultDummyDevice = "kube-ipvs0"
 )
 
-// NewDualStackProxier returns a new Proxier for dual-stack operation
-func NewDualStackProxier(
-	ctx context.Context,
-	ipts map[v1.IPFamily]utiliptables.Interface,
-	ipvs utilipvs.Interface,
-	ipset utilipset.Interface,
-	sysctl utilsysctl.Interface,
-	syncPeriod time.Duration,
-	minSyncPeriod time.Duration,
-	excludeCIDRs []string,
-	strictARP bool,
-	tcpTimeout time.Duration,
-	tcpFinTimeout time.Duration,
-	udpTimeout time.Duration,
-	masqueradeAll bool,
-	masqueradeBit int,
-	localDetectors map[v1.IPFamily]proxyutil.LocalTrafficDetector,
-	nodeName string,
-	nodeIPs map[v1.IPFamily]net.IP,
-	recorder events.EventRecorder,
-	healthzServer *healthcheck.ProxyHealthServer,
-	scheduler string,
-	nodePortAddresses []string,
-) (proxy.Proxier, error) {
-	// Create an ipv4 instance of the single-stack proxier
-	ipv4Proxier, err := NewProxier(ctx, v1.IPv4Protocol, ipts[v1.IPv4Protocol], ipvs, ipset, sysctl,
-		syncPeriod, minSyncPeriod, filterCIDRs(false, excludeCIDRs), strictARP,
-		tcpTimeout, tcpFinTimeout, udpTimeout, masqueradeAll, masqueradeBit,
-		localDetectors[v1.IPv4Protocol], nodeName, nodeIPs[v1.IPv4Protocol], recorder,
-		healthzServer, scheduler, nodePortAddresses)
-	if err != nil {
-		return nil, fmt.Errorf("unable to create ipv4 proxier: %v", err)
-	}
-
-	ipv6Proxier, err := NewProxier(ctx, v1.IPv6Protocol, ipts[v1.IPv6Protocol], ipvs, ipset, sysctl,
-		syncPeriod, minSyncPeriod, filterCIDRs(true, excludeCIDRs), strictARP,
-		tcpTimeout, tcpFinTimeout, udpTimeout, masqueradeAll, masqueradeBit,
-		localDetectors[v1.IPv6Protocol], nodeName, nodeIPs[v1.IPv6Protocol], recorder,
-		healthzServer, scheduler, nodePortAddresses)
-	if err != nil {
-		return nil, fmt.Errorf("unable to create ipv6 proxier: %v", err)
-	}
-
-	runner := proxy.NewRunner()
-	runner.AddProxier(v1.IPv4Protocol, ipv4Proxier)
-	runner.AddProxier(v1.IPv6Protocol, ipv6Proxier)
-	return runner, nil
-}
-
 // Proxier is an ipvs-based proxy
 type Proxier struct {
 	// the ipfamily on which this proxy is operating on.
@@ -236,8 +187,8 @@ type Proxier struct {
 // Proxier implements proxy.Proxier
 var _ proxy.Proxier = &Proxier{}
 
-// NewProxier returns a new single-stack IPVS proxier.
-func NewProxier(
+// newProxier returns a new single-stack IPVS proxier.
+func newProxier(
 	ctx context.Context,
 	ipFamily v1.IPFamily,
 	ipt utiliptables.Interface,
@@ -327,7 +278,8 @@ func NewProxier(
 	return proxier, nil
 }
 
-func filterCIDRs(wantIPv6 bool, cidrs []string) []string {
+func filterCIDRs(family v1.IPFamily, cidrs []string) []string {
+	wantIPv6 := family == v1.IPv6Protocol
 	var filteredCIDRs []string
 	for _, cidr := range cidrs {
 		if netutils.IsIPv6CIDRString(cidr) == wantIPv6 {
