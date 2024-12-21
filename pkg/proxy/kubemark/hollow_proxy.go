@@ -28,8 +28,8 @@ import (
 	v1core "k8s.io/client-go/kubernetes/typed/core/v1"
 	"k8s.io/client-go/tools/events"
 	proxyapp "k8s.io/kubernetes/cmd/kube-proxy/app"
+	"k8s.io/kubernetes/pkg/proxy"
 	proxyconfigapi "k8s.io/kubernetes/pkg/proxy/apis/config"
-	"k8s.io/kubernetes/pkg/proxy/metaproxier"
 	"k8s.io/utils/ptr"
 )
 
@@ -55,7 +55,7 @@ func NewHollowProxy(
 			},
 
 			Client:      client,
-			Proxier:     metaproxier.New(),
+			Runner:      proxy.NewRunner(),
 			Broadcaster: broadcaster,
 			Recorder:    recorder,
 			NodeRef: &v1.ObjectReference{

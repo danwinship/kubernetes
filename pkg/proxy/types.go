@@ -48,9 +48,9 @@ type Backend interface {
 	// (Assumes Init() has been called.)
 	PrivilegedInit(ctx context.Context, initOnly bool) error
 
-	// NewProxier creates the proxy.Proxier for a Backend. (Assumes Init() has been
+	// NewProxyRunner creates the proxy.Runner for a Backend. (Assumes Init() has been
 	// called.)
-	NewProxier(ctx context.Context, nodeName string, nodeIPs map[v1.IPFamily]net.IP, recorder events.EventRecorder, healthzServer *healthcheck.ProxyHealthServer, localDetectors map[v1.IPFamily]proxyutil.LocalTrafficDetector) (Proxier, error)
+	NewProxyRunner(ctx context.Context, nodeName string, nodeIPs map[v1.IPFamily]net.IP, recorder events.EventRecorder, healthzServer *healthcheck.ProxyHealthServer, localDetectors map[v1.IPFamily]proxyutil.LocalTrafficDetector) (*Runner, error)
 
 	// Cleanup cleans up state left behind by a previous run of the Backend, either
 	// because the user is switching backends, or because they ran --cleanup. If force

@@ -30,7 +30,6 @@ import (
 	"k8s.io/kubernetes/pkg/proxy"
 	proxyconfigapi "k8s.io/kubernetes/pkg/proxy/apis/config"
 	"k8s.io/kubernetes/pkg/proxy/healthcheck"
-	"k8s.io/kubernetes/pkg/proxy/metaproxier"
 	proxyutil "k8s.io/kubernetes/pkg/proxy/util"
 )
 
@@ -90,16 +89,16 @@ func (backend *Backend) PrivilegedInit(ctx context.Context, initOnly bool) error
 	return nil
 }
 
-// NewProxier creates a new winkernel proxier. (Assumes Init() has been called.)
-func (backend *Backend) NewProxier(
+// NewProxyRunner creates a new winkernel proxy runner. (Assumes Init() has been called.)
+func (backend *Backend) NewProxyRunner(
 	ctx context.Context,
 	nodeName string,
 	nodeIPs map[v1.IPFamily]net.IP,
 	recorder events.EventRecorder,
 	healthzServer *healthcheck.ProxyHealthServer,
 	_ map[v1.IPFamily]proxyutil.LocalTrafficDetector,
-) (proxy.Proxier, error) {
-	mp := metaproxier.New()
+) (*proxy.Runner, error) {
+	r := proxy.NewRunner()
 	for _, family := range backend.ipFamilies {
 		proxier, err := newProxier(
 			family,
@@ -115,9 +114,9 @@ func (backend *Backend) NewProxier(
 		if err != nil {
 			return nil, fmt.Errorf("unable to create %s proxier: %w", family, err)
 		}
-		mp.AddProxier(family, proxier)
+		r.AddProxier(family, proxier)
 	}
-	return mp, nil
+	return r, nil
 }
 
 // Cleanup cleans up state left behind by a previous run of the Backend, either because

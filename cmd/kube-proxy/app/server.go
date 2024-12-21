@@ -177,7 +177,7 @@ type ProxyServer struct {
 	localDetectors map[v1.IPFamily]proxyutil.LocalTrafficDetector
 	podCIDRs       []string
 
-	Proxier proxy.Proxier
+	Runner  *proxy.Runner
 }
 
 // newProxyServer creates a ProxyServer based on the given config
@@ -289,7 +289,7 @@ func newProxyServer(ctx context.Context, config *kubeproxyconfig.KubeProxyConfig
 		logger.Error(err, "Kube-proxy configuration may be incomplete or incorrect")
 	}
 
-	s.Proxier, err = backend.NewProxier(ctx, s.NodeName, s.NodeIPs, s.Recorder, s.HealthzServer, s.localDetectors)
+	s.Runner, err = backend.NewProxyRunner(ctx, s.NodeName, s.NodeIPs, s.Recorder, s.HealthzServer, s.localDetectors)
 	if err != nil {
 		return nil, err
 	}
@@ -606,16 +606,16 @@ func (s *ProxyServer) Run(ctx context.Context) error {
 			options.FieldSelector = fields.OneTermNotEqualSelector("spec.clusterIP", v1.ClusterIPNone).String()
 		}))
 	serviceConfig := config.NewServiceConfig(ctx, serviceInformerFactory.Core().V1().Services(), s.Config.ConfigSyncPeriod.Duration)
-	serviceConfig.RegisterEventHandler(s.Proxier)
+	serviceConfig.RegisterEventHandler(s.Runner)
 	go serviceConfig.Run(ctx.Done())
 
 	endpointSliceConfig := config.NewEndpointSliceConfig(ctx, informerFactory.Discovery().V1().EndpointSlices(), s.Config.ConfigSyncPeriod.Duration)
-	endpointSliceConfig.RegisterEventHandler(s.Proxier)
+	endpointSliceConfig.RegisterEventHandler(s.Runner)
 	go endpointSliceConfig.Run(ctx.Done())
 
 	if utilfeature.DefaultFeatureGate.Enabled(features.MultiCIDRServiceAllocator) {
 		serviceCIDRConfig := config.NewServiceCIDRConfig(ctx, informerFactory.Networking().V1().ServiceCIDRs(), s.Config.ConfigSyncPeriod.Duration)
-		serviceCIDRConfig.RegisterEventHandler(s.Proxier)
+		serviceCIDRConfig.RegisterEventHandler(s.Runner)
 		go serviceCIDRConfig.Run(wait.NeverStop)
 	}
 	// This has to start after the calls to NewServiceConfig because that
@@ -628,7 +628,7 @@ func (s *ProxyServer) Run(ctx context.Context) error {
 		nodeConfig := config.NewNodeConfig(ctx, s.NodeManager.NodeInformer(), s.Config.ConfigSyncPeriod.Duration)
 		nodeConfig.RegisterEventHandler(s.NodeManager)
 		nodeTopologyConfig := config.NewNodeTopologyConfig(ctx, s.NodeManager.NodeInformer(), s.Config.ConfigSyncPeriod.Duration)
-		nodeTopologyConfig.RegisterEventHandler(s.Proxier)
+		nodeTopologyConfig.RegisterEventHandler(s.Runner)
 
 		go nodeConfig.Run(wait.NeverStop)
 	}
@@ -636,7 +636,7 @@ func (s *ProxyServer) Run(ctx context.Context) error {
 	// Birth Cry after the birth is successful
 	s.birthCry()
 
-	go s.Proxier.SyncLoop()
+	go s.Runner.SyncLoop()
 
 	select {
 	case err = <-healthzErrCh:
