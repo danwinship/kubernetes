@@ -175,7 +175,7 @@ type ProxyServer struct {
 	podCIDRs    []string // only used for LocalModeNodeCIDR
 	NodeManager *proxy.NodeManager
 
-	Proxier proxy.Provider
+	Proxier proxy.Proxier
 }
 
 // newProxyServer creates a ProxyServer based on the given config
