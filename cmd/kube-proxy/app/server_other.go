@@ -45,8 +45,8 @@ func (s *ProxyServer) platformCheckSupported(ctx context.Context) (ipv4Supported
 	return false, false, false, unsupportedError
 }
 
-// createProxier creates the proxy.Provider
-func (s *ProxyServer) createProxier(ctx context.Context, config *proxyconfigapi.KubeProxyConfiguration, dualStackMode, initOnly bool) (proxy.Provider, error) {
+// createProxier creates the proxy.Proxier
+func (s *ProxyServer) createProxier(ctx context.Context, config *proxyconfigapi.KubeProxyConfiguration, dualStackMode, initOnly bool) (proxy.Proxier, error) {
 	return nil, unsupportedError
 }
 

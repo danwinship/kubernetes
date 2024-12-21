@@ -116,7 +116,7 @@ func NewDualStackProxier(
 	healthzServer *healthcheck.ProxyHealthServer,
 	nodePortAddresses []string,
 	initOnly bool,
-) (proxy.Provider, error) {
+) (proxy.Proxier, error) {
 	// Create an ipv4 instance of the single-stack proxier
 	ipv4Proxier, err := NewProxier(ctx, v1.IPv4Protocol,
 		syncPeriod, minSyncPeriod, masqueradeAll, masqueradeBit,
@@ -204,8 +204,8 @@ type Proxier struct {
 	serviceNodePorts    *nftElementStorage
 }
 
-// Proxier implements proxy.Provider
-var _ proxy.Provider = &Proxier{}
+// Proxier implements proxy.Proxier
+var _ proxy.Proxier = &Proxier{}
 
 // NewProxier returns a new single-stack NFTables proxier.
 func NewProxier(ctx context.Context,
