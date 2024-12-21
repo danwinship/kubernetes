@@ -44,7 +44,6 @@ import (
 	"k8s.io/kubernetes/pkg/proxy"
 	"k8s.io/kubernetes/pkg/proxy/conntrack"
 	"k8s.io/kubernetes/pkg/proxy/healthcheck"
-	"k8s.io/kubernetes/pkg/proxy/metaproxier"
 	"k8s.io/kubernetes/pkg/proxy/metrics"
 	proxyutil "k8s.io/kubernetes/pkg/proxy/util"
 	"k8s.io/kubernetes/pkg/proxy/util/nfacct"
@@ -90,7 +89,7 @@ const (
 
 const sysctlNFConntrackTCPBeLiberal = "net/netfilter/nf_conntrack_tcp_be_liberal"
 
-// NewDualStackProxier creates a MetaProxier instance, with IPv4 and IPv6 proxies.
+// NewDualStackProxier creates a meta proxier with IPv4 and IPv6 proxies.
 func NewDualStackProxier(
 	ctx context.Context,
 	ipts map[v1.IPFamily]utiliptables.Interface,
@@ -124,7 +123,10 @@ func NewDualStackProxier(
 		return nil, fmt.Errorf("unable to create ipv6 proxier: %v", err)
 	}
 
-	return metaproxier.NewMetaProxier(ipv4Proxier, ipv6Proxier), nil
+	runner := proxy.NewRunner()
+	runner.AddProxier(v1.IPv4Protocol, ipv4Proxier)
+	runner.AddProxier(v1.IPv6Protocol, ipv6Proxier)
+	return runner, nil
 }
 
 // Proxier is an iptables-based proxy

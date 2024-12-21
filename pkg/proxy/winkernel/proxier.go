@@ -46,7 +46,6 @@ import (
 	"k8s.io/kubernetes/pkg/proxy/apis/config"
 	proxyconfig "k8s.io/kubernetes/pkg/proxy/config"
 	"k8s.io/kubernetes/pkg/proxy/healthcheck"
-	"k8s.io/kubernetes/pkg/proxy/metaproxier"
 	"k8s.io/kubernetes/pkg/proxy/metrics"
 	proxyutil "k8s.io/kubernetes/pkg/proxy/util"
 	"k8s.io/kubernetes/pkg/util/async"
@@ -867,9 +866,10 @@ func NewDualStackProxier(
 		return nil, fmt.Errorf("unable to create ipv6 proxier: %v, nodeName: %s, nodeIP:%v", err, nodeName, nodeIPs[v1.IPv6Protocol])
 	}
 
-	// Return a meta-proxier that dispatch calls between the two
-	// single-stack proxier instances
-	return metaproxier.NewMetaProxier(ipv4Proxier, ipv6Proxier), nil
+	runner := proxy.NewRunner()
+	runner.AddProxier(v1.IPv4Protocol, ipv4Proxier)
+	runner.AddProxier(v1.IPv6Protocol, ipv6Proxier)
+	return runner, nil
 }
 
 // CleanupLeftovers removes all hns rules created by the Proxier
