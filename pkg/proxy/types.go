@@ -24,7 +24,11 @@ import (
 	"k8s.io/kubernetes/pkg/proxy/config"
 )
 
-// Proxier is the interface provided by proxier implementations.
+// Backend represents an entire proxy backend (e.g., nftables, winkernel).
+type Backend interface {}
+
+// Proxier is the interface to a specific proxy implementation. A Backend may wrap one or
+// more Proxiers.
 type Proxier interface {
 	config.EndpointSliceHandler
 	config.ServiceHandler

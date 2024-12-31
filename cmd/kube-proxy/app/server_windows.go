@@ -82,6 +82,19 @@ func (s *ProxyServer) platformCheckSupported(ctx context.Context) (ipv4Supported
 	return
 }
 
+// createBackend creates the proxy.Backend
+func (s *ProxyServer) createBackend(ctx context.Context) (proxy.Backend, error) {
+	return winkernel.NewBackend(
+		ctx,
+		s.Config,
+		s.PrimaryIPFamily,
+		s.NodeName,
+		s.NodeIPs,
+		s.Recorder,
+		s.HealthzServer,
+	)
+}
+
 // createProxier creates the Proxier
 func (s *ProxyServer) createProxier(ctx context.Context, config *proxyconfigapi.KubeProxyConfiguration, dualStackMode, initOnly bool) (proxy.Proxier, error) {
 	if initOnly {

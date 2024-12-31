@@ -114,6 +114,52 @@ func (s *ProxyServer) platformCheckSupported(ctx context.Context) (ipv4Supported
 	return
 }
 
+// createBackend creates the proxy.Backend
+func (s *ProxyServer) createBackend(ctx context.Context) (proxy.Backend, error) {
+	logger := klog.FromContext(ctx)
+
+	localDetectors := getLocalDetectors(logger, s.PrimaryIPFamily, s.Config, s.podCIDRs)
+
+	switch s.Config.Mode {
+	case proxyconfigapi.ProxyModeIPTables:
+		return iptables.NewBackend(
+			ctx,
+			s.Config,
+			s.PrimaryIPFamily,
+			s.NodeName,
+			s.NodeIPs,
+			s.Recorder,
+			s.HealthzServer,
+			localDetectors,
+		)
+	case proxyconfigapi.ProxyModeIPVS:
+		return ipvs.NewBackend(
+			ctx,
+			s.Config,
+			s.PrimaryIPFamily,
+			s.NodeName,
+			s.NodeIPs,
+			s.Recorder,
+			s.HealthzServer,
+			localDetectors,
+		)
+	case proxyconfigapi.ProxyModeNFTables:
+		return nftables.NewBackend(
+			ctx,
+			s.Config,
+			s.PrimaryIPFamily,
+			s.NodeName,
+			s.NodeIPs,
+			s.Recorder,
+			s.HealthzServer,
+			localDetectors,
+		)
+	}
+
+	// (can't happen, due to validation)
+	return nil, fmt.Errorf("unknown backend type %q", s.Config.Mode)
+}
+
 // createProxier creates the Proxier
 func (s *ProxyServer) createProxier(ctx context.Context, config *proxyconfigapi.KubeProxyConfiguration, dualStack, initOnly bool) (proxy.Proxier, error) {
 	logger := klog.FromContext(ctx)
@@ -123,7 +169,6 @@ func (s *ProxyServer) createProxier(ctx context.Context, config *proxyconfigapi.
 	localDetectors := getLocalDetectors(logger, s.PrimaryIPFamily, config, s.podCIDRs)
 
 	if config.Mode == proxyconfigapi.ProxyModeIPTables {
-		logger.Info("Using iptables Proxier")
 		ipts := utiliptables.NewDualStack()
 
 		if dualStack {

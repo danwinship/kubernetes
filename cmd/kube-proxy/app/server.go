@@ -171,6 +171,7 @@ type ProxyServer struct {
 
 	podCIDRs []string // only used for LocalModeNodeCIDR
 
+	Backend proxy.Backend
 	Proxier proxy.Proxier
 }
 
@@ -239,6 +240,12 @@ func newProxyServer(ctx context.Context, config *kubeproxyconfig.KubeProxyConfig
 	err = checkBadConfig(s)
 	if err != nil {
 		logger.Error(err, "Kube-proxy configuration may be incomplete or incorrect")
+	}
+
+	logger.Info("Creating proxy backend", "mode", config.Mode)
+	s.Backend, err = s.createBackend(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("unable to create proxy backend: %w", err)
 	}
 
 	ipv4Supported, ipv6Supported, dualStackSupported, err := s.platformCheckSupported(ctx)
