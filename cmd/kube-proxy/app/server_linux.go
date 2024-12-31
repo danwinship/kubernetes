@@ -50,7 +50,6 @@ import (
 // config file, to apply platform-specific default values to config.
 func (o *Options) platformApplyDefaults(config *proxyconfigapi.KubeProxyConfiguration) {
 	if config.Mode == "" {
-		o.logger.Info("Using iptables proxy")
 		config.Mode = proxyconfigapi.ProxyModeIPTables
 	}
 
@@ -133,7 +132,6 @@ func (s *ProxyServer) createProxier(ctx context.Context, config *proxyconfigapi.
 	localDetectors := getLocalDetectors(logger, s.PrimaryIPFamily, config, s.podCIDRs)
 
 	if config.Mode == proxyconfigapi.ProxyModeIPTables {
-		logger.Info("Using iptables Proxier")
 		ipts := utiliptables.NewBestEffort()
 
 		if dualStack {
@@ -190,7 +188,6 @@ func (s *ProxyServer) createProxier(ctx context.Context, config *proxyconfigapi.
 		}
 		ipts := utiliptables.NewBestEffort()
 
-		logger.Info("Using ipvs Proxier")
 		if dualStack {
 			proxier, err = ipvs.NewDualStackProxier(
 				ctx,
@@ -247,8 +244,6 @@ func (s *ProxyServer) createProxier(ctx context.Context, config *proxyconfigapi.
 			return nil, fmt.Errorf("unable to create proxier: %v", err)
 		}
 	} else if config.Mode == proxyconfigapi.ProxyModeNFTables {
-		logger.Info("Using nftables Proxier")
-
 		if dualStack {
 			// TODO this has side effects that should only happen when Run() is invoked.
 			proxier, err = nftables.NewDualStackProxier(

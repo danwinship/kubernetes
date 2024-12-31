@@ -17,14 +17,27 @@ limitations under the License.
 package proxy
 
 import (
+	"context"
 	"fmt"
 
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
+	proxyconfigapi "k8s.io/kubernetes/pkg/proxy/apis/config"
 	"k8s.io/kubernetes/pkg/proxy/config"
 )
 
-// Proxier is the interface provided by proxier implementations.
+// Backend represents an entire proxy backend (e.g., nftables, winkernel).
+type Backend interface {
+	// Init initializes the selected backend, applies backend-specific config defaults,
+	// and confirms that the backend can run on this node with this config.
+	Init(ctx context.Context, config *proxyconfigapi.KubeProxyConfiguration, primaryIPFamily v1.IPFamily) error
+}
+
+// Backends gives the set of available backends
+var Backends = map[proxyconfigapi.ProxyMode]Backend{}
+
+// Proxier is the interface to a specific proxy implementation. A Backend may wrap one or
+// more Proxiers.
 type Proxier interface {
 	config.EndpointSliceHandler
 	config.ServiceHandler

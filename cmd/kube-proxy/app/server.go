@@ -221,6 +221,15 @@ func newProxyServer(ctx context.Context, config *kubeproxyconfig.KubeProxyConfig
 	s.PrimaryIPFamily, s.NodeIPs = detectNodeIPs(ctx, rawNodeIPs, config.BindAddress)
 	s.podCIDRs = s.NodeManager.PodCIDRs()
 
+	backend := proxy.Backends[config.Mode]
+	if backend == nil {
+		return nil, fmt.Errorf("unknown proxy backend %q", config.Mode)
+	}
+	logger.Info("Using proxy backend", "backend", config.Mode)
+	if err := backend.Init(ctx, config, s.PrimaryIPFamily); err != nil {
+		return nil, fmt.Errorf("could not initialize proxy backend: %w", err)
+	}
+
 	if len(config.NodePortAddresses) == 1 && config.NodePortAddresses[0] == kubeproxyconfig.NodePortAddressesPrimary {
 		var nodePortAddresses []string
 		if nodeIP := s.NodeIPs[v1.IPv4Protocol]; nodeIP != nil && !nodeIP.IsLoopback() {
