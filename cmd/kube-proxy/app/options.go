@@ -37,6 +37,7 @@ import (
 	"k8s.io/kube-proxy/config/v1alpha1"
 	"k8s.io/kubernetes/pkg/cluster/ports"
 	"k8s.io/kubernetes/pkg/kubelet/qos"
+	"k8s.io/kubernetes/pkg/proxy"
 	kubeproxyconfig "k8s.io/kubernetes/pkg/proxy/apis/config"
 	proxyconfigscheme "k8s.io/kubernetes/pkg/proxy/apis/config/scheme"
 	kubeproxyconfigv1alpha1 "k8s.io/kubernetes/pkg/proxy/apis/config/v1alpha1"
@@ -61,6 +62,8 @@ type Options struct {
 	config *kubeproxyconfig.KubeProxyConfiguration
 	// watcher is used to watch on the update change of ConfigFile
 	watcher filesystem.FSWatcher
+	// backend is the selected proxy backend
+	backend proxy.Backend
 	// proxyServer is the interface to run the proxy server
 	proxyServer proxyRun
 	// errCh is the channel that errors will be sent

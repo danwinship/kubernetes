@@ -182,6 +182,15 @@ type ProxyServer struct {
 func newProxyServer(ctx context.Context, config *kubeproxyconfig.KubeProxyConfiguration, master string, initOnly bool, flagzReader flagz.Reader) (*ProxyServer, error) {
 	logger := klog.FromContext(ctx)
 
+	backend := proxy.Backends[config.Mode]
+	if backend == nil {
+		return nil, fmt.Errorf("unknown proxy backend %q", config.Mode)
+	}
+	logger.Info("Using proxy backend", "backend", config.Mode)
+	if err := backend.Init(ctx, config); err != nil {
+		return nil, fmt.Errorf("could not initialize proxy backend: %w", err)
+	}	
+
 	s := &ProxyServer{
 		Config: config,
 		flagz:  flagzReader,
