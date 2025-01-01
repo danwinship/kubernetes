@@ -38,7 +38,6 @@ import (
 	discovery "k8s.io/api/discovery/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
-	"k8s.io/apimachinery/pkg/util/version"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/tools/events"
 	utilsysctl "k8s.io/component-helpers/node/util/sysctl"
@@ -53,7 +52,6 @@ import (
 	proxyutil "k8s.io/kubernetes/pkg/proxy/util"
 	"k8s.io/kubernetes/pkg/util/async"
 	utiliptables "k8s.io/kubernetes/pkg/util/iptables"
-	utilkernel "k8s.io/kubernetes/pkg/util/kernel"
 	netutils "k8s.io/utils/net"
 )
 
@@ -97,17 +95,6 @@ const (
 	defaultDummyDevice = "kube-ipvs0"
 )
 
-// In IPVS proxy mode, the following flags need to be set
-const (
-	sysctlVSConnTrack             = "net/ipv4/vs/conntrack"
-	sysctlConnReuse               = "net/ipv4/vs/conn_reuse_mode"
-	sysctlExpireNoDestConn        = "net/ipv4/vs/expire_nodest_conn"
-	sysctlExpireQuiescentTemplate = "net/ipv4/vs/expire_quiescent_template"
-	sysctlForward                 = "net/ipv4/ip_forward"
-	sysctlArpIgnore               = "net/ipv4/conf/all/arp_ignore"
-	sysctlArpAnnounce             = "net/ipv4/conf/all/arp_announce"
-)
-
 // NewDualStackProxier returns a new Proxier for dual-stack operation
 func NewDualStackProxier(
 	ctx context.Context,
@@ -131,14 +118,13 @@ func NewDualStackProxier(
 	healthzServer *healthcheck.ProxyHealthServer,
 	scheduler string,
 	nodePortAddresses []string,
-	initOnly bool,
 ) (proxy.Proxier, error) {
 	// Create an ipv4 instance of the single-stack proxier
 	ipv4Proxier, err := NewProxier(ctx, v1.IPv4Protocol, ipts[v1.IPv4Protocol], ipvs, ipset, sysctl,
 		syncPeriod, minSyncPeriod, filterCIDRs(false, excludeCIDRs), strictARP,
 		tcpTimeout, tcpFinTimeout, udpTimeout, masqueradeAll, masqueradeBit,
 		localDetectors[v1.IPv4Protocol], nodeName, nodeIPs[v1.IPv4Protocol], recorder,
-		healthzServer, scheduler, nodePortAddresses, initOnly)
+		healthzServer, scheduler, nodePortAddresses)
 	if err != nil {
 		return nil, fmt.Errorf("unable to create ipv4 proxier: %v", err)
 	}
@@ -147,12 +133,9 @@ func NewDualStackProxier(
 		syncPeriod, minSyncPeriod, filterCIDRs(true, excludeCIDRs), strictARP,
 		tcpTimeout, tcpFinTimeout, udpTimeout, masqueradeAll, masqueradeBit,
 		localDetectors[v1.IPv6Protocol], nodeName, nodeIPs[v1.IPv6Protocol], recorder,
-		healthzServer, scheduler, nodePortAddresses, initOnly)
+		healthzServer, scheduler, nodePortAddresses)
 	if err != nil {
 		return nil, fmt.Errorf("unable to create ipv6 proxier: %v", err)
-	}
-	if initOnly {
-		return nil, nil
 	}
 
 	// Return a meta-proxier that dispatch calls between the two
@@ -278,71 +261,8 @@ func NewProxier(
 	healthzServer *healthcheck.ProxyHealthServer,
 	scheduler string,
 	nodePortAddressStrings []string,
-	initOnly bool,
 ) (*Proxier, error) {
 	logger := klog.LoggerWithValues(klog.FromContext(ctx), "ipFamily", ipFamily)
-	// Set the conntrack sysctl we need for
-	if err := proxyutil.EnsureSysctl(sysctl, sysctlVSConnTrack, 1); err != nil {
-		return nil, err
-	}
-
-	kernelVersion, err := utilkernel.GetVersion()
-	if err != nil {
-		return nil, fmt.Errorf("failed to get kernel version: %w", err)
-	}
-
-	if kernelVersion.LessThan(version.MustParseGeneric(utilkernel.IPVSConnReuseModeMinSupportedKernelVersion)) {
-		logger.Error(nil, "Can't set sysctl, kernel version doesn't satisfy minimum version requirements", "sysctl", sysctlConnReuse, "minimumKernelVersion", utilkernel.IPVSConnReuseModeMinSupportedKernelVersion)
-	} else if kernelVersion.AtLeast(version.MustParseGeneric(utilkernel.IPVSConnReuseModeFixedKernelVersion)) {
-		// https://github.com/kubernetes/kubernetes/issues/93297
-		logger.V(2).Info("Left as-is", "sysctl", sysctlConnReuse)
-	} else {
-		// Set the connection reuse mode
-		if err := proxyutil.EnsureSysctl(sysctl, sysctlConnReuse, 0); err != nil {
-			return nil, err
-		}
-	}
-
-	// Set the expire_nodest_conn sysctl we need for
-	if err := proxyutil.EnsureSysctl(sysctl, sysctlExpireNoDestConn, 1); err != nil {
-		return nil, err
-	}
-
-	// Set the expire_quiescent_template sysctl we need for
-	if err := proxyutil.EnsureSysctl(sysctl, sysctlExpireQuiescentTemplate, 1); err != nil {
-		return nil, err
-	}
-
-	// Set the ip_forward sysctl we need for
-	if err := proxyutil.EnsureSysctl(sysctl, sysctlForward, 1); err != nil {
-		return nil, err
-	}
-
-	if strictARP {
-		// Set the arp_ignore sysctl we need for
-		if err := proxyutil.EnsureSysctl(sysctl, sysctlArpIgnore, 1); err != nil {
-			return nil, err
-		}
-
-		// Set the arp_announce sysctl we need for
-		if err := proxyutil.EnsureSysctl(sysctl, sysctlArpAnnounce, 2); err != nil {
-			return nil, err
-		}
-	}
-
-	// Configure IPVS timeouts if any one of the timeout parameters have been set.
-	// This is the equivalent to running ipvsadm --set, a value of 0 indicates the
-	// current system timeout should be preserved
-	if tcpTimeout > 0 || tcpFinTimeout > 0 || udpTimeout > 0 {
-		if err := ipvs.ConfigureTimeouts(tcpTimeout, tcpFinTimeout, udpTimeout); err != nil {
-			logger.Error(err, "Failed to configure IPVS timeouts")
-		}
-	}
-
-	if initOnly {
-		logger.Info("System initialized and --init-only specified")
-		return nil, nil
-	}
 
 	// Generate the masquerade mark to use for SNAT rules.
 	masqueradeValue := 1 << uint(masqueradeBit)

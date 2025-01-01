@@ -27,6 +27,7 @@ import (
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/tools/events"
 	utilsysctl "k8s.io/component-helpers/node/util/sysctl"
+	"k8s.io/klog/v2"
 	"k8s.io/kubernetes/pkg/proxy"
 	kubeproxyconfig "k8s.io/kubernetes/pkg/proxy/apis/config"
 	"k8s.io/kubernetes/pkg/proxy/healthcheck"
@@ -34,14 +35,17 @@ import (
 	utiliptables "k8s.io/kubernetes/pkg/util/iptables"
 )
 
+const sysctlRouteLocalnet = "net/ipv4/conf/all/route_localnet"
+
 // Backend implements the IPTables backend
 type Backend struct {
-	config         *kubeproxyconfig.KubeProxyConfiguration
-	hostname       string
-	nodeIPs        map[v1.IPFamily]net.IP
-	recorder       events.EventRecorder
-	healthzServer  *healthcheck.ProxyHealthServer
-	localDetectors map[v1.IPFamily]proxyutil.LocalTrafficDetector
+	config            *kubeproxyconfig.KubeProxyConfiguration
+	hostname          string
+	nodeIPs           map[v1.IPFamily]net.IP
+	recorder          events.EventRecorder
+	healthzServer     *healthcheck.ProxyHealthServer
+	localDetectors    map[v1.IPFamily]proxyutil.LocalTrafficDetector
+	nodePortAddresses map[v1.IPFamily]*proxyutil.NodePortAddresses
 
 	ipts   map[v1.IPFamily]utiliptables.Interface
 	sysctl utilsysctl.Interface
@@ -68,15 +72,38 @@ func NewBackend(
 		return nil, fmt.Errorf("iptables is not available on this host")
 	}
 
+	nodePortAddresses := map[v1.IPFamily]*proxyutil.NodePortAddresses{
+		v1.IPv4Protocol: proxyutil.NewNodePortAddresses(v1.IPv4Protocol, config.NodePortAddresses),
+		v1.IPv6Protocol: proxyutil.NewNodePortAddresses(v1.IPv6Protocol, config.NodePortAddresses),
+	}
+
 	return &Backend{
-		config:         config,
-		hostname:       hostname,
-		nodeIPs:        nodeIPs,
-		recorder:       recorder,
-		healthzServer:  healthzServer,
-		localDetectors: localDetectors,
+		config:            config,
+		hostname:          hostname,
+		nodeIPs:           nodeIPs,
+		recorder:          recorder,
+		healthzServer:     healthzServer,
+		localDetectors:    localDetectors,
+		nodePortAddresses: nodePortAddresses,
 
 		ipts:   ipts,
 		sysctl: sysctl,
 	}, nil
+}
+
+func (backend *Backend) PrivilegedInit(ctx context.Context) error {
+	// Figure out if we need to set route_localnet to allow IPv4 localhost NodePorts.
+	// https://issues.k8s.io/90259
+	if backend.ipts[v1.IPv4Protocol] != nil &&
+		*backend.config.IPTables.LocalhostNodePorts &&
+		backend.nodePortAddresses[v1.IPv4Protocol].ContainsIPv4Loopback() {
+
+		logger := klog.FromContext(ctx)
+		logger.Info("Setting route_localnet=1 to allow node-ports on localhost; to change this either disable iptables.localhostNodePorts (--iptables-localhost-nodeports) or set nodePortAddresses (--nodeport-addresses) to filter loopback addresses")
+		if err := proxyutil.EnsureSysctl(backend.sysctl, sysctlRouteLocalnet, 1); err != nil {
+			return fmt.Errorf("cannot set required sysctl for proxy: %v", err)
+		}
+	}
+
+	return nil
 }

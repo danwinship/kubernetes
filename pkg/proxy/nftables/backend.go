@@ -83,6 +83,10 @@ func NewBackend(
 	}, nil
 }
 
+func (backend *Backend) PrivilegedInit(ctx context.Context) error {
+	return nil
+}
+
 // Create a knftables.Interface and check if we can use the nftables proxy mode on this host.
 func getNFTablesInterface(ipFamily v1.IPFamily) (knftables.Interface, error) {
 	var nftablesFamily knftables.Family

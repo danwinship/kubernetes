@@ -30,7 +30,7 @@ func (o *Options) addOSFlags(fs *pflag.FlagSet) {
 
 // platformApplyDefaults is called after parsing command-line flags and/or reading the
 // config file, to apply platform-specific default values to config.
-func (o *Options) platformApplyDefaults(config *proxyconfigapi.KubeProxyConfiguration) {
+func (o *Options) platformApplyDefaults(config *proxyconfigapi.KubeProxyConfiguration) error {
 	if config.Mode == "" {
 		o.logger.Info("Using iptables proxy")
 		config.Mode = proxyconfigapi.ProxyModeIPTables
@@ -45,4 +45,5 @@ func (o *Options) platformApplyDefaults(config *proxyconfigapi.KubeProxyConfigur
 		config.DetectLocalMode = proxyconfigapi.LocalModeClusterCIDR
 	}
 	o.logger.V(2).Info("DetectLocalMode", "localMode", string(config.DetectLocalMode))
+	return nil
 }

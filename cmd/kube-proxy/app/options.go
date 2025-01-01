@@ -231,7 +231,9 @@ func (o *Options) Complete(fs *pflag.FlagSet) error {
 		o.processV1Alpha1Flags(fs)
 	}
 
-	o.platformApplyDefaults(o.config)
+	if err := o.platformApplyDefaults(o.config); err != nil {
+		return err
+	}
 
 	if err := o.processHostnameOverrideFlag(); err != nil {
 		return err

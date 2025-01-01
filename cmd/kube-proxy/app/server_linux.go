@@ -161,7 +161,7 @@ func (s *ProxyServer) createBackend(ctx context.Context) (proxy.Backend, error) 
 }
 
 // createProxier creates the Proxier
-func (s *ProxyServer) createProxier(ctx context.Context, config *proxyconfigapi.KubeProxyConfiguration, dualStack, initOnly bool) (proxy.Proxier, error) {
+func (s *ProxyServer) createProxier(ctx context.Context, config *proxyconfigapi.KubeProxyConfiguration, dualStack bool) (proxy.Proxier, error) {
 	logger := klog.FromContext(ctx)
 	var proxier proxy.Proxier
 	var err error
@@ -188,7 +188,6 @@ func (s *ProxyServer) createProxier(ctx context.Context, config *proxyconfigapi.
 				s.Recorder,
 				s.HealthzServer,
 				config.NodePortAddresses,
-				initOnly,
 			)
 		} else {
 			// Create a single-stack proxier if and only if the node does not support dual-stack (i.e, no iptables support).
@@ -210,7 +209,6 @@ func (s *ProxyServer) createProxier(ctx context.Context, config *proxyconfigapi.
 				s.Recorder,
 				s.HealthzServer,
 				config.NodePortAddresses,
-				initOnly,
 			)
 		}
 
@@ -246,7 +244,6 @@ func (s *ProxyServer) createProxier(ctx context.Context, config *proxyconfigapi.
 				s.HealthzServer,
 				config.IPVS.Scheduler,
 				config.NodePortAddresses,
-				initOnly,
 			)
 		} else {
 			proxier, err = ipvs.NewProxier(
@@ -272,7 +269,6 @@ func (s *ProxyServer) createProxier(ctx context.Context, config *proxyconfigapi.
 				s.HealthzServer,
 				config.IPVS.Scheduler,
 				config.NodePortAddresses,
-				initOnly,
 			)
 		}
 		if err != nil {
@@ -295,7 +291,6 @@ func (s *ProxyServer) createProxier(ctx context.Context, config *proxyconfigapi.
 				s.Recorder,
 				s.HealthzServer,
 				config.NodePortAddresses,
-				initOnly,
 			)
 		} else {
 			// Create a single-stack proxier if and only if the node does not support dual-stack
@@ -313,7 +308,6 @@ func (s *ProxyServer) createProxier(ctx context.Context, config *proxyconfigapi.
 				s.Recorder,
 				s.HealthzServer,
 				config.NodePortAddresses,
-				initOnly,
 			)
 		}
 

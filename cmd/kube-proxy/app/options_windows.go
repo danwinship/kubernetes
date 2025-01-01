@@ -20,6 +20,8 @@ limitations under the License.
 package app
 
 import (
+	"fmt"
+
 	"github.com/spf13/pflag"
 
 	proxyconfigapi "k8s.io/kubernetes/pkg/proxy/apis/config"
@@ -36,11 +38,15 @@ func (o *Options) addOSFlags(fs *pflag.FlagSet) {
 
 // platformApplyDefaults is called after parsing command-line flags and/or reading the
 // config file, to apply platform-specific default values to config.
-func (o *Options) platformApplyDefaults(config *proxyconfigapi.KubeProxyConfiguration) {
+func (o *Options) platformApplyDefaults(config *proxyconfigapi.KubeProxyConfiguration) error {
+	if o.InitAndExit {
+		return fmt.Errorf("--init-only is not implemented on Windows")
+	}
 	if config.Mode == "" {
 		config.Mode = proxyconfigapi.ProxyModeKernelspace
 	}
 	if config.Winkernel.RootHnsEndpointName == "" {
 		config.Winkernel.RootHnsEndpointName = "cbr0"
 	}
+	return nil
 }

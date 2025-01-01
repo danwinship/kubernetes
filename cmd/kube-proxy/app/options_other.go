@@ -30,6 +30,7 @@ func (o *Options) addOSFlags(fs *pflag.FlagSet) {
 
 // platformApplyDefaults is called after parsing command-line flags and/or reading the
 // config file, to apply platform-specific default values to config.
-func (o *Options) platformApplyDefaults(config *proxyconfigapi.KubeProxyConfiguration) {
+func (o *Options) platformApplyDefaults(config *proxyconfigapi.KubeProxyConfiguration) error {
+	return nil
 }
 

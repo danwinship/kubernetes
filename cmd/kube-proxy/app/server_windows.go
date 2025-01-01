@@ -90,11 +90,7 @@ func (s *ProxyServer) createBackend(ctx context.Context) (proxy.Backend, error) 
 }
 
 // createProxier creates the Proxier
-func (s *ProxyServer) createProxier(ctx context.Context, config *proxyconfigapi.KubeProxyConfiguration, dualStackMode, initOnly bool) (proxy.Proxier, error) {
-	if initOnly {
-		return nil, fmt.Errorf("--init-only is not implemented on Windows")
-	}
-
+func (s *ProxyServer) createProxier(ctx context.Context, config *proxyconfigapi.KubeProxyConfiguration, dualStackMode bool) (proxy.Proxier, error) {
 	var proxier proxy.Proxier
 	var err error
 

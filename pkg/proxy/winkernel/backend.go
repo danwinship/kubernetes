@@ -70,6 +70,10 @@ func NewBackend(
 	}, nil
 }
 
+func (backend *Backend) PrivilegedInit(ctx context.Context) error {
+	return nil
+}
+
 // canUseWinKernelProxier returns an error if we can't use the winkernel Proxier.
 func canUseWinKernelProxier() error {
 	_, err := hnslib.HNSListPolicyListRequest()

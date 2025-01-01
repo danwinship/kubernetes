@@ -25,6 +25,7 @@ import (
 	"net"
 
 	v1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/util/version"
 	"k8s.io/client-go/tools/events"
 	utilsysctl "k8s.io/component-helpers/node/util/sysctl"
 	"k8s.io/klog/v2"
@@ -35,7 +36,19 @@ import (
 	utilipvs "k8s.io/kubernetes/pkg/proxy/ipvs/util"
 	proxyutil "k8s.io/kubernetes/pkg/proxy/util"
 	utiliptables "k8s.io/kubernetes/pkg/util/iptables"
+	utilkernel "k8s.io/kubernetes/pkg/util/kernel"
 	netutils "k8s.io/utils/net"
+)
+
+// In IPVS proxy mode, the following flags need to be set
+const (
+	sysctlVSConnTrack             = "net/ipv4/vs/conntrack"
+	sysctlConnReuse               = "net/ipv4/vs/conn_reuse_mode"
+	sysctlExpireNoDestConn        = "net/ipv4/vs/expire_nodest_conn"
+	sysctlExpireQuiescentTemplate = "net/ipv4/vs/expire_quiescent_template"
+	sysctlForward                 = "net/ipv4/ip_forward"
+	sysctlARPIgnore               = "net/ipv4/conf/all/arp_ignore"
+	sysctlARPAnnounce             = "net/ipv4/conf/all/arp_announce"
 )
 
 // Backend implements the IPVS backend
@@ -92,6 +105,73 @@ func NewBackend(
 		ipset:  ipset,
 		sysctl: sysctl,
 	}, nil
+}
+
+func (backend *Backend) PrivilegedInit(ctx context.Context) error {
+	logger := klog.FromContext(ctx)
+
+	// Set the conntrack sysctl we need for
+	if err := proxyutil.EnsureSysctl(backend.sysctl, sysctlVSConnTrack, 1); err != nil {
+		return err
+	}
+
+	kernelVersion, err := utilkernel.GetVersion()
+	if err != nil {
+		return fmt.Errorf("failed to get kernel version: %w", err)
+	}
+
+	if kernelVersion.LessThan(version.MustParseGeneric(utilkernel.IPVSConnReuseModeMinSupportedKernelVersion)) {
+		logger.Error(nil, "Can't set sysctl, kernel version doesn't satisfy minimum version requirements", "sysctl", sysctlConnReuse, "minimumKernelVersion", utilkernel.IPVSConnReuseModeMinSupportedKernelVersion)
+	} else if kernelVersion.AtLeast(version.MustParseGeneric(utilkernel.IPVSConnReuseModeFixedKernelVersion)) {
+		// https://github.com/kubernetes/kubernetes/issues/93297
+		logger.V(2).Info("Left as-is", "sysctl", sysctlConnReuse)
+	} else {
+		// Set the connection reuse mode
+		if err := proxyutil.EnsureSysctl(backend.sysctl, sysctlConnReuse, 0); err != nil {
+			return err
+		}
+	}
+
+	// Set the expire_nodest_conn sysctl we need for
+	if err := proxyutil.EnsureSysctl(backend.sysctl, sysctlExpireNoDestConn, 1); err != nil {
+		return err
+	}
+
+	// Set the expire_quiescent_template sysctl we need for
+	if err := proxyutil.EnsureSysctl(backend.sysctl, sysctlExpireQuiescentTemplate, 1); err != nil {
+		return err
+	}
+
+	// Set the ip_forward sysctl we need for
+	if err := proxyutil.EnsureSysctl(backend.sysctl, sysctlForward, 1); err != nil {
+		return err
+	}
+
+	if backend.config.IPVS.StrictARP {
+		// Set the arp_ignore sysctl we need for
+		if err := proxyutil.EnsureSysctl(backend.sysctl, sysctlARPIgnore, 1); err != nil {
+			return err
+		}
+
+		// Set the arp_announce sysctl we need for
+		if err := proxyutil.EnsureSysctl(backend.sysctl, sysctlARPAnnounce, 2); err != nil {
+			return err
+		}
+	}
+
+	// Configure IPVS timeouts if any one of the timeout parameters have been set.
+	// This is the equivalent to running ipvsadm --set, a value of 0 indicates the
+	// current system timeout should be preserved
+	tcpTimeout := backend.config.IPVS.TCPTimeout.Duration
+	tcpFinTimeout := backend.config.IPVS.TCPFinTimeout.Duration
+	udpTimeout := backend.config.IPVS.UDPTimeout.Duration
+	if tcpTimeout > 0 || tcpFinTimeout > 0 || udpTimeout > 0 {
+		if err := backend.ipvs.ConfigureTimeouts(tcpTimeout, tcpFinTimeout, udpTimeout); err != nil {
+			logger.Error(err, "Failed to configure IPVS timeouts")
+		}
+	}
+
+	return nil
 }
 
 // canUseIPVSProxier checks if we can use the ipvs Proxier.
