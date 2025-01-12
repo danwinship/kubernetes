@@ -21,7 +21,10 @@ package winkernel
 
 import (
 	"context"
+	"fmt"
 	"net"
+
+	"github.com/Microsoft/hnslib"
 
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/tools/events"
@@ -53,6 +56,10 @@ func NewBackend(
 	recorder events.EventRecorder,
 	healthzServer *healthcheck.ProxyHealthServer,
 ) (*Backend, error) {
+	if err := canUseWinKernelProxier(); err != nil {
+		return nil, err
+	}
+
 	return &Backend{
 		config:          config,
 		primaryIPFamily: primaryIPFamily,
@@ -61,4 +68,13 @@ func NewBackend(
 		recorder:        recorder,
 		healthzServer:   healthzServer,
 	}, nil
+}
+
+// canUseWinKernelProxier returns an error if we can't use the winkernel Proxier.
+func canUseWinKernelProxier() error {
+	_, err := hnslib.HNSListPolicyListRequest()
+	if err != nil {
+		return fmt.Errorf("Windows kernel is not compatible for Kernel mode")
+	}
+	return nil
 }

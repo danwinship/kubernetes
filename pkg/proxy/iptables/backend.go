@@ -21,6 +21,7 @@ package iptables
 
 import (
 	"context"
+	"fmt"
 	"net"
 
 	v1 "k8s.io/api/core/v1"
@@ -62,6 +63,10 @@ func NewBackend(
 ) (*Backend, error) {
 	ipts := utiliptables.NewDualStack()
 	sysctl := utilsysctl.New()
+
+	if len(ipts) == 0 {
+		return nil, fmt.Errorf("iptables is not available on this host")
+	}
 
 	return &Backend{
 		config:         config,

@@ -220,9 +220,6 @@ func (s *ProxyServer) createProxier(ctx context.Context, config *proxyconfigapi.
 	} else if config.Mode == proxyconfigapi.ProxyModeIPVS {
 		ipsetInterface := utilipset.New()
 		ipvsInterface := utilipvs.New()
-		if err := ipvs.CanUseIPVSProxier(ctx, ipvsInterface, ipsetInterface, config.IPVS.Scheduler); err != nil {
-			return nil, fmt.Errorf("can't use the IPVS proxier: %v", err)
-		}
 		ipts := utiliptables.NewDualStack()
 
 		logger.Info("Using ipvs Proxier")
