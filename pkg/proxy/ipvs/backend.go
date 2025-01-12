@@ -24,13 +24,27 @@ import (
 	"fmt"
 
 	v1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/util/version"
+	utilsysctl "k8s.io/component-helpers/node/util/sysctl"
 	"k8s.io/klog/v2"
 	"k8s.io/kubernetes/pkg/proxy"
 	proxyconfigapi "k8s.io/kubernetes/pkg/proxy/apis/config"
 	utilipset "k8s.io/kubernetes/pkg/proxy/ipvs/ipset"
 	utilipvs "k8s.io/kubernetes/pkg/proxy/ipvs/util"
+	proxyutil "k8s.io/kubernetes/pkg/proxy/util"
 	utiliptables "k8s.io/kubernetes/pkg/util/iptables"
 	utilkernel "k8s.io/kubernetes/pkg/util/kernel"
+)
+
+// In IPVS proxy mode, the following flags need to be set
+const (
+	sysctlVSConnTrack             = "net/ipv4/vs/conntrack"
+	sysctlConnReuse               = "net/ipv4/vs/conn_reuse_mode"
+	sysctlExpireNoDestConn        = "net/ipv4/vs/expire_nodest_conn"
+	sysctlExpireQuiescentTemplate = "net/ipv4/vs/expire_quiescent_template"
+	sysctlForward                 = "net/ipv4/ip_forward"
+	sysctlARPIgnore               = "net/ipv4/conf/all/arp_ignore"
+	sysctlARPAnnounce             = "net/ipv4/conf/all/arp_announce"
 )
 
 // Backend implements the IPVS backend
@@ -108,4 +122,67 @@ func (backend *Backend) CheckIPFamilySupport(ctx context.Context, primaryIPFamil
 	dualStackSupported = len(backend.ipts) == 2
 
 	return singleStackSupported, dualStackSupported
+}
+
+// PrivilegedInit performs any host initialization steps that require full root
+// privileges, *if they have not already been performed*. When using `--init-only`, this
+// will be called first from a privileged kube-proxy process, and then a second time from
+// an unprivileged kube-proxy process; the second call must not return an error if the
+// first call correctly initialized everything. (Assumes Init() has been called.)
+func (backend *Backend) PrivilegedInit(ctx context.Context, initOnly bool) error {
+	logger := klog.FromContext(ctx)
+
+	sysctl := utilsysctl.New()
+	if err := proxyutil.EnsureSysctl(sysctl, sysctlVSConnTrack, 1); err != nil {
+		return err
+	}
+
+	kernelVersion, err := utilkernel.GetVersion()
+	if err != nil {
+		return fmt.Errorf("failed to get kernel version: %w", err)
+	}
+
+	if kernelVersion.LessThan(version.MustParseGeneric(utilkernel.IPVSConnReuseModeMinSupportedKernelVersion)) {
+		logger.Error(nil, "Can't set sysctl, kernel version doesn't satisfy minimum version requirements", "sysctl", sysctlConnReuse, "minimumKernelVersion", utilkernel.IPVSConnReuseModeMinSupportedKernelVersion)
+	} else if kernelVersion.AtLeast(version.MustParseGeneric(utilkernel.IPVSConnReuseModeFixedKernelVersion)) {
+		// https://github.com/kubernetes/kubernetes/issues/93297
+		logger.V(2).Info("Left as-is", "sysctl", sysctlConnReuse)
+	} else {
+		if err := proxyutil.EnsureSysctl(sysctl, sysctlConnReuse, 0); err != nil {
+			return err
+		}
+	}
+
+	if err := proxyutil.EnsureSysctl(sysctl, sysctlExpireNoDestConn, 1); err != nil {
+		return err
+	}
+	if err := proxyutil.EnsureSysctl(sysctl, sysctlExpireQuiescentTemplate, 1); err != nil {
+		return err
+	}
+	if err := proxyutil.EnsureSysctl(sysctl, sysctlForward, 1); err != nil {
+		return err
+	}
+
+	if backend.config.IPVS.StrictARP {
+		if err := proxyutil.EnsureSysctl(sysctl, sysctlARPIgnore, 1); err != nil {
+			return err
+		}
+		if err := proxyutil.EnsureSysctl(sysctl, sysctlARPAnnounce, 2); err != nil {
+			return err
+		}
+	}
+
+	// Configure IPVS timeouts if any one of the timeout parameters have been set.
+	// This is the equivalent to running ipvsadm --set, a value of 0 indicates the
+	// current system timeout should be preserved
+	tcpTimeout := backend.config.IPVS.TCPTimeout.Duration
+	tcpFinTimeout := backend.config.IPVS.TCPFinTimeout.Duration
+	udpTimeout := backend.config.IPVS.UDPTimeout.Duration
+	if tcpTimeout > 0 || tcpFinTimeout > 0 || udpTimeout > 0 {
+		if err := backend.ipvs.ConfigureTimeouts(tcpTimeout, tcpFinTimeout, udpTimeout); err != nil {
+			logger.Error(err, "Failed to configure IPVS timeouts")
+		}
+	}
+
+	return nil
 }
