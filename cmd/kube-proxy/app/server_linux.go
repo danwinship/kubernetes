@@ -56,25 +56,6 @@ import (
 // node after it is registered.
 var timeoutForNodePodCIDR = 5 * time.Minute
 
-// platformApplyDefaults is called after parsing command-line flags and/or reading the
-// config file, to apply platform-specific default values to config.
-func (o *Options) platformApplyDefaults(config *proxyconfigapi.KubeProxyConfiguration) {
-	if config.Mode == "" {
-		o.logger.Info("Using iptables proxy")
-		config.Mode = proxyconfigapi.ProxyModeIPTables
-	}
-
-	if config.Mode == proxyconfigapi.ProxyModeNFTables && len(config.NodePortAddresses) == 0 {
-		config.NodePortAddresses = []string{proxyconfigapi.NodePortAddressesPrimary}
-	}
-
-	if config.DetectLocalMode == "" {
-		o.logger.V(4).Info("Defaulting detect-local-mode", "localModeClusterCIDR", string(proxyconfigapi.LocalModeClusterCIDR))
-		config.DetectLocalMode = proxyconfigapi.LocalModeClusterCIDR
-	}
-	o.logger.V(2).Info("DetectLocalMode", "localMode", string(config.DetectLocalMode))
-}
-
 // platformSetup is called after setting up the ProxyServer, but before creating the
 // Proxier. It should fill in any platform-specific fields and perform other
 // platform-specific setup.

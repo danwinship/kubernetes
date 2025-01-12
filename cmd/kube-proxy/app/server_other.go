@@ -30,11 +30,6 @@ import (
 	proxyconfigapi "k8s.io/kubernetes/pkg/proxy/apis/config"
 )
 
-// platformApplyDefaults is called after parsing command-line flags and/or reading the
-// config file, to apply platform-specific default values to config.
-func (o *Options) platformApplyDefaults(config *proxyconfigapi.KubeProxyConfiguration) {
-}
-
 var unsupportedError = fmt.Errorf(runtime.GOOS + "/" + runtime.GOARCH + "is unsupported")
 
 // platformSetup is called after setting up the ProxyServer, but before creating the

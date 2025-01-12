@@ -1,8 +1,8 @@
-//go:build linux
-// +build linux
+//go:build !windows && !linux
+// +build !windows,!linux
 
 /*
-Copyright 2018 The Kubernetes Authors.
+Copyright 2024 The Kubernetes Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -21,11 +21,15 @@ package app
 
 import (
 	"github.com/spf13/pflag"
-)
 
-func initForOS(service bool) error {
-	return nil
-}
+	proxyconfigapi "k8s.io/kubernetes/pkg/proxy/apis/config"
+)
 
 func (o *Options) addOSFlags(fs *pflag.FlagSet) {
 }
+
+// platformApplyDefaults is called after parsing command-line flags and/or reading the
+// config file, to apply platform-specific default values to config.
+func (o *Options) platformApplyDefaults(config *proxyconfigapi.KubeProxyConfiguration) {
+}
+

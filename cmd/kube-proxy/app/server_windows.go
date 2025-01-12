@@ -34,23 +34,25 @@ import (
 	"k8s.io/kubernetes/pkg/proxy"
 	proxyconfigapi "k8s.io/kubernetes/pkg/proxy/apis/config"
 	"k8s.io/kubernetes/pkg/proxy/winkernel"
+
+	"k8s.io/kubernetes/pkg/windows/service"
 )
 
-// platformApplyDefaults is called after parsing command-line flags and/or reading the
-// config file, to apply platform-specific default values to config.
-func (o *Options) platformApplyDefaults(config *proxyconfigapi.KubeProxyConfiguration) {
-	if config.Mode == "" {
-		config.Mode = proxyconfigapi.ProxyModeKernelspace
-	}
-	if config.Winkernel.RootHnsEndpointName == "" {
-		config.Winkernel.RootHnsEndpointName = "cbr0"
-	}
-}
+const (
+	serviceName = "kube-proxy"
+)
 
 // platformSetup is called after setting up the ProxyServer, but before creating the
 // Proxier. It should fill in any platform-specific fields and perform other
 // platform-specific setup.
 func (s *ProxyServer) platformSetup(ctx context.Context) error {
+	if s.Config.Windows.RunAsService {
+		err := service.InitService(serviceName)
+		if err != nil {
+			return err
+		}
+	}
+
 	// Preserve backward-compatibility with the old secondary IP behavior
 	if s.PrimaryIPFamily == v1.IPv4Protocol {
 		s.NodeIPs[v1.IPv6Protocol] = net.IPv6zero
