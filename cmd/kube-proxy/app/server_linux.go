@@ -78,7 +78,7 @@ func isIPTablesBased(mode proxyconfigapi.ProxyMode) bool {
 }
 
 // createProxier creates the Proxier
-func (s *ProxyServer) createProxier(ctx context.Context, config *proxyconfigapi.KubeProxyConfiguration, dualStack, initOnly bool) (proxy.Proxier, error) {
+func (s *ProxyServer) createProxier(ctx context.Context, config *proxyconfigapi.KubeProxyConfiguration, dualStack bool) (proxy.Proxier, error) {
 	logger := klog.FromContext(ctx)
 	var proxier proxy.Proxier
 	var err error
@@ -105,7 +105,6 @@ func (s *ProxyServer) createProxier(ctx context.Context, config *proxyconfigapi.
 				s.Recorder,
 				s.HealthzServer,
 				config.NodePortAddresses,
-				initOnly,
 			)
 		} else {
 			// Create a single-stack proxier if and only if the node does not support dual-stack (i.e, no iptables support).
@@ -127,7 +126,6 @@ func (s *ProxyServer) createProxier(ctx context.Context, config *proxyconfigapi.
 				s.Recorder,
 				s.HealthzServer,
 				config.NodePortAddresses,
-				initOnly,
 			)
 		}
 
@@ -145,14 +143,9 @@ func (s *ProxyServer) createProxier(ctx context.Context, config *proxyconfigapi.
 				ipts,
 				ipvsInterface,
 				ipsetInterface,
-				utilsysctl.New(),
 				config.SyncPeriod.Duration,
 				config.MinSyncPeriod.Duration,
 				config.IPVS.ExcludeCIDRs,
-				config.IPVS.StrictARP,
-				config.IPVS.TCPTimeout.Duration,
-				config.IPVS.TCPFinTimeout.Duration,
-				config.IPVS.UDPTimeout.Duration,
 				config.Linux.MasqueradeAll,
 				int(*config.IPTables.MasqueradeBit),
 				localDetectors,
@@ -162,7 +155,6 @@ func (s *ProxyServer) createProxier(ctx context.Context, config *proxyconfigapi.
 				s.HealthzServer,
 				config.IPVS.Scheduler,
 				config.NodePortAddresses,
-				initOnly,
 			)
 		} else {
 			proxier, err = ipvs.NewProxier(
@@ -171,14 +163,9 @@ func (s *ProxyServer) createProxier(ctx context.Context, config *proxyconfigapi.
 				ipts[s.PrimaryIPFamily],
 				ipvsInterface,
 				ipsetInterface,
-				utilsysctl.New(),
 				config.SyncPeriod.Duration,
 				config.MinSyncPeriod.Duration,
 				config.IPVS.ExcludeCIDRs,
-				config.IPVS.StrictARP,
-				config.IPVS.TCPTimeout.Duration,
-				config.IPVS.TCPFinTimeout.Duration,
-				config.IPVS.UDPTimeout.Duration,
 				config.Linux.MasqueradeAll,
 				int(*config.IPTables.MasqueradeBit),
 				localDetectors[s.PrimaryIPFamily],
@@ -188,7 +175,6 @@ func (s *ProxyServer) createProxier(ctx context.Context, config *proxyconfigapi.
 				s.HealthzServer,
 				config.IPVS.Scheduler,
 				config.NodePortAddresses,
-				initOnly,
 			)
 		}
 		if err != nil {
@@ -209,7 +195,6 @@ func (s *ProxyServer) createProxier(ctx context.Context, config *proxyconfigapi.
 				s.Recorder,
 				s.HealthzServer,
 				config.NodePortAddresses,
-				initOnly,
 			)
 		} else {
 			// Create a single-stack proxier if and only if the node does not support dual-stack
@@ -227,7 +212,6 @@ func (s *ProxyServer) createProxier(ctx context.Context, config *proxyconfigapi.
 				s.Recorder,
 				s.HealthzServer,
 				config.NodePortAddresses,
-				initOnly,
 			)
 		}
 

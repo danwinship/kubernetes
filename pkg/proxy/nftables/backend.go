@@ -87,3 +87,13 @@ func (backend *Backend) Init(ctx context.Context, config *proxyconfigapi.KubePro
 func (backend *Backend) DualStackSupported() bool {
 	return len(backend.nfts) == 2
 }
+
+// PrivilegedInit performs any host initialization steps that require full root
+// privileges, *if they have not already been performed*. When using `--init-only`, this
+// will be called first from a privileged kube-proxy process, and then a second time from
+// an unprivileged kube-proxy process; the second call must not return an error if the
+// first call correctly initialized everything. (Assumes Init() has been called.)
+func (backend *Backend) PrivilegedInit(ctx context.Context, initOnly bool) error {
+	// nftables backend needs no privileged init
+	return nil
+}

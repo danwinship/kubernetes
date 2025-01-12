@@ -24,12 +24,16 @@ import (
 	"fmt"
 
 	v1 "k8s.io/api/core/v1"
+	utilsysctl "k8s.io/component-helpers/node/util/sysctl"
 	"k8s.io/klog/v2"
 	"k8s.io/kubernetes/pkg/proxy"
 	proxyconfigapi "k8s.io/kubernetes/pkg/proxy/apis/config"
+	proxyutil "k8s.io/kubernetes/pkg/proxy/util"
 	utiliptables "k8s.io/kubernetes/pkg/util/iptables"
 	utilkernel "k8s.io/kubernetes/pkg/util/kernel"
 )
+
+const sysctlRouteLocalnet = "net/ipv4/conf/all/route_localnet"
 
 // Backend implements the IPTables backend
 type Backend struct {
@@ -91,4 +95,25 @@ func (backend *Backend) Init(ctx context.Context, config *proxyconfigapi.KubePro
 // host. (Assumes Init() has been called.)
 func (backend *Backend) DualStackSupported() bool {
 	return len(backend.ipts) == 2
+}
+
+// PrivilegedInit performs any host initialization steps that require full root
+// privileges, *if they have not already been performed*. When using `--init-only`, this
+// will be called first from a privileged kube-proxy process, and then a second time from
+// an unprivileged kube-proxy process; the second call must not return an error if the
+// first call correctly initialized everything. (Assumes Init() has been called.)
+func (backend *Backend) PrivilegedInit(ctx context.Context, initOnly bool) error {
+	// Figure out if we need to set route_localnet to allow IPv4 localhost NodePorts.
+	// https://issues.k8s.io/90259
+	if backend.ipts[v1.IPv4Protocol] != nil && *backend.config.IPTables.LocalhostNodePorts {
+		v4NodePortAddresses := proxyutil.NewNodePortAddresses(v1.IPv4Protocol, backend.config.NodePortAddresses)
+		if v4NodePortAddresses.ContainsIPv4Loopback() {
+			klog.FromContext(ctx).Info("Setting route_localnet=1 to allow node-ports on localhost; to change this either disable iptables.localhostNodePorts (--iptables-localhost-nodeports) or set nodePortAddresses (--nodeport-addresses) to filter loopback addresses")
+			if err := proxyutil.EnsureSysctl(utilsysctl.New(), sysctlRouteLocalnet, 1); err != nil {
+				return fmt.Errorf("cannot set required sysctl for proxy: %v", err)
+			}
+		}
+	}
+
+	return nil
 }

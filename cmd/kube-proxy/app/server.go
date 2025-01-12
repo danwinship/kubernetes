@@ -259,6 +259,13 @@ func newProxyServer(ctx context.Context, config *kubeproxyconfig.KubeProxyConfig
 	if err != nil {
 		return nil, err
 	}
+	if err := backend.PrivilegedInit(ctx, initOnly); err != nil {
+		return nil, fmt.Errorf("error initializing %q backend: %w", config.Mode, err)
+	}
+	if initOnly {
+		logger.Info("System initialized and --init-only specified")
+		return nil, nil
+	}
 
 	err = checkBadConfig(s)
 	if err != nil {
@@ -280,7 +287,7 @@ func newProxyServer(ctx context.Context, config *kubeproxyconfig.KubeProxyConfig
 		logger.Error(err, "Kube-proxy configuration may be incomplete or incorrect")
 	}
 
-	s.Proxier, err = s.createProxier(ctx, config, dualStackSupported, initOnly)
+	s.Proxier, err = s.createProxier(ctx, config, dualStackSupported)
 	if err != nil {
 		return nil, err
 	}

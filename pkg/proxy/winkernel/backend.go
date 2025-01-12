@@ -21,6 +21,7 @@ package winkernel
 
 import (
 	"context"
+	"fmt"
 
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/kubernetes/pkg/proxy"
@@ -64,4 +65,19 @@ func (backend *Backend) Init(ctx context.Context, config *proxyconfigapi.KubePro
 // host. (Assumes Init() has been called.)
 func (backend *Backend) DualStackSupported() bool {
 	return backend.dualStackSupported
+}
+
+// PrivilegedInit performs any host initialization steps that require full root
+// privileges, *if they have not already been performed*. When using `--init-only`, this
+// will be called first from a privileged kube-proxy process, and then a second time from
+// an unprivileged kube-proxy process; the second call must not return an error if the
+// first call correctly initialized everything. (Assumes Init() has been called.)
+func (backend *Backend) PrivilegedInit(ctx context.Context, initOnly bool) error {
+	if initOnly {
+		return fmt.Errorf("--init-only is not implemented on Windows")
+	}
+
+	// This is still called as part of setup even when not using initOnly. In that
+	// case, there is nothing to do on Windows.
+	return nil
 }

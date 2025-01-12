@@ -45,7 +45,7 @@ func (s *ProxyServer) platformSetup(ctx context.Context) error {
 }
 
 // createProxier creates the proxy.Proxier
-func (s *ProxyServer) createProxier(ctx context.Context, config *proxyconfigapi.KubeProxyConfiguration, dualStackMode, initOnly bool) (proxy.Proxier, error) {
+func (s *ProxyServer) createProxier(ctx context.Context, config *proxyconfigapi.KubeProxyConfiguration, dualStackMode bool) (proxy.Proxier, error) {
 	return nil, unsupportedError
 }
 
