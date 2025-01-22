@@ -10,22 +10,19 @@ var (
 		// alpha features that are not gated
 		"[Disabled:Alpha]": {
 			`\[Feature:StorageVersionAPI\]`,
-			`\[Feature:InPlacePodVerticalScaling\]`,
-			`\[Feature:ServiceCIDRs\]`,
 			`\[Feature:ClusterTrustBundle\]`,
 			`\[Feature:SELinuxMount\]`,
 			`\[FeatureGate:SELinuxMount\]`,
 			`\[Feature:UserNamespacesPodSecurityStandards\]`,
-			`\[Feature:UserNamespacesSupport\]`, // disabled Beta
 			`\[Feature:DynamicResourceAllocation\]`,
 			`\[Feature:VolumeAttributesClass\]`, // disabled Beta
 			`\[sig-cli\] Kubectl client Kubectl prune with applyset should apply and prune objects`, // Alpha feature since k8s 1.27
 			// 4.19
 			`\[Feature:PodLevelResources\]`,
-			`\[Feature:SchedulerAsyncPreemption\]`,
-			`\[Feature:RelaxedDNSSearchValidation\]`,
 			`\[Feature:PodLogsQuerySplitStreams\]`,
-			`\[Feature:PodLifecycleSleepActionAllowZero\]`,
+			`\[Feature:volumegroupsnapshot\]`, // disabled Beta
+			// 4.20
+			`\[Feature:OffByDefault\]`,
 		},
 		// tests for features that are not implemented in openshift
 		"[Disabled:Unimplemented]": {
@@ -162,6 +159,9 @@ var (
 
 			// https://issues.redhat.com/browse/OCPBUGS-38839
 			`\[sig-network\] \[Feature:Traffic Distribution\] when Service has trafficDistribution=PreferClose should route traffic to an endpoint that is close to the client`,
+
+			// https://issues.redhat.com/browse/OCPBUGS-45273
+			`\[sig-network\] Services should implement NodePort and HealthCheckNodePort correctly when ExternalTrafficPolicy changes`,
 		},
 		// tests that need to be temporarily disabled while the rebase is in progress.
 		"[Disabled:RebaseInProgress]": {
@@ -174,25 +174,12 @@ var (
 			// https://issues.redhat.com/browse/OCPBUGS-17194
 			`\[sig-node\] ImageCredentialProvider \[Feature:KubeletCredentialProviders\] should be able to create pod with image credentials fetched from external credential provider`,
 
-			// https://issues.redhat.com/browse/OCPBUGS-45214
-			// Even though this feature is not GA in k/k, it will be GA in OCP 4.19, so we should fix it and unskip this test
-			`\[Feature:volumegroupsnapshot\]`,
+			// https://issues.redhat.com/browse/OCPBUGS-54418
+			`\[sig-network\] Traffic Distribution should route traffic to an endpoint in the same zone when using PreferClose`,
 
-			// https://issues.redhat.com/browse/OCPBUGS-45273
-			`\[sig-network\] Services should implement NodePort and HealthCheckNodePort correctly when ExternalTrafficPolicy changes`,
-
-			// https://issues.redhat.com/browse/OCPBUGS-45273
-			`\[sig-cli\] Kubectl Port forwarding Shutdown client connection while the remote stream is writing data to the port-forward connection port-forward should keep working after detect broken connection`,
-
-			// https://issues.redhat.com/browse/OCPBUGS-45274
-			// https://github.com/kubernetes/kubernetes/issues/129056
-			`\[sig-node\] PodRejectionStatus Kubelet should reject pod when the node didn't have enough resource`,
-
-			// https://issues.redhat.com/browse/OCPBUGS-45359
-			`\[Feature:RecoverVolumeExpansionFailure\]`,
-
-			// https://issues.redhat.com/browse/OCPBUGS-46477
-			`\[sig-storage\] In-tree Volumes \[Driver: azure-file\]`,
+			`\[sig-cli\] oc idle`,
+			`CSI Mock selinux on mount SELinuxMount`,
+			`\[sig-node\] \[Feature:KubeletFineGrainedAuthz\] when calling kubelet API check /healthz enpoint is accessible via nodes/proxy RBAC`,
 		},
 		// tests that may work, but we don't support them
 		"[Disabled:Unsupported]": {
