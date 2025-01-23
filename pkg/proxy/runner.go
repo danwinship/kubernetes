@@ -17,9 +17,16 @@ limitations under the License.
 package proxy
 
 import (
+	"context"
+	"time"
+
 	v1 "k8s.io/api/core/v1"
 	discovery "k8s.io/api/discovery/v1"
+	v1informers "k8s.io/client-go/informers/core/v1"
+	discoveryv1informers "k8s.io/client-go/informers/discovery/v1"
+	networkingv1informers "k8s.io/client-go/informers/networking/v1"
 	"k8s.io/klog/v2"
+	proxyconfig "k8s.io/kubernetes/pkg/proxy/config"
 )
 
 // Runner wraps 0 or more other proxiers. Proxier API calls will be dispatched to the
@@ -41,6 +48,32 @@ func NewRunner() *Runner {
 // AddProxier adds proxier to the Runner
 func (r *Runner) AddProxier(family v1.IPFamily, proxier Proxier) {
 	r.proxiers[family] = proxier
+}
+
+// StartInformers starts the runner's informers
+func (r *Runner) StartInformers(
+	ctx context.Context,
+	informerSyncPeriod time.Duration,
+	serviceInformer v1informers.ServiceInformer,
+	endpointSliceInformer discoveryv1informers.EndpointSliceInformer,
+	serviceCIDRInformer networkingv1informers.ServiceCIDRInformer,
+	nodeInformer v1informers.NodeInformer,
+) {
+	serviceConfig := proxyconfig.NewServiceConfig(ctx, serviceInformer, informerSyncPeriod)
+	serviceConfig.RegisterEventHandler(r)
+	go serviceConfig.Run(ctx.Done())
+
+	endpointSliceConfig := proxyconfig.NewEndpointSliceConfig(ctx, endpointSliceInformer, informerSyncPeriod)
+	endpointSliceConfig.RegisterEventHandler(r)
+	go endpointSliceConfig.Run(ctx.Done())
+
+	serviceCIDRConfig := proxyconfig.NewServiceCIDRConfig(ctx, serviceCIDRInformer, informerSyncPeriod)
+	serviceCIDRConfig.RegisterEventHandler(r)
+	go serviceCIDRConfig.Run(ctx.Done())
+
+	nodeConfig := proxyconfig.NewNodeConfig(ctx, nodeInformer, informerSyncPeriod)
+	nodeConfig.RegisterEventHandler(r)
+	go nodeConfig.Run(ctx.Done())
 }
 
 // Sync immediately synchronizes the Proxier's current state to proxy rules.
