@@ -4620,25 +4620,22 @@ func validateEndpointsPortsOrFail(ctx context.Context, c clientset.Interface, na
 			return false, nil
 		}
 
-		// If EndpointSlice API is enabled, then validate if appropriate EndpointSlice objects
-		// were also create/updated/deleted.
-		if _, err := c.Discovery().ServerResourcesForGroupVersion(discoveryv1.SchemeGroupVersion.String()); err == nil {
-			opts := metav1.ListOptions{
-				LabelSelector: "kubernetes.io/service-name=" + serviceName,
+		// Validate appropriate EndpointSlice objects were also create/updated/deleted.
+		opts := metav1.ListOptions{
+			LabelSelector: "kubernetes.io/service-name=" + serviceName,
+		}
+		es, err := c.DiscoveryV1().EndpointSlices(namespace).List(ctx, opts)
+		if err != nil {
+			framework.Logf("Failed go list EndpointSlice objects: %v", err)
+			// Retry the error
+			return false, nil
+		}
+		portsByUID = portsByPodUID(e2eendpointslice.GetContainerPortsByPodUID(es.Items))
+		if err := validatePorts(portsByUID, expectedPortsByPodUID); err != nil {
+			if i%5 == 0 {
+				framework.Logf("Unexpected endpoint slices: found %v, expected %v, will retry", portsByUID, expectedEndpoints)
 			}
-			es, err := c.DiscoveryV1().EndpointSlices(namespace).List(ctx, opts)
-			if err != nil {
-				framework.Logf("Failed go list EndpointSlice objects: %v", err)
-				// Retry the error
-				return false, nil
-			}
-			portsByUID = portsByPodUID(e2eendpointslice.GetContainerPortsByPodUID(es.Items))
-			if err := validatePorts(portsByUID, expectedPortsByPodUID); err != nil {
-				if i%5 == 0 {
-					framework.Logf("Unexpected endpoint slices: found %v, expected %v, will retry", portsByUID, expectedEndpoints)
-				}
-				return false, nil
-			}
+			return false, nil
 		}
 		framework.Logf("successfully validated that service %s in namespace %s exposes endpoints %v",
 			serviceName, namespace, expectedEndpoints)
@@ -4704,25 +4701,22 @@ func validateEndpointsPortsWithProtocolsOrFail(c clientset.Interface, namespace,
 			return false, nil
 		}
 
-		// If EndpointSlice API is enabled, then validate if appropriate EndpointSlice objects
-		// were also create/updated/deleted.
-		if _, err := c.Discovery().ServerResourcesForGroupVersion(discoveryv1.SchemeGroupVersion.String()); err == nil {
-			opts := metav1.ListOptions{
-				LabelSelector: "kubernetes.io/service-name=" + serviceName,
+		// Validate appropriate EndpointSlice objects were also create/updated/deleted.
+		opts := metav1.ListOptions{
+			LabelSelector: "kubernetes.io/service-name=" + serviceName,
+		}
+		es, err := c.DiscoveryV1().EndpointSlices(namespace).List(context.TODO(), opts)
+		if err != nil {
+			framework.Logf("Failed go list EndpointSlice objects: %v", err)
+			// Retry the error
+			return false, nil
+		}
+		portsByUID = fullPortsByPodUID(e2eendpointslice.GetFullContainerPortsByPodUID(es.Items))
+		if err := validatePortsAndProtocols(portsByUID, expectedPortsByPodUID); err != nil {
+			if i%5 == 0 {
+				framework.Logf("Unexpected endpoint slices: found %v, expected %v, will retry", portsByUID, expectedEndpoints)
 			}
-			es, err := c.DiscoveryV1().EndpointSlices(namespace).List(context.TODO(), opts)
-			if err != nil {
-				framework.Logf("Failed go list EndpointSlice objects: %v", err)
-				// Retry the error
-				return false, nil
-			}
-			portsByUID = fullPortsByPodUID(e2eendpointslice.GetFullContainerPortsByPodUID(es.Items))
-			if err := validatePortsAndProtocols(portsByUID, expectedPortsByPodUID); err != nil {
-				if i%5 == 0 {
-					framework.Logf("Unexpected endpoint slices: found %v, expected %v, will retry", portsByUID, expectedEndpoints)
-				}
-				return false, nil
-			}
+			return false, nil
 		}
 		framework.Logf("successfully validated that service %s in namespace %s exposes endpoints %v",
 			serviceName, namespace, expectedEndpoints)
