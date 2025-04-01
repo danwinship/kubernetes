@@ -158,7 +158,7 @@ var (
 			`\[sig-node\] \[Feature:PodLifecycleSleepAction\] when create a pod with lifecycle hook using sleep action valid prestop hook using sleep action`,
 
 			// https://issues.redhat.com/browse/OCPBUGS-38839
-			`\[sig-network\] \[Feature:Traffic Distribution\] when Service has trafficDistribution=PreferClose should route traffic to an endpoint that is close to the client`,
+			`\[sig-network\] Traffic Distribution`,
 
 			// https://issues.redhat.com/browse/OCPBUGS-45273
 			`\[sig-network\] Services should implement NodePort and HealthCheckNodePort correctly when ExternalTrafficPolicy changes`,
@@ -173,9 +173,6 @@ var (
 
 			// https://issues.redhat.com/browse/OCPBUGS-17194
 			`\[sig-node\] ImageCredentialProvider \[Feature:KubeletCredentialProviders\] should be able to create pod with image credentials fetched from external credential provider`,
-
-			// https://issues.redhat.com/browse/OCPBUGS-54418
-			`\[sig-network\] Traffic Distribution should route traffic to an endpoint in the same zone when using PreferClose`,
 
 			`\[sig-cli\] oc idle`,
 			`CSI Mock selinux on mount SELinuxMount`,

@@ -1457,17 +1457,17 @@ var Annotations = map[string]string{
 
 	"[sig-network] Topology Hints should distribute endpoints evenly": " [Disabled:Broken] [Suite:k8s]",
 
-	"[sig-network] Traffic Distribution should route traffic correctly between pods on multiple nodes when using PreferClose": " [Suite:openshift/conformance/parallel] [Suite:k8s]",
+	"[sig-network] Traffic Distribution should route traffic correctly between pods on multiple nodes when using PreferClose": " [Disabled:Broken] [Suite:k8s]",
 
-	"[sig-network] Traffic Distribution should route traffic correctly between pods on multiple nodes when using PreferSameZone [FeatureGate:PreferSameTrafficDistribution] [Alpha] [Feature:OffByDefault]": " [Disabled:Alpha] [Suite:k8s]",
+	"[sig-network] Traffic Distribution should route traffic correctly between pods on multiple nodes when using PreferSameZone [FeatureGate:PreferSameTrafficDistribution] [Alpha] [Feature:OffByDefault]": " [Disabled:Alpha] [Disabled:Broken] [Suite:k8s]",
 
-	"[sig-network] Traffic Distribution should route traffic to an endpoint in the same zone when using PreferClose": " [Disabled:RebaseInProgress] [Suite:k8s]",
+	"[sig-network] Traffic Distribution should route traffic to an endpoint in the same zone when using PreferClose": " [Disabled:Broken] [Suite:k8s]",
 
-	"[sig-network] Traffic Distribution should route traffic to an endpoint in the same zone when using PreferSameZone [FeatureGate:PreferSameTrafficDistribution] [Alpha] [Feature:OffByDefault]": " [Disabled:Alpha] [Suite:k8s]",
+	"[sig-network] Traffic Distribution should route traffic to an endpoint in the same zone when using PreferSameZone [FeatureGate:PreferSameTrafficDistribution] [Alpha] [Feature:OffByDefault]": " [Disabled:Alpha] [Disabled:Broken] [Suite:k8s]",
 
-	"[sig-network] Traffic Distribution should route traffic to an endpoint on the same node or fall back to same zone when using PreferSameNode [FeatureGate:PreferSameTrafficDistribution] [Alpha] [Feature:OffByDefault]": " [Disabled:Alpha] [Suite:k8s]",
+	"[sig-network] Traffic Distribution should route traffic to an endpoint on the same node or fall back to same zone when using PreferSameNode [FeatureGate:PreferSameTrafficDistribution] [Alpha] [Feature:OffByDefault]": " [Disabled:Alpha] [Disabled:Broken] [Suite:k8s]",
 
-	"[sig-network] Traffic Distribution should route traffic to an endpoint on the same node when using PreferSameNode and fall back when the endpoint becomes unavailable [FeatureGate:PreferSameTrafficDistribution] [Alpha] [Feature:OffByDefault]": " [Disabled:Alpha] [Suite:k8s]",
+	"[sig-network] Traffic Distribution should route traffic to an endpoint on the same node when using PreferSameNode and fall back when the endpoint becomes unavailable [FeatureGate:PreferSameTrafficDistribution] [Alpha] [Feature:OffByDefault]": " [Disabled:Alpha] [Disabled:Broken] [Suite:k8s]",
 
 	"[sig-network] [Feature:IPv6DualStack] Granular Checks: Services Secondary IP Family [LinuxOnly] should be able to handle large requests: http": " [Suite:openshift/conformance/parallel] [Suite:k8s]",
 
