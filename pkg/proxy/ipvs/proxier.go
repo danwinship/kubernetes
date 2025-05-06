@@ -44,7 +44,6 @@ import (
 	"k8s.io/kubernetes/pkg/proxy/healthcheck"
 	utilipset "k8s.io/kubernetes/pkg/proxy/ipvs/ipset"
 	utilipvs "k8s.io/kubernetes/pkg/proxy/ipvs/util"
-	"k8s.io/kubernetes/pkg/proxy/metaproxier"
 	"k8s.io/kubernetes/pkg/proxy/metrics"
 	"k8s.io/kubernetes/pkg/proxy/runner"
 	proxyutil "k8s.io/kubernetes/pkg/proxy/util"
@@ -91,49 +90,6 @@ const (
 	// defaultDummyDevice is the default dummy interface which ipvs service address will bind to it.
 	defaultDummyDevice = "kube-ipvs0"
 )
-
-// newDualStackProxier returns a new Proxier for dual-stack operation
-func newDualStackProxier(
-	ctx context.Context,
-	ipts map[v1.IPFamily]utiliptables.Interface,
-	ipvs utilipvs.Interface,
-	ipset utilipset.Interface,
-	syncPeriod time.Duration,
-	minSyncPeriod time.Duration,
-	excludeCIDRs []string,
-	masqueradeAll bool,
-	masqueradeBit int,
-	localDetectors map[v1.IPFamily]proxyutil.LocalTrafficDetector,
-	nodeName string,
-	nodeIPs map[v1.IPFamily]net.IP,
-	recorder events.EventRecorder,
-	healthzServer *healthcheck.ProxyHealthServer,
-	scheduler string,
-	nodePortAddresses []string,
-) (proxy.Proxier, error) {
-	// Create an ipv4 instance of the single-stack proxier
-	ipv4Proxier, err := newProxier(ctx, v1.IPv4Protocol, ipts[v1.IPv4Protocol], ipvs, ipset,
-		syncPeriod, minSyncPeriod, filterCIDRs(false, excludeCIDRs),
-		masqueradeAll, masqueradeBit,
-		localDetectors[v1.IPv4Protocol], nodeName, nodeIPs[v1.IPv4Protocol], recorder,
-		healthzServer, scheduler, nodePortAddresses)
-	if err != nil {
-		return nil, fmt.Errorf("unable to create ipv4 proxier: %v", err)
-	}
-
-	ipv6Proxier, err := newProxier(ctx, v1.IPv6Protocol, ipts[v1.IPv6Protocol], ipvs, ipset,
-		syncPeriod, minSyncPeriod, filterCIDRs(true, excludeCIDRs),
-		masqueradeAll, masqueradeBit,
-		localDetectors[v1.IPv6Protocol], nodeName, nodeIPs[v1.IPv6Protocol], recorder,
-		healthzServer, scheduler, nodePortAddresses)
-	if err != nil {
-		return nil, fmt.Errorf("unable to create ipv6 proxier: %v", err)
-	}
-
-	// Return a meta-proxier that dispatch calls between the two
-	// single-stack proxier instances
-	return metaproxier.NewMetaProxier(ipv4Proxier, ipv6Proxier), nil
-}
 
 // Proxier is an ipvs-based proxy
 type Proxier struct {

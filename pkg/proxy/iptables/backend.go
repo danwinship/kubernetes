@@ -31,6 +31,7 @@ import (
 	"k8s.io/kubernetes/pkg/proxy"
 	proxyconfigapi "k8s.io/kubernetes/pkg/proxy/apis/config"
 	"k8s.io/kubernetes/pkg/proxy/healthcheck"
+	"k8s.io/kubernetes/pkg/proxy/metaproxier"
 	proxyutil "k8s.io/kubernetes/pkg/proxy/util"
 	utiliptables "k8s.io/kubernetes/pkg/util/iptables"
 	utilkernel "k8s.io/kubernetes/pkg/util/kernel"
@@ -130,52 +131,32 @@ func (backend *Backend) NewProxier(
 	healthzServer *healthcheck.ProxyHealthServer,
 	localDetectors map[v1.IPFamily]proxyutil.LocalTrafficDetector,
 ) (proxy.Proxier, error) {
-	var proxier proxy.Proxier
-	var err error
-
-	if len(backend.ipts) == 2 {
+	mp := metaproxier.New()
+	for family := range backend.ipts {
 		// TODO this has side effects that should only happen when Run() is invoked.
-		proxier, err = newDualStackProxier(
+		proxier, err := newProxier(
 			ctx,
-			backend.ipts,
+			family,
+			backend.ipts[family],
 			utilsysctl.New(),
 			backend.config.SyncPeriod.Duration,
 			backend.config.MinSyncPeriod.Duration,
 			backend.config.Linux.MasqueradeAll,
 			*backend.config.IPTables.LocalhostNodePorts,
 			int(*backend.config.IPTables.MasqueradeBit),
-			localDetectors,
+			localDetectors[family],
 			nodeName,
-			nodeIPs,
+			nodeIPs[family],
 			recorder,
 			healthzServer,
 			backend.config.NodePortAddresses,
 		)
-	} else {
-		// TODO this has side effects that should only happen when Run() is invoked.
-		proxier, err = newProxier(
-			ctx,
-			backend.primaryIPFamily,
-			backend.ipts[backend.primaryIPFamily],
-			utilsysctl.New(),
-			backend.config.SyncPeriod.Duration,
-			backend.config.MinSyncPeriod.Duration,
-			backend.config.Linux.MasqueradeAll,
-			*backend.config.IPTables.LocalhostNodePorts,
-			int(*backend.config.IPTables.MasqueradeBit),
-			localDetectors[backend.primaryIPFamily],
-			nodeName,
-			nodeIPs[backend.primaryIPFamily],
-			recorder,
-			healthzServer,
-			backend.config.NodePortAddresses,
-		)
+		if err != nil {
+			return nil, fmt.Errorf("unable to create %s proxier: %v", family, err)
+		}
+		mp.AddProxier(family, proxier)
 	}
-	if err != nil {
-		return nil, fmt.Errorf("unable to create proxier: %v", err)
-	}
-
-	return proxier, nil
+	return mp, nil
 }
 
 // Cleanup cleans up state left behind by a previous run of the Backend, either because

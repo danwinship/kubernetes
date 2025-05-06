@@ -30,6 +30,7 @@ import (
 	"k8s.io/kubernetes/pkg/proxy"
 	proxyconfigapi "k8s.io/kubernetes/pkg/proxy/apis/config"
 	"k8s.io/kubernetes/pkg/proxy/healthcheck"
+	"k8s.io/kubernetes/pkg/proxy/metaproxier"
 	proxyutil "k8s.io/kubernetes/pkg/proxy/util"
 	utilkernel "k8s.io/kubernetes/pkg/util/kernel"
 	"sigs.k8s.io/knftables"
@@ -111,48 +112,30 @@ func (backend *Backend) NewProxier(
 	healthzServer *healthcheck.ProxyHealthServer,
 	localDetectors map[v1.IPFamily]proxyutil.LocalTrafficDetector,
 ) (proxy.Proxier, error) {
-	var proxier proxy.Proxier
-	var err error
-
-	if len(backend.nfts) == 2 {
+	mp := metaproxier.New()
+	for family := range backend.nfts {
 		// TODO this has side effects that should only happen when Run() is invoked.
-		proxier, err = newDualStackProxier(
+		proxier, err := newProxier(
 			ctx,
-			backend.nfts,
+			family,
+			backend.nfts[family],
 			backend.config.SyncPeriod.Duration,
 			backend.config.MinSyncPeriod.Duration,
 			backend.config.Linux.MasqueradeAll,
 			int(*backend.config.NFTables.MasqueradeBit),
-			localDetectors,
+			localDetectors[family],
 			nodeName,
-			nodeIPs,
+			nodeIPs[family],
 			recorder,
 			healthzServer,
 			backend.config.NodePortAddresses,
 		)
-	} else {
-		// TODO this has side effects that should only happen when Run() is invoked.
-		proxier, err = newProxier(
-			ctx,
-			backend.primaryIPFamily,
-			backend.nfts[backend.primaryIPFamily],
-			backend.config.SyncPeriod.Duration,
-			backend.config.MinSyncPeriod.Duration,
-			backend.config.Linux.MasqueradeAll,
-			int(*backend.config.NFTables.MasqueradeBit),
-			localDetectors[backend.primaryIPFamily],
-			nodeName,
-			nodeIPs[backend.primaryIPFamily],
-			recorder,
-			healthzServer,
-			backend.config.NodePortAddresses,
-		)
+		if err != nil {
+			return nil, fmt.Errorf("unable to create %s proxier: %v", family, err)
+		}
+		mp.AddProxier(family, proxier)
 	}
-	if err != nil {
-		return nil, fmt.Errorf("unable to create proxier: %v", err)
-	}
-
-	return proxier, nil
+	return mp, nil
 }
 
 // Cleanup cleans up state left behind by a previous run of the Backend, either because

@@ -30,14 +30,14 @@ import (
 	"k8s.io/kubernetes/pkg/proxy"
 	proxyconfigapi "k8s.io/kubernetes/pkg/proxy/apis/config"
 	"k8s.io/kubernetes/pkg/proxy/healthcheck"
+	"k8s.io/kubernetes/pkg/proxy/metaproxier"
 	proxyutil "k8s.io/kubernetes/pkg/proxy/util"
 )
 
 // Backend implements the winkernel backend
 type Backend struct {
-	config             *proxyconfigapi.KubeProxyConfiguration
-	primaryIPFamily    v1.IPFamily
-	dualStackSupported bool
+	config     *proxyconfigapi.KubeProxyConfiguration
+	ipFamilies []v1.IPFamily
 }
 
 func init() {
@@ -56,12 +56,15 @@ func (backend *Backend) Init(ctx context.Context, config *proxyconfigapi.KubePro
 	}
 
 	backend.config = config
-	backend.primaryIPFamily = primaryIPFamily
 
 	// winkernel always supports both single-stack IPv4 and single-stack IPv6,
 	// but may not support dual-stack.
 	compatTester := dualStackCompatTester{}
-	backend.dualStackSupported = compatTester.DualStackCompatible(config.Winkernel.NetworkName)
+	if compatTester.DualStackCompatible(config.Winkernel.NetworkName) {
+		backend.ipFamilies = []v1.IPFamily{v1.IPv4Protocol, v1.IPv6Protocol}
+	} else {
+		backend.ipFamilies = []v1.IPFamily{primaryIPFamily}
+	}
 
 	return nil
 }
@@ -69,7 +72,7 @@ func (backend *Backend) Init(ctx context.Context, config *proxyconfigapi.KubePro
 // DualStackSupported checks if the winkernel backend supports dual-stack operation on this
 // host. (Assumes Init() has been called.)
 func (backend *Backend) DualStackSupported() bool {
-	return backend.dualStackSupported
+	return len(backend.ipFamilies) == 2
 }
 
 // PrivilegedInit performs any host initialization steps that require full root
@@ -96,38 +99,25 @@ func (backend *Backend) NewProxier(
 	healthzServer *healthcheck.ProxyHealthServer,
 	_ map[v1.IPFamily]proxyutil.LocalTrafficDetector,
 ) (proxy.Proxier, error) {
-	var proxier proxy.Proxier
-	var err error
-
-	if backend.dualStackSupported {
-		proxier, err = newDualStackProxier(
+	mp := metaproxier.New()
+	for _, family := range backend.ipFamilies {
+		proxier, err := newProxier(
+			family,
 			backend.config.SyncPeriod.Duration,
 			backend.config.MinSyncPeriod.Duration,
 			nodeName,
-			nodeIPs,
+			nodeIPs[family],
 			recorder,
 			healthzServer,
 			backend.config.HealthzBindAddress,
 			backend.config.Winkernel,
 		)
-	} else {
-		proxier, err = newProxier(
-			backend.primaryIPFamily,
-			backend.config.SyncPeriod.Duration,
-			backend.config.MinSyncPeriod.Duration,
-			nodeName,
-			nodeIPs[backend.primaryIPFamily],
-			recorder,
-			healthzServer,
-			backend.config.HealthzBindAddress,
-			backend.config.Winkernel,
-		)
+		if err != nil {
+			return nil, fmt.Errorf("unable to create %s proxier: %w", family, err)
+		}
+		mp.AddProxier(family, proxier)
 	}
-	if err != nil {
-		return nil, fmt.Errorf("unable to create proxier: %v", err)
-	}
-
-	return proxier, nil
+	return mp, nil
 }
 
 // Cleanup cleans up state left behind by a previous run of the Backend, either because

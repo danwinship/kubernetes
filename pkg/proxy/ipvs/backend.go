@@ -35,6 +35,7 @@ import (
 	utilipset "k8s.io/kubernetes/pkg/proxy/ipvs/ipset"
 	utilipvs "k8s.io/kubernetes/pkg/proxy/ipvs/util"
 	proxyutil "k8s.io/kubernetes/pkg/proxy/util"
+	"k8s.io/kubernetes/pkg/proxy/metaproxier"
 	utiliptables "k8s.io/kubernetes/pkg/util/iptables"
 	utilkernel "k8s.io/kubernetes/pkg/util/kernel"
 )
@@ -201,13 +202,12 @@ func (backend *Backend) NewProxier(
 	healthzServer *healthcheck.ProxyHealthServer,
 	localDetectors map[v1.IPFamily]proxyutil.LocalTrafficDetector,
 ) (proxy.Proxier, error) {
-	var proxier proxy.Proxier
-	var err error
-
-	if len(backend.ipts) == 2 {
-		proxier, err = newDualStackProxier(
+	mp := metaproxier.New()
+	for family := range backend.ipts {
+		proxier, err := newProxier(
 			ctx,
-			backend.ipts,
+			family,
+			backend.ipts[family],
 			backend.ipvs,
 			backend.ipset,
 			backend.config.SyncPeriod.Duration,
@@ -215,40 +215,20 @@ func (backend *Backend) NewProxier(
 			backend.config.IPVS.ExcludeCIDRs,
 			backend.config.Linux.MasqueradeAll,
 			int(*backend.config.IPTables.MasqueradeBit),
-			localDetectors,
+			localDetectors[family],
 			nodeName,
-			nodeIPs,
+			nodeIPs[family],
 			recorder,
 			healthzServer,
 			backend.config.IPVS.Scheduler,
 			backend.config.NodePortAddresses,
 		)
-	} else {
-		proxier, err = newProxier(
-			ctx,
-			backend.primaryIPFamily,
-			backend.ipts[backend.primaryIPFamily],
-			backend.ipvs,
-			backend.ipset,
-			backend.config.SyncPeriod.Duration,
-			backend.config.MinSyncPeriod.Duration,
-			backend.config.IPVS.ExcludeCIDRs,
-			backend.config.Linux.MasqueradeAll,
-			int(*backend.config.IPTables.MasqueradeBit),
-			localDetectors[backend.primaryIPFamily],
-			nodeName,
-			nodeIPs[backend.primaryIPFamily],
-			recorder,
-			healthzServer,
-			backend.config.IPVS.Scheduler,
-			backend.config.NodePortAddresses,
-		)
+		if err != nil {
+			return nil, fmt.Errorf("unable to create %s proxier: %v", family, err)
+		}
+		mp.AddProxier(family, proxier)
 	}
-	if err != nil {
-		return nil, fmt.Errorf("unable to create proxier: %v", err)
-	}
-
-	return proxier, nil
+	return mp, nil
 }
 
 // Cleanup cleans up state left behind by a previous run of the Backend, either because

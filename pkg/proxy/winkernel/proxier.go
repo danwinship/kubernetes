@@ -45,7 +45,6 @@ import (
 	"k8s.io/kubernetes/pkg/proxy"
 	"k8s.io/kubernetes/pkg/proxy/apis/config"
 	"k8s.io/kubernetes/pkg/proxy/healthcheck"
-	"k8s.io/kubernetes/pkg/proxy/metaproxier"
 	"k8s.io/kubernetes/pkg/proxy/metrics"
 	"k8s.io/kubernetes/pkg/proxy/runner"
 	proxyutil "k8s.io/kubernetes/pkg/proxy/util"
@@ -796,38 +795,6 @@ func newProxierInternal(
 	proxier.serviceChanges = serviceChanges
 
 	return proxier, nil
-}
-
-func newDualStackProxier(
-	syncPeriod time.Duration,
-	minSyncPeriod time.Duration,
-	nodeName string,
-	nodeIPs map[v1.IPFamily]net.IP,
-	recorder events.EventRecorder,
-	healthzServer *healthcheck.ProxyHealthServer,
-	healthzBindAddress string,
-	config config.KubeProxyWinkernelConfiguration,
-) (proxy.Proxier, error) {
-
-	// Create an ipv4 instance of the single-stack proxier
-	ipv4Proxier, err := newProxier(v1.IPv4Protocol, syncPeriod, minSyncPeriod,
-		nodeName, nodeIPs[v1.IPv4Protocol], recorder, healthzServer,
-		healthzBindAddress, config)
-
-	if err != nil {
-		return nil, fmt.Errorf("unable to create ipv4 proxier: %v, nodeName: %s, nodeIP:%v", err, nodeName, nodeIPs[v1.IPv4Protocol])
-	}
-
-	ipv6Proxier, err := newProxier(v1.IPv6Protocol, syncPeriod, minSyncPeriod,
-		nodeName, nodeIPs[v1.IPv6Protocol], recorder, healthzServer,
-		healthzBindAddress, config)
-	if err != nil {
-		return nil, fmt.Errorf("unable to create ipv6 proxier: %v, nodeName: %s, nodeIP:%v", err, nodeName, nodeIPs[v1.IPv6Protocol])
-	}
-
-	// Return a meta-proxier that dispatch calls between the two
-	// single-stack proxier instances
-	return metaproxier.NewMetaProxier(ipv4Proxier, ipv6Proxier), nil
 }
 
 // CleanupLeftovers removes all hns rules created by the Proxier

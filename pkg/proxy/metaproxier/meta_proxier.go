@@ -23,73 +23,94 @@ import (
 	"k8s.io/kubernetes/pkg/proxy"
 )
 
+// metaProxier wraps 0 or more other proxiers. Proxier API calls will be dispatched to the
+// Proxier instances depending on address family.
 type metaProxier struct {
-	// actual, wrapped
-	ipv4Proxier proxy.Proxier
-	// actual, wrapped
-	ipv6Proxier proxy.Proxier
+	proxiers map[v1.IPFamily]proxy.Proxier
 }
 
-// NewMetaProxier returns a dual-stack "meta-proxier". Proxier API
-// calls will be dispatched to the Proxier instances depending
-// on address family.
-func NewMetaProxier(ipv4Proxier, ipv6Proxier proxy.Proxier) proxy.Proxier {
-	return proxy.Proxier(&metaProxier{
-		ipv4Proxier: ipv4Proxier,
-		ipv6Proxier: ipv6Proxier,
-	})
+// metaProxier implements proxy.Proxier
+var _ proxy.Proxier = &metaProxier{}
+
+// New returns an empty metaProxier
+func New() *metaProxier {
+	return &metaProxier{
+		proxiers: make(map[v1.IPFamily]proxy.Proxier),
+	}
 }
 
-// Sync immediately synchronizes the Proxier's current state to
-// proxy rules.
-func (proxier *metaProxier) Sync() {
-	proxier.ipv4Proxier.Sync()
-	proxier.ipv6Proxier.Sync()
+// AddProxier adds proxier to the metaProxier
+func (mp *metaProxier) AddProxier(family v1.IPFamily, proxier proxy.Proxier) {
+	mp.proxiers[family] = proxier
 }
 
-// SyncLoop runs periodic work.  This is expected to run as a
-// goroutine or as the main loop of the app.  It does not return.
-func (proxier *metaProxier) SyncLoop() {
-	go proxier.ipv6Proxier.SyncLoop() // Use go-routine here!
-	proxier.ipv4Proxier.SyncLoop()    // never returns
+// Sync immediately synchronizes the Proxier's current state to proxy rules.
+func (mp *metaProxier) Sync() {
+	for _, proxier := range mp.proxiers {
+		proxier.Sync()
+	}
+}
+
+// SyncLoop runs periodic work. This is expected to run as a goroutine or as the main loop
+// of the app. It does not return.
+func (mp *metaProxier) SyncLoop() {
+	switch {
+	case mp.proxiers[v1.IPv4Protocol] != nil && mp.proxiers[v1.IPv6Protocol] != nil:
+		go mp.proxiers[v1.IPv6Protocol].SyncLoop()
+		mp.proxiers[v1.IPv4Protocol].SyncLoop()
+	case mp.proxiers[v1.IPv4Protocol] != nil:
+		mp.proxiers[v1.IPv4Protocol].SyncLoop()
+	case mp.proxiers[v1.IPv6Protocol] != nil:
+		mp.proxiers[v1.IPv6Protocol].SyncLoop()
+	default:
+		select {}
+	}
 }
 
 // OnServiceAdd is called whenever creation of new service object is observed.
-func (proxier *metaProxier) OnServiceAdd(service *v1.Service) {
-	proxier.ipv4Proxier.OnServiceAdd(service)
-	proxier.ipv6Proxier.OnServiceAdd(service)
+func (mp *metaProxier) OnServiceAdd(service *v1.Service) {
+	for _, proxier := range mp.proxiers {
+		proxier.OnServiceAdd(service)
+	}
 }
 
-// OnServiceUpdate is called whenever modification of an existing
-// service object is observed.
-func (proxier *metaProxier) OnServiceUpdate(oldService, service *v1.Service) {
-	proxier.ipv4Proxier.OnServiceUpdate(oldService, service)
-	proxier.ipv6Proxier.OnServiceUpdate(oldService, service)
+// OnServiceUpdate is called whenever modification of an existing service object is
+// observed.
+func (mp *metaProxier) OnServiceUpdate(oldService, service *v1.Service) {
+	for _, proxier := range mp.proxiers {
+		proxier.OnServiceUpdate(oldService, service)
+	}
 }
 
-// OnServiceDelete is called whenever deletion of an existing service
-// object is observed.
-func (proxier *metaProxier) OnServiceDelete(service *v1.Service) {
-	proxier.ipv4Proxier.OnServiceDelete(service)
-	proxier.ipv6Proxier.OnServiceDelete(service)
-
+// OnServiceDelete is called whenever deletion of an existing service object is observed.
+func (mp *metaProxier) OnServiceDelete(service *v1.Service) {
+	for _, proxier := range mp.proxiers {
+		proxier.OnServiceDelete(service)
+	}
 }
 
-// OnServiceSynced is called once all the initial event handlers were
-// called and the state is fully propagated to local cache.
-func (proxier *metaProxier) OnServiceSynced() {
-	proxier.ipv4Proxier.OnServiceSynced()
-	proxier.ipv6Proxier.OnServiceSynced()
+// OnServiceSynced is called once all the initial event handlers were called and the state
+// is fully propagated to local cache.
+func (mp *metaProxier) OnServiceSynced() {
+	for _, proxier := range mp.proxiers {
+		proxier.OnServiceSynced()
+	}
 }
 
 // OnEndpointSliceAdd is called whenever creation of a new endpoint slice object
 // is observed.
-func (proxier *metaProxier) OnEndpointSliceAdd(endpointSlice *discovery.EndpointSlice) {
+func (mp *metaProxier) OnEndpointSliceAdd(endpointSlice *discovery.EndpointSlice) {
 	switch endpointSlice.AddressType {
 	case discovery.AddressTypeIPv4:
-		proxier.ipv4Proxier.OnEndpointSliceAdd(endpointSlice)
+		proxier := mp.proxiers[v1.IPv4Protocol]
+		if proxier != nil {
+			proxier.OnEndpointSliceAdd(endpointSlice)
+		}
 	case discovery.AddressTypeIPv6:
-		proxier.ipv6Proxier.OnEndpointSliceAdd(endpointSlice)
+		proxier := mp.proxiers[v1.IPv6Protocol]
+		if proxier != nil {
+			proxier.OnEndpointSliceAdd(endpointSlice)
+		}
 	default:
 		klog.ErrorS(nil, "EndpointSlice address type not supported", "addressType", endpointSlice.AddressType)
 	}
@@ -97,12 +118,18 @@ func (proxier *metaProxier) OnEndpointSliceAdd(endpointSlice *discovery.Endpoint
 
 // OnEndpointSliceUpdate is called whenever modification of an existing endpoint
 // slice object is observed.
-func (proxier *metaProxier) OnEndpointSliceUpdate(oldEndpointSlice, newEndpointSlice *discovery.EndpointSlice) {
+func (mp *metaProxier) OnEndpointSliceUpdate(oldEndpointSlice, newEndpointSlice *discovery.EndpointSlice) {
 	switch newEndpointSlice.AddressType {
 	case discovery.AddressTypeIPv4:
-		proxier.ipv4Proxier.OnEndpointSliceUpdate(oldEndpointSlice, newEndpointSlice)
+		proxier := mp.proxiers[v1.IPv4Protocol]
+		if proxier != nil {
+			proxier.OnEndpointSliceUpdate(oldEndpointSlice, newEndpointSlice)
+		}
 	case discovery.AddressTypeIPv6:
-		proxier.ipv6Proxier.OnEndpointSliceUpdate(oldEndpointSlice, newEndpointSlice)
+		proxier := mp.proxiers[v1.IPv6Protocol]
+		if proxier != nil {
+			proxier.OnEndpointSliceUpdate(oldEndpointSlice, newEndpointSlice)
+		}
 	default:
 		klog.ErrorS(nil, "EndpointSlice address type not supported", "addressType", newEndpointSlice.AddressType)
 	}
@@ -110,33 +137,42 @@ func (proxier *metaProxier) OnEndpointSliceUpdate(oldEndpointSlice, newEndpointS
 
 // OnEndpointSliceDelete is called whenever deletion of an existing endpoint slice
 // object is observed.
-func (proxier *metaProxier) OnEndpointSliceDelete(endpointSlice *discovery.EndpointSlice) {
+func (mp *metaProxier) OnEndpointSliceDelete(endpointSlice *discovery.EndpointSlice) {
 	switch endpointSlice.AddressType {
 	case discovery.AddressTypeIPv4:
-		proxier.ipv4Proxier.OnEndpointSliceDelete(endpointSlice)
+		proxier := mp.proxiers[v1.IPv4Protocol]
+		if proxier != nil {
+			proxier.OnEndpointSliceDelete(endpointSlice)
+		}
 	case discovery.AddressTypeIPv6:
-		proxier.ipv6Proxier.OnEndpointSliceDelete(endpointSlice)
+		proxier := mp.proxiers[v1.IPv6Protocol]
+		if proxier != nil {
+			proxier.OnEndpointSliceDelete(endpointSlice)
+		}
 	default:
 		klog.ErrorS(nil, "EndpointSlice address type not supported", "addressType", endpointSlice.AddressType)
 	}
 }
 
-// OnEndpointSlicesSynced is called once all the initial event handlers were
-// called and the state is fully propagated to local cache.
-func (proxier *metaProxier) OnEndpointSlicesSynced() {
-	proxier.ipv4Proxier.OnEndpointSlicesSynced()
-	proxier.ipv6Proxier.OnEndpointSlicesSynced()
+// OnEndpointSlicesSynced is called once all the initial event handlers were called and
+// the state is fully propagated to local cache.
+func (mp *metaProxier) OnEndpointSlicesSynced() {
+	for _, proxier := range mp.proxiers {
+		proxier.OnEndpointSlicesSynced()
+	}
 }
 
 // OnTopologyChange is called whenever change in proxy relevant topology labels is observed.
-func (proxier *metaProxier) OnTopologyChange(topologyLabels map[string]string) {
-	proxier.ipv4Proxier.OnTopologyChange(topologyLabels)
-	proxier.ipv6Proxier.OnTopologyChange(topologyLabels)
+func (mp *metaProxier) OnTopologyChange(topologyLabels map[string]string) {
+	for _, proxier := range mp.proxiers {
+		proxier.OnTopologyChange(topologyLabels)
+	}
 }
 
-// OnServiceCIDRsChanged is called whenever a change is observed
-// in any of the ServiceCIDRs, and provides complete list of service cidrs.
-func (proxier *metaProxier) OnServiceCIDRsChanged(cidrs []string) {
-	proxier.ipv4Proxier.OnServiceCIDRsChanged(cidrs)
-	proxier.ipv6Proxier.OnServiceCIDRsChanged(cidrs)
+// OnServiceCIDRsChanged is called whenever a change is observed in any of the
+// ServiceCIDRs, and provides complete list of service cidrs.
+func (mp *metaProxier) OnServiceCIDRsChanged(cidrs []string) {
+	for _, proxier := range mp.proxiers {
+		proxier.OnServiceCIDRsChanged(cidrs)
+	}
 }
