@@ -103,7 +103,7 @@ func TestGetServerAddressByClientCIDRs(t *testing.T) {
 		},
 	}
 
-	_, ipRange, _ := netutils.ParseCIDRSloppy("10.0.0.0/24")
+	ipRange := netutils.MustParseIPNet("10.0.0.0/24")
 	discoveryAddresses := DefaultAddresses{DefaultAddress: "ExternalAddress"}
 	discoveryAddresses.CIDRRules = append(discoveryAddresses.CIDRRules,
 		CIDRRule{IPRange: *ipRange, Address: "serviceIP"})

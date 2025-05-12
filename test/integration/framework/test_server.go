@@ -98,7 +98,7 @@ func StartTestServer(ctx context.Context, t testing.TB, setup TestServerSetup) (
 		}
 	}
 
-	_, defaultServiceClusterIPRange, _ := netutils.ParseCIDRSloppy("10.0.0.0/24")
+	defaultServiceClusterIPRange := netutils.MustParseIPNet("10.0.0.0/24")
 	proxySigningKey, err := utils.NewPrivateKey()
 	if err != nil {
 		t.Fatal(err)

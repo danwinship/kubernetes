@@ -917,7 +917,7 @@ func TestCidrSetMetricsHistogram(t *testing.T) {
 
 	// Allocate half of the range
 	// Occupy does not update the nextCandidate
-	_, halfClusterCIDR, _ := netutils.ParseCIDRSloppy("10.0.0.0/17")
+	halfClusterCIDR := netutils.MustParseIPNet("10.0.0.0/17")
 	a.Occupy(halfClusterCIDR)
 	em = testMetrics{
 		usage:      0.5,

@@ -3904,7 +3904,7 @@ func TestCleanLegacyService(t *testing.T) {
 	ipt := iptablestest.NewFake()
 	ipvs := ipvstest.NewFake()
 	ipset := ipsettest.NewFake(testIPSetVersion)
-	excludeCIDRs, _ := netutils.ParseCIDRs([]string{"3.3.3.0/24", "4.4.4.0/24"})
+	excludeCIDRs := netutils.MustParseIPNetList("3.3.3.0/24", "4.4.4.0/24")
 	fp := NewFakeProxier(ctx, ipt, ipvs, ipset, nil, excludeCIDRs, v1.IPv4Protocol)
 
 	// All ipvs services that were processed in the latest sync loop.
@@ -4057,7 +4057,7 @@ func TestCleanLegacyRealServersExcludeCIDRs(t *testing.T) {
 	ipvs := ipvstest.NewFake()
 	ipset := ipsettest.NewFake(testIPSetVersion)
 	gtm := NewGracefulTerminationManager(ipvs)
-	excludeCIDRs, _ := netutils.ParseCIDRs([]string{"4.4.4.4/32"})
+	excludeCIDRs := netutils.MustParseIPNetList("4.4.4.4/32")
 	fp := NewFakeProxier(ctx, ipt, ipvs, ipset, nil, excludeCIDRs, v1.IPv4Protocol)
 	fp.gracefuldeleteManager = gtm
 
@@ -4109,7 +4109,7 @@ func TestCleanLegacyService6(t *testing.T) {
 	ipt := iptablestest.NewFake()
 	ipvs := ipvstest.NewFake()
 	ipset := ipsettest.NewFake(testIPSetVersion)
-	excludeCIDRs, _ := netutils.ParseCIDRs([]string{"3000::/64", "4000::/64"})
+	excludeCIDRs := netutils.MustParseIPNetList("3000::/64", "4000::/64")
 	fp := NewFakeProxier(ctx, ipt, ipvs, ipset, nil, excludeCIDRs, v1.IPv6Protocol)
 	fp.nodeIP = netutils.MustParseIP("::1")
 

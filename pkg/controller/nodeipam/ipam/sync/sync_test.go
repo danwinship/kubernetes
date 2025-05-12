@@ -35,7 +35,7 @@ import (
 )
 
 var (
-	_, clusterCIDRRange, _ = netutils.ParseCIDRSloppy("10.1.0.0/16")
+	clusterCIDRRange = netutils.MustParseIPNet("10.1.0.0/16")
 )
 
 type fakeEvent struct {

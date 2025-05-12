@@ -80,7 +80,7 @@ func TestRepair(t *testing.T) {
 func TestRepairLeak(t *testing.T) {
 	clearMetrics()
 
-	_, cidr, _ := netutils.ParseCIDRSloppy("192.168.1.0/24")
+	cidr := netutils.MustParseIPNet("192.168.1.0/24")
 	previous, err := ipallocator.NewInMemory(cidr)
 	if err != nil {
 		t.Fatal(err)
@@ -144,7 +144,7 @@ func TestRepairLeak(t *testing.T) {
 func TestRepairWithExisting(t *testing.T) {
 	clearMetrics()
 
-	_, cidr, _ := netutils.ParseCIDRSloppy("192.168.1.0/24")
+	cidr := netutils.MustParseIPNet("192.168.1.0/24")
 	previous, err := ipallocator.NewInMemory(cidr)
 	if err != nil {
 		t.Fatal(err)
@@ -401,7 +401,7 @@ func TestRepairDualStack(t *testing.T) {
 
 func TestRepairLeakDualStack(t *testing.T) {
 	clearMetrics()
-	_, cidr, _ := netutils.ParseCIDRSloppy("192.168.1.0/24")
+	cidr := netutils.MustParseIPNet("192.168.1.0/24")
 	previous, err := ipallocator.NewInMemory(cidr)
 	if err != nil {
 		t.Fatal(err)
@@ -409,7 +409,7 @@ func TestRepairLeakDualStack(t *testing.T) {
 
 	previous.Allocate(netutils.MustParseIP("192.168.1.10"))
 
-	_, secondaryCIDR, _ := netutils.ParseCIDRSloppy("2000::/108")
+	secondaryCIDR := netutils.MustParseIPNet("2000::/108")
 	secondaryPrevious, err := ipallocator.NewInMemory(secondaryCIDR)
 	if err != nil {
 		t.Fatal(err)
@@ -510,13 +510,13 @@ func TestRepairWithExistingDualStack(t *testing.T) {
 	// we can saftly create tests that has ipFamilyPolicy:nil
 	// this will work every where except alloc & validation
 
-	_, cidr, _ := netutils.ParseCIDRSloppy("192.168.1.0/24")
+	cidr := netutils.MustParseIPNet("192.168.1.0/24")
 	previous, err := ipallocator.NewInMemory(cidr)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	_, secondaryCIDR, _ := netutils.ParseCIDRSloppy("2000::/108")
+	secondaryCIDR := netutils.MustParseIPNet("2000::/108")
 	secondaryPrevious, err := ipallocator.NewInMemory(secondaryCIDR)
 	if err != nil {
 		t.Fatal(err)

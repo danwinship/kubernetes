@@ -68,7 +68,7 @@ func newStorage(t *testing.T) (*etcd3testing.EtcdTestServer, ipallocator.Interfa
 }
 
 func validNewRangeAllocation() *api.RangeAllocation {
-	_, cidr, _ := netutils.ParseCIDRSloppy("192.168.1.0/24")
+	cidr := netutils.MustParseIPNet("192.168.1.0/24")
 	return &api.RangeAllocation{
 		Range: cidr.String(),
 	}

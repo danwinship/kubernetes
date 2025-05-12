@@ -430,10 +430,10 @@ func TestReconcile(t *testing.T) {
 			routes, ok := cloud.Routes()
 			assert.True(t, ok, "fakecloud failed to run Routes()")
 			cidrs := make([]*net.IPNet, 0)
-			_, cidr, _ := netutils.ParseCIDRSloppy("10.120.0.0/16")
+			cidr := netutils.MustParseIPNet("10.120.0.0/16")
 			cidrs = append(cidrs, cidr)
 			if testCase.dualStack {
-				_, cidrv6, _ := netutils.ParseCIDRSloppy("ace:cab:deca::/8")
+				cidrv6 := netutils.MustParseIPNet("ace:cab:deca::/8")
 				cidrs = append(cidrs, cidrv6)
 			}
 

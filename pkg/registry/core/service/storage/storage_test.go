@@ -73,10 +73,10 @@ func newStorageWithPods(t *testing.T, ipFamilies []api.IPFamily, pods []api.Pod,
 	for _, fam := range ipFamilies {
 		switch fam {
 		case api.IPv4Protocol:
-			_, cidr, _ := netutils.ParseCIDRSloppy("10.0.0.0/16")
+			cidr := netutils.MustParseIPNet("10.0.0.0/16")
 			ipAllocs[fam] = makeIPAllocator(cidr)
 		case api.IPv6Protocol:
-			_, cidr, _ := netutils.ParseCIDRSloppy("2000::/108")
+			cidr := netutils.MustParseIPNet("2000::/108")
 			ipAllocs[fam] = makeIPAllocator(cidr)
 		default:
 			t.Fatalf("Unknown IPFamily: %v", fam)
