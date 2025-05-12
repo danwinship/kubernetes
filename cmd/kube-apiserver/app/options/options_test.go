@@ -316,7 +316,7 @@ func TestAddFlags(t *testing.T) {
 
 		Extra: Extra{
 			ServiceNodePortRange:   kubeoptions.DefaultServiceNodePortRange,
-			ServiceClusterIPRanges: (netutils.MustParseIPNet("192.168.128.0/17")).String(),
+			ServiceClusterIPRanges: "192.168.128.0/17",
 			EndpointReconcilerType: string(reconcilers.LeaseEndpointReconcilerType),
 			AllowPrivileged:        false,
 			KubeletConfig: kubeletclient.KubeletClientConfig{

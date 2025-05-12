@@ -101,7 +101,7 @@ func setUp(t *testing.T) (*etcd3testing.EtcdTestServer, Config, *assert.Assertio
 			APIServerServicePort:   443,
 			MasterCount:            1,
 			EndpointReconcilerType: reconcilers.MasterCountReconcilerType,
-			ServiceIPRange:         net.IPNet{IP: netutils.MustParseIP("10.0.0.0"), Mask: net.CIDRMask(24, 32)},
+			ServiceIPRange:         *netutils.MustParseIPNet("10.0.0.0/24"),
 		},
 	}
 

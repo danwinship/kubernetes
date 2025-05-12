@@ -38,18 +38,12 @@ func makeOptionsWithCIDRs(serviceCIDR string, secondaryServiceCIDR string) *Serv
 
 	var primaryCIDR, secondaryCIDR net.IPNet
 	if len(serviceCIDR) > 0 {
-		cidr, _ := netutils.ParseIPNet(serviceCIDR)
-		if cidr != nil {
-			primaryCIDR = *(cidr)
-		}
+		primaryCIDR = *netutils.MustParseIPNet(serviceCIDR)
+	}
+	if len(secondaryServiceCIDR) > 0 {
+		secondaryCIDR = *netutils.MustParseIPNet(secondaryServiceCIDR)
 	}
 
-	if len(secondaryServiceCIDR) > 0 {
-		cidr, _ := netutils.ParseIPNet(secondaryServiceCIDR)
-		if cidr != nil {
-			secondaryCIDR = *(cidr)
-		}
-	}
 	return &ServerRunOptions{
 		Extra: Extra{
 			ServiceClusterIPRanges:         value,

@@ -58,10 +58,7 @@ func TestOccupyPreExistingCIDR(t *testing.T) {
 				Clientset: fake.NewSimpleClientset(),
 			},
 			allocatorParams: CIDRAllocatorParams{
-				ClusterCIDRs: func() []*net.IPNet {
-					clusterCIDRv4 := netutils.MustParseIPNet("10.10.0.0/16")
-					return []*net.IPNet{clusterCIDRv4}
-				}(),
+				ClusterCIDRs:         netutils.MustParseIPNetList("10.10.0.0/16"),
 				ServiceCIDR:          nil,
 				SecondaryServiceCIDR: nil,
 				NodeCIDRMaskSizes:    []int{24},
@@ -83,11 +80,7 @@ func TestOccupyPreExistingCIDR(t *testing.T) {
 				Clientset: fake.NewSimpleClientset(),
 			},
 			allocatorParams: CIDRAllocatorParams{
-				ClusterCIDRs: func() []*net.IPNet {
-					clusterCIDRv4 := netutils.MustParseIPNet("10.10.0.0/16")
-					clusterCIDRv6 := netutils.MustParseIPNet("ace:cab:deca::/8")
-					return []*net.IPNet{clusterCIDRv4, clusterCIDRv6}
-				}(),
+				ClusterCIDRs:         netutils.MustParseIPNetList("10.10.0.0/16", "ace:cab:deca::/8"),
 				ServiceCIDR:          nil,
 				SecondaryServiceCIDR: nil,
 				NodeCIDRMaskSizes:    []int{24, 24},
@@ -112,10 +105,7 @@ func TestOccupyPreExistingCIDR(t *testing.T) {
 				Clientset: fake.NewSimpleClientset(),
 			},
 			allocatorParams: CIDRAllocatorParams{
-				ClusterCIDRs: func() []*net.IPNet {
-					clusterCIDRv4 := netutils.MustParseIPNet("10.10.0.0/16")
-					return []*net.IPNet{clusterCIDRv4}
-				}(),
+				ClusterCIDRs:         netutils.MustParseIPNetList("10.10.0.0/16"),
 				ServiceCIDR:          nil,
 				SecondaryServiceCIDR: nil,
 				NodeCIDRMaskSizes:    []int{24},
@@ -140,11 +130,7 @@ func TestOccupyPreExistingCIDR(t *testing.T) {
 				Clientset: fake.NewSimpleClientset(),
 			},
 			allocatorParams: CIDRAllocatorParams{
-				ClusterCIDRs: func() []*net.IPNet {
-					clusterCIDRv4 := netutils.MustParseIPNet("10.10.0.0/16")
-					clusterCIDRv6 := netutils.MustParseIPNet("ace:cab:deca::/8")
-					return []*net.IPNet{clusterCIDRv4, clusterCIDRv6}
-				}(),
+				ClusterCIDRs:         netutils.MustParseIPNetList("10.10.0.0/16", "ace:cab:deca::/8"),
 				ServiceCIDR:          nil,
 				SecondaryServiceCIDR: nil,
 				NodeCIDRMaskSizes:    []int{24, 24},
@@ -170,10 +156,7 @@ func TestOccupyPreExistingCIDR(t *testing.T) {
 				Clientset: fake.NewSimpleClientset(),
 			},
 			allocatorParams: CIDRAllocatorParams{
-				ClusterCIDRs: func() []*net.IPNet {
-					clusterCIDRv4 := netutils.MustParseIPNet("10.10.0.0/16")
-					return []*net.IPNet{clusterCIDRv4}
-				}(),
+				ClusterCIDRs:         netutils.MustParseIPNetList("10.10.0.0/16"),
 				ServiceCIDR:          nil,
 				SecondaryServiceCIDR: nil,
 				NodeCIDRMaskSizes:    []int{24},
@@ -199,10 +182,7 @@ func TestOccupyPreExistingCIDR(t *testing.T) {
 				Clientset: fake.NewSimpleClientset(),
 			},
 			allocatorParams: CIDRAllocatorParams{
-				ClusterCIDRs: func() []*net.IPNet {
-					clusterCIDRv4 := netutils.MustParseIPNet("10.10.0.0/16")
-					return []*net.IPNet{clusterCIDRv4}
-				}(),
+				ClusterCIDRs:         netutils.MustParseIPNetList("10.10.0.0/16"),
 				ServiceCIDR:          nil,
 				SecondaryServiceCIDR: nil,
 				NodeCIDRMaskSizes:    []int{24},
@@ -228,11 +208,7 @@ func TestOccupyPreExistingCIDR(t *testing.T) {
 				Clientset: fake.NewSimpleClientset(),
 			},
 			allocatorParams: CIDRAllocatorParams{
-				ClusterCIDRs: func() []*net.IPNet {
-					clusterCIDRv4 := netutils.MustParseIPNet("10.10.0.0/16")
-					clusterCIDRv6 := netutils.MustParseIPNet("ace:cab:deca::/8")
-					return []*net.IPNet{clusterCIDRv4, clusterCIDRv6}
-				}(),
+				ClusterCIDRs:         netutils.MustParseIPNetList("10.10.0.0/16", "ace:cab:deca::/8"),
 				ServiceCIDR:          nil,
 				SecondaryServiceCIDR: nil,
 				NodeCIDRMaskSizes:    []int{24, 24},
@@ -258,11 +234,7 @@ func TestOccupyPreExistingCIDR(t *testing.T) {
 				Clientset: fake.NewSimpleClientset(),
 			},
 			allocatorParams: CIDRAllocatorParams{
-				ClusterCIDRs: func() []*net.IPNet {
-					clusterCIDRv4 := netutils.MustParseIPNet("10.10.0.0/16")
-					clusterCIDRv6 := netutils.MustParseIPNet("ace:cab:deca::/8")
-					return []*net.IPNet{clusterCIDRv4, clusterCIDRv6}
-				}(),
+				ClusterCIDRs:         netutils.MustParseIPNetList("10.10.0.0/16", "ace:cab:deca::/8"),
 				ServiceCIDR:          nil,
 				SecondaryServiceCIDR: nil,
 				NodeCIDRMaskSizes:    []int{24, 24},
@@ -314,10 +286,7 @@ func TestAllocateOrOccupyCIDRSuccess(t *testing.T) {
 				Clientset: fake.NewSimpleClientset(),
 			},
 			allocatorParams: CIDRAllocatorParams{
-				ClusterCIDRs: func() []*net.IPNet {
-					clusterCIDR := netutils.MustParseIPNet("127.123.234.0/24")
-					return []*net.IPNet{clusterCIDR}
-				}(),
+				ClusterCIDRs:         netutils.MustParseIPNetList("127.123.234.0/24"),
 				ServiceCIDR:          nil,
 				SecondaryServiceCIDR: nil,
 				NodeCIDRMaskSizes:    []int{30},
@@ -339,14 +308,8 @@ func TestAllocateOrOccupyCIDRSuccess(t *testing.T) {
 				Clientset: fake.NewSimpleClientset(),
 			},
 			allocatorParams: CIDRAllocatorParams{
-				ClusterCIDRs: func() []*net.IPNet {
-					clusterCIDR := netutils.MustParseIPNet("127.123.234.0/24")
-					return []*net.IPNet{clusterCIDR}
-				}(),
-				ServiceCIDR: func() *net.IPNet {
-					serviceCIDR := netutils.MustParseIPNet("127.123.234.0/26")
-					return serviceCIDR
-				}(),
+				ClusterCIDRs:         netutils.MustParseIPNetList("127.123.234.0/24"),
+				ServiceCIDR:          netutils.MustParseIPNet("127.123.234.0/26"),
 				SecondaryServiceCIDR: nil,
 				NodeCIDRMaskSizes:    []int{30},
 			},
@@ -368,14 +331,8 @@ func TestAllocateOrOccupyCIDRSuccess(t *testing.T) {
 				Clientset: fake.NewSimpleClientset(),
 			},
 			allocatorParams: CIDRAllocatorParams{
-				ClusterCIDRs: func() []*net.IPNet {
-					clusterCIDR := netutils.MustParseIPNet("127.123.234.0/24")
-					return []*net.IPNet{clusterCIDR}
-				}(),
-				ServiceCIDR: func() *net.IPNet {
-					serviceCIDR := netutils.MustParseIPNet("127.123.234.0/26")
-					return serviceCIDR
-				}(),
+				ClusterCIDRs:         netutils.MustParseIPNetList("127.123.234.0/24"),
+				ServiceCIDR:          netutils.MustParseIPNet("127.123.234.0/26"),
 				SecondaryServiceCIDR: nil,
 				NodeCIDRMaskSizes:    []int{30},
 			},
@@ -399,15 +356,8 @@ func TestAllocateOrOccupyCIDRSuccess(t *testing.T) {
 				Clientset: fake.NewSimpleClientset(),
 			},
 			allocatorParams: CIDRAllocatorParams{
-				ClusterCIDRs: func() []*net.IPNet {
-					clusterCIDRv4 := netutils.MustParseIPNet("127.123.234.0/8")
-					clusterCIDRv6 := netutils.MustParseIPNet("ace:cab:deca::/84")
-					return []*net.IPNet{clusterCIDRv4, clusterCIDRv6}
-				}(),
-				ServiceCIDR: func() *net.IPNet {
-					serviceCIDR := netutils.MustParseIPNet("127.123.234.0/26")
-					return serviceCIDR
-				}(),
+				ClusterCIDRs:         netutils.MustParseIPNetList("127.123.234.0/8", "ace:cab:deca::/84"),
+				ServiceCIDR:          netutils.MustParseIPNet("127.123.234.0/26"),
 				SecondaryServiceCIDR: nil,
 				NodeCIDRMaskSizes:    []int{24, 98},
 			},
@@ -425,15 +375,8 @@ func TestAllocateOrOccupyCIDRSuccess(t *testing.T) {
 				Clientset: fake.NewSimpleClientset(),
 			},
 			allocatorParams: CIDRAllocatorParams{
-				ClusterCIDRs: func() []*net.IPNet {
-					clusterCIDRv4 := netutils.MustParseIPNet("127.123.234.0/8")
-					clusterCIDRv6 := netutils.MustParseIPNet("ace:cab:deca::/84")
-					return []*net.IPNet{clusterCIDRv6, clusterCIDRv4}
-				}(),
-				ServiceCIDR: func() *net.IPNet {
-					serviceCIDR := netutils.MustParseIPNet("127.123.234.0/26")
-					return serviceCIDR
-				}(),
+				ClusterCIDRs:         netutils.MustParseIPNetList("ace:cab:deca::/84", "127.123.234.0/8"),
+				ServiceCIDR:          netutils.MustParseIPNet("127.123.234.0/26"),
 				SecondaryServiceCIDR: nil,
 				NodeCIDRMaskSizes:    []int{98, 24},
 			},
@@ -451,16 +394,8 @@ func TestAllocateOrOccupyCIDRSuccess(t *testing.T) {
 				Clientset: fake.NewSimpleClientset(),
 			},
 			allocatorParams: CIDRAllocatorParams{
-				ClusterCIDRs: func() []*net.IPNet {
-					clusterCIDRv4 := netutils.MustParseIPNet("127.123.234.0/8")
-					clusterCIDRv6 := netutils.MustParseIPNet("ace:cab:deca::/84")
-					clusterCIDRv4_2 := netutils.MustParseIPNet("10.0.0.0/8")
-					return []*net.IPNet{clusterCIDRv4, clusterCIDRv6, clusterCIDRv4_2}
-				}(),
-				ServiceCIDR: func() *net.IPNet {
-					serviceCIDR := netutils.MustParseIPNet("127.123.234.0/26")
-					return serviceCIDR
-				}(),
+				ClusterCIDRs:         netutils.MustParseIPNetList("127.123.234.0/8", "ace:cab:deca::/84", "10.0.0.0/8"),
+				ServiceCIDR:          netutils.MustParseIPNet("127.123.234.0/26"),
 				SecondaryServiceCIDR: nil,
 				NodeCIDRMaskSizes:    []int{24, 98, 24},
 			},
@@ -494,10 +429,7 @@ func TestAllocateOrOccupyCIDRSuccess(t *testing.T) {
 				Clientset: fake.NewSimpleClientset(),
 			},
 			allocatorParams: CIDRAllocatorParams{
-				ClusterCIDRs: func() []*net.IPNet {
-					clusterCIDR := netutils.MustParseIPNet("10.10.0.0/22")
-					return []*net.IPNet{clusterCIDR}
-				}(),
+				ClusterCIDRs:         netutils.MustParseIPNetList("10.10.0.0/22"),
 				ServiceCIDR:          nil,
 				SecondaryServiceCIDR: nil,
 				NodeCIDRMaskSizes:    []int{24},
@@ -597,10 +529,7 @@ func TestAllocateOrOccupyCIDRFailure(t *testing.T) {
 				Clientset: fake.NewSimpleClientset(),
 			},
 			allocatorParams: CIDRAllocatorParams{
-				ClusterCIDRs: func() []*net.IPNet {
-					clusterCIDR := netutils.MustParseIPNet("127.123.234.0/28")
-					return []*net.IPNet{clusterCIDR}
-				}(),
+				ClusterCIDRs:         netutils.MustParseIPNetList("127.123.234.0/28"),
 				ServiceCIDR:          nil,
 				SecondaryServiceCIDR: nil,
 				NodeCIDRMaskSizes:    []int{30},
@@ -701,10 +630,7 @@ func TestReleaseCIDRSuccess(t *testing.T) {
 				Clientset: fake.NewSimpleClientset(),
 			},
 			allocatorParams: CIDRAllocatorParams{
-				ClusterCIDRs: func() []*net.IPNet {
-					clusterCIDR := netutils.MustParseIPNet("127.123.234.0/28")
-					return []*net.IPNet{clusterCIDR}
-				}(),
+				ClusterCIDRs:         netutils.MustParseIPNetList("127.123.234.0/28"),
 				ServiceCIDR:          nil,
 				SecondaryServiceCIDR: nil,
 				NodeCIDRMaskSizes:    []int{30},
@@ -733,10 +659,7 @@ func TestReleaseCIDRSuccess(t *testing.T) {
 				Clientset: fake.NewSimpleClientset(),
 			},
 			allocatorParams: CIDRAllocatorParams{
-				ClusterCIDRs: func() []*net.IPNet {
-					clusterCIDR := netutils.MustParseIPNet("127.123.234.0/28")
-					return []*net.IPNet{clusterCIDR}
-				}(),
+				ClusterCIDRs:         netutils.MustParseIPNetList("127.123.234.0/28"),
 				ServiceCIDR:          nil,
 				SecondaryServiceCIDR: nil,
 				NodeCIDRMaskSizes:    []int{30},
@@ -842,15 +765,9 @@ func TestReleaseCIDRSuccess(t *testing.T) {
 	}
 }
 func TestNodeDeletionReleaseCIDR(t *testing.T) {
-	clusterCIDRv4, err := netutils.ParseIPNet("10.10.0.0/16")
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
+	clusterCIDRv4 := netutils.MustParseIPNet("10.10.0.0/16")
+	allocatedCIDR := netutils.MustParseIPNet("10.10.0.0/24")
 
-	allocatedCIDR, err := netutils.ParseIPNet("10.10.0.0/24")
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
 	testCases := []struct {
 		description       string
 		nodeKey           string
