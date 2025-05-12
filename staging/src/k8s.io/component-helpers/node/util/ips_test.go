@@ -55,23 +55,17 @@ func TestParseNodeIPArgument(t *testing.T) {
 		{
 			desc: "single IPv4",
 			in:   "1.2.3.4",
-			out: []net.IP{
-				netutils.MustParseIP("1.2.3.4"),
-			},
+			out:  netutils.MustParseIPList("1.2.3.4"),
 		},
 		{
 			desc: "single IPv4 with whitespace",
 			in:   " 1.2.3.4   ",
-			out: []net.IP{
-				netutils.MustParseIP("1.2.3.4"),
-			},
+			out:  netutils.MustParseIPList("1.2.3.4"),
 		},
 		{
 			desc: "single IPv4 non-canonical",
 			in:   "01.2.3.004",
-			out: []net.IP{
-				netutils.MustParseIP("1.2.3.4"),
-			},
+			out:  netutils.MustParseIPList("1.2.3.4"),
 		},
 		{
 			desc:     "single IPv4 invalid (ignored)",
@@ -88,48 +82,34 @@ func TestParseNodeIPArgument(t *testing.T) {
 		{
 			desc: "single IPv4 unspecified",
 			in:   "0.0.0.0",
-			out: []net.IP{
-				net.IPv4zero,
-			},
+			out:  netutils.MustParseIPList("0.0.0.0"),
 		},
 		{
-			desc: "single IPv4 plus ignored garbage",
-			in:   "1.2.3.4,not-an-IPv6-address",
-			out: []net.IP{
-				netutils.MustParseIP("1.2.3.4"),
-			},
+			desc:     "single IPv4 plus ignored garbage",
+			in:       "1.2.3.4,not-an-IPv6-address",
+			out:      netutils.MustParseIPList("1.2.3.4"),
 			invalids: []string{"not-an-IPv6-address"},
 		},
 		{
 			desc: "single IPv6",
 			in:   "abcd::ef01",
-			out: []net.IP{
-				netutils.MustParseIP("abcd::ef01"),
-			},
+			out:  netutils.MustParseIPList("abcd::ef01"),
 		},
 		{
 			desc: "single IPv6 non-canonical",
 			in:   "abcd:0abc:00ab:0000:0000::1",
-			out: []net.IP{
-				netutils.MustParseIP("abcd:abc:ab::1"),
-			},
+			out:  netutils.MustParseIPList("abcd:abc:ab::1"),
 		},
 		{
-			desc: "simple dual-stack",
-			in:   "1.2.3.4,abcd::ef01",
-			out: []net.IP{
-				netutils.MustParseIP("1.2.3.4"),
-				netutils.MustParseIP("abcd::ef01"),
-			},
+			desc:  "simple dual-stack",
+			in:    "1.2.3.4,abcd::ef01",
+			out:   netutils.MustParseIPList("1.2.3.4", "abcd::ef01"),
 			ssErr: "not supported in this configuration",
 		},
 		{
-			desc: "dual-stack with whitespace",
-			in:   "abcd::ef01 , 1.2.3.4",
-			out: []net.IP{
-				netutils.MustParseIP("abcd::ef01"),
-				netutils.MustParseIP("1.2.3.4"),
-			},
+			desc:  "dual-stack with whitespace",
+			in:    "abcd::ef01 , 1.2.3.4",
+			out:   netutils.MustParseIPList("abcd::ef01", "1.2.3.4"),
 			ssErr: "not supported in this configuration",
 		},
 		{
@@ -155,12 +135,9 @@ func TestParseNodeIPArgument(t *testing.T) {
 			ssErr: "not supported in this configuration",
 		},
 		{
-			desc: "dual-stack plus ignored garbage",
-			in:   "abcd::ef01 , 1.2.3.4, something else",
-			out: []net.IP{
-				netutils.MustParseIP("abcd::ef01"),
-				netutils.MustParseIP("1.2.3.4"),
-			},
+			desc:     "dual-stack plus ignored garbage",
+			in:       "abcd::ef01 , 1.2.3.4, something else",
+			out:      netutils.MustParseIPList("abcd::ef01", "1.2.3.4"),
 			invalids: []string{"something else"},
 			ssErr:    "not supported in this configuration",
 		},
@@ -245,9 +222,7 @@ func TestParseNodeIPAnnotation(t *testing.T) {
 		{
 			desc: "single IPv4",
 			in:   "1.2.3.4",
-			out: []net.IP{
-				netutils.MustParseIP("1.2.3.4"),
-			},
+			out:  netutils.MustParseIPList("1.2.3.4"),
 		},
 		{
 			desc: "single IPv4 with whitespace",
@@ -257,9 +232,7 @@ func TestParseNodeIPAnnotation(t *testing.T) {
 		{
 			desc: "single IPv4 non-canonical",
 			in:   "01.2.3.004",
-			out: []net.IP{
-				netutils.MustParseIP("1.2.3.4"),
-			},
+			out:  netutils.MustParseIPList("1.2.3.4"),
 		},
 		{
 			desc: "single IPv4 invalid",
@@ -274,9 +247,7 @@ func TestParseNodeIPAnnotation(t *testing.T) {
 		{
 			desc: "single IPv4 unspecified",
 			in:   "0.0.0.0",
-			out: []net.IP{
-				net.IPv4zero,
-			},
+			out:  netutils.MustParseIPList("0.0.0.0"),
 		},
 		{
 			desc: "single IPv4 plus garbage",
@@ -286,24 +257,17 @@ func TestParseNodeIPAnnotation(t *testing.T) {
 		{
 			desc: "single IPv6",
 			in:   "abcd::ef01",
-			out: []net.IP{
-				netutils.MustParseIP("abcd::ef01"),
-			},
+			out:  netutils.MustParseIPList("abcd::ef01"),
 		},
 		{
 			desc: "single IPv6 non-canonical",
 			in:   "abcd:0abc:00ab:0000:0000::1",
-			out: []net.IP{
-				netutils.MustParseIP("abcd:abc:ab::1"),
-			},
+			out:  netutils.MustParseIPList("abcd:abc:ab::1"),
 		},
 		{
-			desc: "simple dual-stack",
-			in:   "1.2.3.4,abcd::ef01",
-			out: []net.IP{
-				netutils.MustParseIP("1.2.3.4"),
-				netutils.MustParseIP("abcd::ef01"),
-			},
+			desc:  "simple dual-stack",
+			in:    "1.2.3.4,abcd::ef01",
+			out:   netutils.MustParseIPList("1.2.3.4", "abcd::ef01"),
 			ssErr: "not supported in this configuration",
 		},
 		{

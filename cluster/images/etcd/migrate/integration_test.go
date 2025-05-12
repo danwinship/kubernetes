@@ -285,7 +285,7 @@ func getOrCreateTestCertFiles(certFileName, keyFileName string, spec TestCertSpe
 		}
 	}
 
-	certPem, keyPem, err := generateSelfSignedCertKey(spec.host, parseIPList(spec.ips), spec.names)
+	certPem, keyPem, err := generateSelfSignedCertKey(spec.host, netutils.MustParseIPList(spec.ips...), spec.names)
 	if err != nil {
 		return err
 	}
@@ -303,14 +303,6 @@ func getOrCreateTestCertFiles(certFileName, keyFileName string, spec TestCertSpe
 	}
 
 	return nil
-}
-
-func parseIPList(ips []string) []net.IP {
-	var netIPs []net.IP
-	for _, ip := range ips {
-		netIPs = append(netIPs, netutils.ParseIPSloppy(ip))
-	}
-	return netIPs
 }
 
 // generateSelfSignedCertKey creates a self-signed certificate and key for the given host.

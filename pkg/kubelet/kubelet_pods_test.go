@@ -20,7 +20,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"net"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -4610,9 +4609,7 @@ func TestNodeAddressUpdatesGenerateAPIPodStatusHostNetworkPodIPs(t *testing.T) {
 			testKubelet := newTestKubelet(t, false /* controllerAttachDetachEnabled */)
 			defer testKubelet.Cleanup()
 			kl := testKubelet.kubelet
-			for _, ip := range tc.nodeIPs {
-				kl.nodeIPs = append(kl.nodeIPs, netutils.ParseIPSloppy(ip))
-			}
+			kl.nodeIPs = netutils.MustParseIPList(tc.nodeIPs...)
 			kl.nodeLister = testNodeLister{nodes: []*v1.Node{
 				{
 					ObjectMeta: metav1.ObjectMeta{Name: string(kl.nodeName)},
@@ -4760,7 +4757,7 @@ func TestGenerateAPIPodStatusPodIPs(t *testing.T) {
 			defer testKubelet.Cleanup()
 			kl := testKubelet.kubelet
 			if tc.nodeIP != "" {
-				kl.nodeIPs = []net.IP{netutils.ParseIPSloppy(tc.nodeIP)}
+				kl.nodeIPs = netutils.MustParseIPList(tc.nodeIP)
 			}
 
 			pod := podWithUIDNameNs("12345", "test-pod", "test-namespace")
@@ -4870,7 +4867,7 @@ func TestSortPodIPs(t *testing.T) {
 			defer testKubelet.Cleanup()
 			kl := testKubelet.kubelet
 			if tc.nodeIP != "" {
-				kl.nodeIPs = []net.IP{netutils.ParseIPSloppy(tc.nodeIP)}
+				kl.nodeIPs = netutils.MustParseIPList(tc.nodeIP)
 			}
 
 			podIPs := kl.sortPodIPs(tc.podIPs)

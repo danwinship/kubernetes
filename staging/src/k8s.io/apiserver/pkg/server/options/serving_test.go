@@ -383,14 +383,6 @@ func TestServerRunWithSNI(t *testing.T) {
 	}
 }
 
-func parseIPList(ips []string) []net.IP {
-	var netIPs []net.IP
-	for _, ip := range ips {
-		netIPs = append(netIPs, netutils.ParseIPSloppy(ip))
-	}
-	return netIPs
-}
-
 func getOrCreateTestCertFiles(certFileName, keyFileName string, spec TestCertSpec) (err error) {
 	if _, err := os.Stat(certFileName); err == nil {
 		if _, err := os.Stat(keyFileName); err == nil {
@@ -398,7 +390,7 @@ func getOrCreateTestCertFiles(certFileName, keyFileName string, spec TestCertSpe
 		}
 	}
 
-	certPem, keyPem, err := generateSelfSignedCertKey(spec.host, parseIPList(spec.ips), spec.names)
+	certPem, keyPem, err := generateSelfSignedCertKey(spec.host, netutils.MustParseIPList(spec.ips...), spec.names)
 	if err != nil {
 		return err
 	}

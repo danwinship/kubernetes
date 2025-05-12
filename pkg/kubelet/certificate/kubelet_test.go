@@ -270,7 +270,7 @@ func TestKubeletServerCertificateFromFiles(t *testing.T) {
 
 func TestNewCertificateManagerConfigGetTemplate(t *testing.T) {
 	nodeName := "fake-node"
-	nodeIP := netutils.MustParseIP("192.168.1.1")
+	nodeIP := "192.168.1.1"
 	tests := []struct {
 		name          string
 		nodeAddresses []v1.NodeAddress
@@ -317,7 +317,7 @@ func TestNewCertificateManagerConfigGetTemplate(t *testing.T) {
 			nodeAddresses: []v1.NodeAddress{
 				{
 					Type:    v1.NodeInternalIP,
-					Address: nodeIP.String(),
+					Address: nodeIP,
 				},
 			},
 			want: &x509.CertificateRequest{
@@ -325,7 +325,7 @@ func TestNewCertificateManagerConfigGetTemplate(t *testing.T) {
 					CommonName:   fmt.Sprintf("system:node:%s", nodeName),
 					Organization: []string{"system:nodes"},
 				},
-				IPAddresses: []net.IP{nodeIP},
+				IPAddresses: netutils.MustParseIPList(nodeIP),
 			},
 			featuregate: true,
 		},
@@ -334,7 +334,7 @@ func TestNewCertificateManagerConfigGetTemplate(t *testing.T) {
 			nodeAddresses: []v1.NodeAddress{
 				{
 					Type:    v1.NodeInternalIP,
-					Address: nodeIP.String(),
+					Address: nodeIP,
 				},
 			},
 			want: &x509.CertificateRequest{
@@ -342,7 +342,7 @@ func TestNewCertificateManagerConfigGetTemplate(t *testing.T) {
 					CommonName:   fmt.Sprintf("system:node:%s", nodeName),
 					Organization: []string{"system:nodes"},
 				},
-				IPAddresses: []net.IP{nodeIP},
+				IPAddresses: netutils.MustParseIPList(nodeIP),
 			},
 			featuregate: false,
 		},
@@ -355,7 +355,7 @@ func TestNewCertificateManagerConfigGetTemplate(t *testing.T) {
 				},
 				{
 					Type:    v1.NodeInternalIP,
-					Address: nodeIP.String(),
+					Address: nodeIP,
 				},
 			},
 			want: &x509.CertificateRequest{
@@ -364,7 +364,7 @@ func TestNewCertificateManagerConfigGetTemplate(t *testing.T) {
 					Organization: []string{"system:nodes"},
 				},
 				DNSNames:    []string{nodeName},
-				IPAddresses: []net.IP{nodeIP},
+				IPAddresses: netutils.MustParseIPList(nodeIP),
 			},
 			featuregate: true,
 		},
@@ -377,7 +377,7 @@ func TestNewCertificateManagerConfigGetTemplate(t *testing.T) {
 				},
 				{
 					Type:    v1.NodeInternalIP,
-					Address: nodeIP.String(),
+					Address: nodeIP,
 				},
 			},
 			want: &x509.CertificateRequest{
@@ -386,7 +386,7 @@ func TestNewCertificateManagerConfigGetTemplate(t *testing.T) {
 					Organization: []string{"system:nodes"},
 				},
 				DNSNames:    []string{nodeName},
-				IPAddresses: []net.IP{nodeIP},
+				IPAddresses: netutils.MustParseIPList(nodeIP),
 			},
 			featuregate: false,
 		},

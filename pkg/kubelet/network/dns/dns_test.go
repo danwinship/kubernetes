@@ -18,7 +18,6 @@ package dns
 
 import (
 	"fmt"
-	"net"
 	"os"
 	"strconv"
 	"strings"
@@ -353,7 +352,7 @@ func TestGetPodDNSType(t *testing.T) {
 	}
 	testClusterDNSDomain := "TEST"
 	clusterNS := "203.0.113.1"
-	testClusterDNS := []net.IP{netutils.ParseIPSloppy(clusterNS)}
+	testClusterDNS := netutils.MustParseIPList(clusterNS)
 
 	configurer := NewConfigurer(recorder, nodeRef, nil, nil, testClusterDNSDomain, "")
 
@@ -458,7 +457,7 @@ func TestGetPodDNS(t *testing.T) {
 	}
 	clusterNS := "203.0.113.1"
 	testClusterDNSDomain := "kubernetes.io"
-	testClusterDNS := []net.IP{netutils.ParseIPSloppy(clusterNS)}
+	testClusterDNS := netutils.MustParseIPList(clusterNS)
 
 	configurer := NewConfigurer(recorder, nodeRef, nil, testClusterDNS, testClusterDNSDomain, "")
 
@@ -583,7 +582,7 @@ func TestGetPodDNSCustom(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	configurer := NewConfigurer(recorder, nodeRef, nil, []net.IP{netutils.ParseIPSloppy(testClusterNameserver)}, testClusterDNSDomain, tmpfile.Name())
+	configurer := NewConfigurer(recorder, nodeRef, nil, netutils.MustParseIPList(testClusterNameserver), testClusterDNSDomain, tmpfile.Name())
 
 	testCases := []struct {
 		desc              string
