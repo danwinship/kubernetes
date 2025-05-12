@@ -81,7 +81,7 @@ func TestAllocate(t *testing.T) {
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			_, cidr, err := netutils.ParseCIDRSloppy(tc.cidr)
+			cidr, err := netutils.ParseIPNet(tc.cidr)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -175,7 +175,7 @@ func TestAllocate(t *testing.T) {
 }
 
 func TestAllocateTiny(t *testing.T) {
-	_, cidr, err := netutils.ParseCIDRSloppy("192.168.1.0/32")
+	cidr, err := netutils.ParseIPNet("192.168.1.0/32")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -192,7 +192,7 @@ func TestAllocateTiny(t *testing.T) {
 }
 
 func TestAllocateReserved(t *testing.T) {
-	_, cidr, err := netutils.ParseCIDRSloppy("192.168.1.0/25")
+	cidr, err := netutils.ParseIPNet("192.168.1.0/25")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -241,7 +241,7 @@ func TestAllocateReserved(t *testing.T) {
 }
 
 func TestAllocateSmall(t *testing.T) {
-	_, cidr, err := netutils.ParseCIDRSloppy("192.168.1.240/30")
+	cidr, err := netutils.ParseIPNet("192.168.1.240/30")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -287,7 +287,7 @@ func TestAllocateSmall(t *testing.T) {
 }
 
 func TestForEach(t *testing.T) {
-	_, cidr, err := netutils.ParseCIDRSloppy("192.168.1.0/24")
+	cidr, err := netutils.ParseIPNet("192.168.1.0/24")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -327,7 +327,7 @@ func TestForEach(t *testing.T) {
 }
 
 func TestSnapshot(t *testing.T) {
-	_, cidr, err := netutils.ParseCIDRSloppy("192.168.1.0/24")
+	cidr, err := netutils.ParseIPNet("192.168.1.0/24")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -350,7 +350,7 @@ func TestSnapshot(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	_, network, err := netutils.ParseCIDRSloppy(dst.Range)
+	network, err := netutils.ParseIPNet(dst.Range)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -359,7 +359,7 @@ func TestSnapshot(t *testing.T) {
 		t.Fatalf("mismatched networks: %s : %s", network, cidr)
 	}
 
-	_, otherCidr, err := netutils.ParseCIDRSloppy("192.168.2.0/24")
+	otherCidr, err := netutils.ParseIPNet("192.168.2.0/24")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -389,7 +389,7 @@ func TestSnapshot(t *testing.T) {
 }
 
 func TestNewFromSnapshot(t *testing.T) {
-	_, cidr, err := netutils.ParseCIDRSloppy("192.168.0.0/24")
+	cidr, err := netutils.ParseIPNet("192.168.0.0/24")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -434,7 +434,7 @@ func TestClusterIPMetrics(t *testing.T) {
 	clearMetrics()
 	// create IPv4 allocator
 	cidrIPv4 := "10.0.0.0/24"
-	_, clusterCIDRv4, _ := netutils.ParseCIDRSloppy(cidrIPv4)
+	clusterCIDRv4, _ := netutils.ParseIPNet(cidrIPv4)
 	a, err := NewInMemory(clusterCIDRv4)
 	if err != nil {
 		t.Fatalf("unexpected error creating CidrSet: %v", err)
@@ -442,7 +442,7 @@ func TestClusterIPMetrics(t *testing.T) {
 	a.EnableMetrics()
 	// create IPv6 allocator
 	cidrIPv6 := "2001:db8::/112"
-	_, clusterCIDRv6, _ := netutils.ParseCIDRSloppy(cidrIPv6)
+	clusterCIDRv6, _ := netutils.ParseIPNet(cidrIPv6)
 	b, err := NewInMemory(clusterCIDRv6)
 	b.EnableMetrics()
 	if err != nil {
@@ -546,7 +546,7 @@ func TestClusterIPAllocatedMetrics(t *testing.T) {
 	clearMetrics()
 	// create IPv4 allocator
 	cidrIPv4 := "10.0.0.0/25"
-	_, clusterCIDRv4, _ := netutils.ParseCIDRSloppy(cidrIPv4)
+	clusterCIDRv4, _ := netutils.ParseIPNet(cidrIPv4)
 	a, err := NewInMemory(clusterCIDRv4)
 	if err != nil {
 		t.Fatalf("unexpected error creating CidrSet: %v", err)
@@ -604,7 +604,7 @@ func TestClusterIPAllocatedMetrics(t *testing.T) {
 func TestMetricsDisabled(t *testing.T) {
 	// create metrics enabled allocator
 	cidrIPv4 := "10.0.0.0/24"
-	_, clusterCIDRv4, _ := netutils.ParseCIDRSloppy(cidrIPv4)
+	clusterCIDRv4, _ := netutils.ParseIPNet(cidrIPv4)
 	a, err := NewInMemory(clusterCIDRv4)
 	if err != nil {
 		t.Fatalf("unexpected error creating CidrSet: %v", err)
@@ -720,7 +720,7 @@ func TestDryRun(t *testing.T) {
 	}}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			_, cidr, err := netutils.ParseCIDRSloppy(tc.cidr)
+			cidr, err := netutils.ParseIPNet(tc.cidr)
 			if err != nil {
 				t.Fatalf("unexpected failure: %v", err)
 			}
@@ -839,7 +839,7 @@ func Test_calculateRangeOffset(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 
-			_, cidr, err := netutils.ParseCIDRSloppy(tt.cidr)
+			cidr, err := netutils.ParseIPNet(tt.cidr)
 			if err != nil {
 				t.Fatalf("Unexpected error parsing CIDR %s: %v", tt.cidr, err)
 			}
@@ -854,7 +854,7 @@ func Test_calculateRangeOffset(t *testing.T) {
 // BenchmarkAllocateNextIPv4
 // BenchmarkAllocateNextIPv4-24    	 1175304	       870.9 ns/op	    1337 B/op	      11 allocs/op
 func BenchmarkAllocateNextIPv4Size1048574(b *testing.B) {
-	_, cidr, err := netutils.ParseCIDRSloppy("10.0.0.0/12")
+	cidr, err := netutils.ParseIPNet("10.0.0.0/12")
 	if err != nil {
 		b.Fatal(err)
 	}
@@ -872,7 +872,7 @@ func BenchmarkAllocateNextIPv4Size1048574(b *testing.B) {
 // BenchmarkAllocateNextIPv6
 // BenchmarkAllocateNextIPv6-24    	 5779431	       194.0 ns/op	      18 B/op	       2 allocs/op
 func BenchmarkAllocateNextIPv6Size65535(b *testing.B) {
-	_, cidr, err := netutils.ParseCIDRSloppy("fd00::/24")
+	cidr, err := netutils.ParseIPNet("fd00::/24")
 	if err != nil {
 		b.Fatal(err)
 	}

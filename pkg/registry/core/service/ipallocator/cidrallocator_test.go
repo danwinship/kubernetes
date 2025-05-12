@@ -508,7 +508,7 @@ func TestCIDRAllocateDualWrite(t *testing.T) {
 	}
 
 	// Create a bitmap allocator that will mirror the ip allocator
-	_, ipnet, err := netutils.ParseCIDRSloppy(cidr.Spec.CIDRs[0])
+	ipnet, err := netutils.ParseIPNet(cidr.Spec.CIDRs[0])
 	if err != nil {
 		t.Fatalf("unexpected failure: %v", err)
 	}
@@ -576,7 +576,7 @@ func TestCIDRAllocateDualWriteCollision(t *testing.T) {
 	}
 
 	// Create a bitmap allocator that will mirror the ip allocator
-	_, ipnet, err := netutils.ParseCIDRSloppy(cidr.Spec.CIDRs[0])
+	ipnet, err := netutils.ParseIPNet(cidr.Spec.CIDRs[0])
 	if err != nil {
 		t.Fatalf("unexpected failure: %v", err)
 	}

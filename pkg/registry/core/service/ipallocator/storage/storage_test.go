@@ -37,7 +37,7 @@ import (
 
 func newStorage(t *testing.T) (*etcd3testing.EtcdTestServer, ipallocator.Interface, allocator.Interface, storage.Interface, factory.DestroyFunc) {
 	etcdStorage, server := registrytest.NewEtcdStorage(t, "")
-	_, cidr, err := netutils.ParseCIDRSloppy("192.168.1.0/24")
+	cidr, err := netutils.ParseIPNet("192.168.1.0/24")
 	if err != nil {
 		t.Fatal(err)
 	}

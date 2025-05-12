@@ -287,7 +287,7 @@ func (r *rangeAllocator) occupyCIDRs(node *v1.Node) error {
 		return nil
 	}
 	for idx, cidr := range node.Spec.PodCIDRs {
-		_, podCIDR, err := netutils.ParseCIDRSloppy(cidr)
+		podCIDR, err := netutils.ParseIPNet(cidr)
 		if err != nil {
 			return fmt.Errorf("failed to parse node %s, CIDR %s", node.Name, node.Spec.PodCIDR)
 		}
@@ -341,7 +341,7 @@ func (r *rangeAllocator) ReleaseCIDR(logger klog.Logger, node *v1.Node) error {
 	}
 
 	for idx, cidr := range node.Spec.PodCIDRs {
-		_, podCIDR, err := netutils.ParseCIDRSloppy(cidr)
+		podCIDR, err := netutils.ParseIPNet(cidr)
 		if err != nil {
 			return fmt.Errorf("failed to parse CIDR %s on Node %v: %v", cidr, node.Name, err)
 		}

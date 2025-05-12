@@ -532,7 +532,7 @@ func TestAllocateOrOccupyCIDRSuccess(t *testing.T) {
 		// pre allocate the cidrs as per the test
 		for idx, allocatedList := range tc.allocatedCIDRs {
 			for _, allocated := range allocatedList {
-				_, cidr, err := netutils.ParseCIDRSloppy(allocated)
+				cidr, err := netutils.ParseIPNet(allocated)
 				if err != nil {
 					t.Fatalf("%v: unexpected error when parsing CIDR %v: %v", tc.description, allocated, err)
 				}
@@ -629,7 +629,7 @@ func TestAllocateOrOccupyCIDRFailure(t *testing.T) {
 		// this is a bit of white box testing
 		for setIdx, allocatedList := range tc.allocatedCIDRs {
 			for _, allocated := range allocatedList {
-				_, cidr, err := netutils.ParseCIDRSloppy(allocated)
+				cidr, err := netutils.ParseIPNet(allocated)
 				if err != nil {
 					t.Fatalf("%v: unexpected error when parsing CIDR %v: %v", tc.description, cidr, err)
 				}
@@ -771,7 +771,7 @@ func TestReleaseCIDRSuccess(t *testing.T) {
 		// this is a bit of white box testing
 		for setIdx, allocatedList := range tc.allocatedCIDRs {
 			for _, allocated := range allocatedList {
-				_, cidr, err := netutils.ParseCIDRSloppy(allocated)
+				cidr, err := netutils.ParseIPNet(allocated)
 				if err != nil {
 					t.Fatalf("%v: unexpected error when parsing CIDR %v: %v", tc.description, allocated, err)
 				}
@@ -842,12 +842,12 @@ func TestReleaseCIDRSuccess(t *testing.T) {
 	}
 }
 func TestNodeDeletionReleaseCIDR(t *testing.T) {
-	_, clusterCIDRv4, err := netutils.ParseCIDRSloppy("10.10.0.0/16")
+	clusterCIDRv4, err := netutils.ParseIPNet("10.10.0.0/16")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	_, allocatedCIDR, err := netutils.ParseCIDRSloppy("10.10.0.0/24")
+	allocatedCIDR, err := netutils.ParseIPNet("10.10.0.0/24")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}

@@ -76,7 +76,7 @@ func StartRealAPIServerOrDie(t *testing.T, configFuncs ...func(*options.ServerRu
 		t.Fatal(err)
 	}
 
-	_, defaultServiceClusterIPRange, err := netutils.ParseCIDRSloppy("10.0.0.0/24")
+	defaultServiceClusterIPRange, err := netutils.ParseIPNet("10.0.0.0/24")
 	if err != nil {
 		t.Fatal(err)
 	}

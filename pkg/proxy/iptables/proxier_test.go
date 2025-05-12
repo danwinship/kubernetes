@@ -1150,7 +1150,7 @@ func addressMatches(t *testing.T, address *iptablestest.IPTablesValue, ipStr str
 
 	var matches bool
 	if strings.Contains(address.Value, "/") {
-		_, cidr, err := netutils.ParseCIDRSloppy(address.Value)
+		cidr, err := netutils.ParseIPNet(address.Value)
 		if err != nil {
 			t.Errorf("Bad CIDR in kube-proxy output: %v", err)
 		}

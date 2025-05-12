@@ -65,7 +65,7 @@ func TestIsResponsibleForRoute(t *testing.T) {
 		{"a00:100::/10", myClusterRoute, "b00:100::/24", false},
 	}
 	for i, testCase := range testCases {
-		_, cidr, err := netutils.ParseCIDRSloppy(testCase.clusterCIDR)
+		cidr, err := netutils.ParseIPNet(testCase.clusterCIDR)
 		if err != nil {
 			t.Errorf("%d. Error in test case: unparsable cidr %q", i, testCase.clusterCIDR)
 		}

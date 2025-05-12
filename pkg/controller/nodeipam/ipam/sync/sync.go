@@ -281,7 +281,7 @@ func (op *updateOp) updateAliasFromNode(ctx context.Context, sync *NodeSync, nod
 		return fmt.Errorf("cannot sync to cloud in mode %q", sync.mode)
 	}
 
-	_, aliasRange, err := netutils.ParseCIDRSloppy(node.Spec.PodCIDR)
+	aliasRange, err := netutils.ParseIPNet(node.Spec.PodCIDR)
 
 	logger := klog.FromContext(ctx)
 	if err != nil {
@@ -365,7 +365,7 @@ func (op *deleteOp) run(logger klog.Logger, sync *NodeSync) error {
 		return nil
 	}
 
-	_, cidrRange, err := netutils.ParseCIDRSloppy(op.node.Spec.PodCIDR)
+	cidrRange, err := netutils.ParseIPNet(op.node.Spec.PodCIDR)
 	if err != nil {
 		logger.Error(err, "Deleted node has an invalid podCIDR", "node", klog.KObj(op.node), "podCIDR", op.node.Spec.PodCIDR)
 		sync.kubeAPI.EmitNodeWarningEvent(op.node.Name, InvalidPodCIDR,

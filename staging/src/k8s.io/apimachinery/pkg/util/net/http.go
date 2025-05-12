@@ -405,7 +405,7 @@ func NewProxierWithNoProxyCIDR(delegate func(req *http.Request) (*url.URL, error
 
 	cidrs := []*net.IPNet{}
 	for _, noProxyRule := range noProxyRules {
-		_, cidr, _ := netutils.ParseCIDRSloppy(noProxyRule)
+		cidr, _ := netutils.ParseIPNet(noProxyRule)
 		if cidr != nil {
 			cidrs = append(cidrs, cidr)
 		}

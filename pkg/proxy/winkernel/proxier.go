@@ -620,7 +620,7 @@ func (proxier *Proxier) newServiceInfo(port *v1.ServicePort, service *v1.Service
 func (network hnsNetworkInfo) findRemoteSubnetProviderAddress(ipStr string) string {
 	var providerAddress string
 	for _, rs := range network.remoteSubnets {
-		_, ipNet, err := netutils.ParseCIDRSloppy(rs.destinationPrefix)
+		ipNet, err := netutils.ParseIPNet(rs.destinationPrefix)
 		if err != nil {
 			klog.ErrorS(err, "Failed to parse CIDR")
 		}

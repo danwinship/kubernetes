@@ -183,7 +183,7 @@ func (tracer *nftablesTracer) addressMatches(ipStr string, wantMatch bool, ruleA
 
 	var match bool
 	if strings.Contains(ruleAddress, "/") {
-		_, cidr, err := netutils.ParseCIDRSloppy(ruleAddress)
+		cidr, err := netutils.ParseIPNet(ruleAddress)
 		if err != nil {
 			tracer.t.Errorf("Bad CIDR in kube-proxy output: %v", err)
 		}

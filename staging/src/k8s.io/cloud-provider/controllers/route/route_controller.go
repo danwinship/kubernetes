@@ -422,7 +422,7 @@ func (rc *RouteController) updateNetworkingCondition(node *v1.Node, routesCreate
 }
 
 func (rc *RouteController) isResponsibleForRoute(route *cloudprovider.Route) bool {
-	_, cidr, err := netutils.ParseCIDRSloppy(route.DestinationCIDR)
+	cidr, err := netutils.ParseIPNet(route.DestinationCIDR)
 	if err != nil {
 		klog.Errorf("Ignoring route %s, unparsable CIDR: %v", route.Name, err)
 		return false

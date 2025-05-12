@@ -202,7 +202,7 @@ func (e *Entry) Validate(set *IPSet) bool {
 		}
 
 		// Net can not be empty for `hash:ip,port,net` type ip set
-		if _, ipNet, err := netutils.ParseCIDRSloppy(e.Net); ipNet == nil {
+		if ipNet, err := netutils.ParseIPNet(e.Net); ipNet == nil {
 			klog.ErrorS(err, "error parsing ip net", "entry", e, "net", e.Net, "set", set)
 			return false
 		}

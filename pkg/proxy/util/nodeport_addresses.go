@@ -60,7 +60,7 @@ func NewNodePortAddresses(family v1.IPFamily, cidrStrings []string) *NodePortAdd
 
 	// Now parse
 	for _, str := range npa.cidrStrings {
-		_, cidr, _ := netutils.ParseCIDRSloppy(str)
+		cidr, _ := netutils.ParseIPNet(str)
 
 		if netutils.IsIPv4CIDR(cidr) {
 			if cidr.IP.IsLoopback() || cidr.Contains(ipv4LoopbackStart) {

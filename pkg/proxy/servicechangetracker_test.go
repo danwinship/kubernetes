@@ -97,7 +97,7 @@ func makeIPs(ipStr ...string) []net.IP {
 func mustMakeCIDRs(cidrStr ...string) []*net.IPNet {
 	var cidrs []*net.IPNet
 	for _, s := range cidrStr {
-		if _, n, err := netutils.ParseCIDRSloppy(s); err == nil {
+		if n, err := netutils.ParseIPNet(s); err == nil {
 			cidrs = append(cidrs, n)
 		} else {
 			panic(err)

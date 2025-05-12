@@ -453,7 +453,7 @@ func (subnet HTTPProxyCIDRCheck) Check() (warnings, errorList []error) {
 		return nil, nil
 	}
 
-	_, cidr, err := netutils.ParseCIDRSloppy(subnet.CIDR)
+	cidr, err := netutils.ParseIPNet(subnet.CIDR)
 	if err != nil {
 		return nil, []error{errors.Wrapf(err, "error parsing CIDR %q", subnet.CIDR)}
 	}

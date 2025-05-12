@@ -672,7 +672,7 @@ func TestIsZeroCIDR(t *testing.T) {
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			_, cidr, _ := netutils.ParseCIDRSloppy(tc.input)
+			cidr, _ := netutils.ParseIPNet(tc.input)
 			if got := IsZeroCIDR(cidr); tc.expected != got {
 				t.Errorf("IsZeroCIDR() = %t, want %t", got, tc.expected)
 			}

@@ -57,7 +57,7 @@ func TestRepair(t *testing.T) {
 	ipregistry := &mockRangeRegistry{
 		item: &api.RangeAllocation{Range: "192.168.1.0/24"},
 	}
-	_, cidr, _ := netutils.ParseCIDRSloppy(ipregistry.item.Range)
+	cidr, _ := netutils.ParseIPNet(ipregistry.item.Range)
 	r := NewRepair(0, fakeClient.CoreV1(), fakeClient.EventsV1(), cidr, ipregistry, nil, nil)
 
 	if err := r.runOnce(); err != nil {
@@ -241,7 +241,7 @@ func TestRepairWithExisting(t *testing.T) {
 }
 
 func makeRangeRegistry(t *testing.T, cidrRange string) *mockRangeRegistry {
-	_, cidr, _ := netutils.ParseCIDRSloppy(cidrRange)
+	cidr, _ := netutils.ParseIPNet(cidrRange)
 	previous, err := ipallocator.NewInMemory(cidr)
 	if err != nil {
 		t.Fatal(err)
@@ -355,8 +355,8 @@ func TestRepairDualStack(t *testing.T) {
 		item: &api.RangeAllocation{Range: "2000::/108"},
 	}
 
-	_, cidr, _ := netutils.ParseCIDRSloppy(ipregistry.item.Range)
-	_, secondaryCIDR, _ := netutils.ParseCIDRSloppy(secondaryIPRegistry.item.Range)
+	cidr, _ := netutils.ParseIPNet(ipregistry.item.Range)
+	secondaryCIDR, _ := netutils.ParseIPNet(secondaryIPRegistry.item.Range)
 	r := NewRepair(0, fakeClient.CoreV1(), fakeClient.EventsV1(), cidr, ipregistry, secondaryCIDR, secondaryIPRegistry)
 
 	if err := r.runOnce(); err != nil {

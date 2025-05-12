@@ -115,7 +115,7 @@ func NewInMemory(cidr *net.IPNet) (*Range, error) {
 
 // NewFromSnapshot allocates a Range and initializes it from a snapshot.
 func NewFromSnapshot(snap *api.RangeAllocation) (*Range, error) {
-	_, ipnet, err := netutils.ParseCIDRSloppy(snap.Range)
+	ipnet, err := netutils.ParseIPNet(snap.Range)
 	if err != nil {
 		return nil, err
 	}

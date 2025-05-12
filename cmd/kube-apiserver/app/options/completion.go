@@ -111,7 +111,7 @@ func getServiceIPAndRanges(serviceClusterIPRanges string) (net.IP, net.IPNet, ne
 		return apiServerServiceIP, primaryServiceIPRange, net.IPNet{}, nil
 	}
 
-	_, primaryServiceClusterCIDR, err := netutils.ParseCIDRSloppy(serviceClusterIPRangeList[0])
+	primaryServiceClusterCIDR, err := netutils.ParseIPNet(serviceClusterIPRangeList[0])
 	if err != nil {
 		return net.IP{}, net.IPNet{}, net.IPNet{}, fmt.Errorf("service-cluster-ip-range[0] is not a valid cidr")
 	}
@@ -124,7 +124,7 @@ func getServiceIPAndRanges(serviceClusterIPRanges string) (net.IP, net.IPNet, ne
 	// user provided at least two entries
 	// note: validation asserts that the list is max of two dual stack entries
 	if len(serviceClusterIPRangeList) > 1 {
-		_, secondaryServiceClusterCIDR, err := netutils.ParseCIDRSloppy(serviceClusterIPRangeList[1])
+		secondaryServiceClusterCIDR, err := netutils.ParseIPNet(serviceClusterIPRangeList[1])
 		if err != nil {
 			return net.IP{}, net.IPNet{}, net.IPNet{}, fmt.Errorf("service-cluster-ip-range[1] is not an ip net")
 		}

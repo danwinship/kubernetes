@@ -250,7 +250,7 @@ func ValidateIPBlock(ipb *networking.IPBlock, fldPath *field.Path, opts NetworkP
 		return allErrs
 	}
 	allErrs = append(allErrs, apivalidation.IsValidCIDRForLegacyField(fldPath.Child("cidr"), ipb.CIDR, opts.AllowCIDRsEvenIfInvalid)...)
-	_, cidrIPNet, err := netutils.ParseCIDRSloppy(ipb.CIDR)
+	cidrIPNet, err := netutils.ParseIPNet(ipb.CIDR)
 	if err != nil {
 		// Implies validation would have failed so we already added errors for it.
 		return allErrs
@@ -259,7 +259,7 @@ func ValidateIPBlock(ipb *networking.IPBlock, fldPath *field.Path, opts NetworkP
 	for i, exceptCIDRStr := range ipb.Except {
 		exceptPath := fldPath.Child("except").Index(i)
 		allErrs = append(allErrs, apivalidation.IsValidCIDRForLegacyField(exceptPath, exceptCIDRStr, opts.AllowCIDRsEvenIfInvalid)...)
-		_, exceptCIDR, err := netutils.ParseCIDRSloppy(exceptCIDRStr)
+		exceptCIDR, err := netutils.ParseIPNet(exceptCIDRStr)
 		if err != nil {
 			// Implies validation would have failed so we already added errors for it.
 			continue

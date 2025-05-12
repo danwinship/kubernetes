@@ -65,7 +65,7 @@ func (a *APIServer) Start(ctx context.Context) error {
 
 	o := options.NewServerRunOptions()
 	o.Etcd.StorageConfig = a.storageConfig
-	_, ipnet, err := netutils.ParseCIDRSloppy(clusterIPRange)
+	ipnet, err := netutils.ParseIPNet(clusterIPRange)
 	if err != nil {
 		return err
 	}

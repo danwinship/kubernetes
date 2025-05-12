@@ -124,14 +124,14 @@ func startNodeIpamController(ctx context.Context, controllerContext ControllerCo
 
 	// service cidr processing
 	if len(strings.TrimSpace(controllerContext.ComponentConfig.NodeIPAMController.ServiceCIDR)) != 0 {
-		_, serviceCIDR, err = netutils.ParseCIDRSloppy(controllerContext.ComponentConfig.NodeIPAMController.ServiceCIDR)
+		serviceCIDR, err = netutils.ParseIPNet(controllerContext.ComponentConfig.NodeIPAMController.ServiceCIDR)
 		if err != nil {
 			logger.Info("Warning: unsuccessful parsing of service CIDR", "CIDR", controllerContext.ComponentConfig.NodeIPAMController.ServiceCIDR, "err", err)
 		}
 	}
 
 	if len(strings.TrimSpace(controllerContext.ComponentConfig.NodeIPAMController.SecondaryServiceCIDR)) != 0 {
-		_, secondaryServiceCIDR, err = netutils.ParseCIDRSloppy(controllerContext.ComponentConfig.NodeIPAMController.SecondaryServiceCIDR)
+		secondaryServiceCIDR, err = netutils.ParseIPNet(controllerContext.ComponentConfig.NodeIPAMController.SecondaryServiceCIDR)
 		if err != nil {
 			logger.Info("Warning: unsuccessful parsing of service CIDR", "CIDR", controllerContext.ComponentConfig.NodeIPAMController.SecondaryServiceCIDR, "err", err)
 		}

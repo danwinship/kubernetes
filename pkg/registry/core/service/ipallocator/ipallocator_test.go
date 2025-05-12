@@ -110,7 +110,7 @@ func TestAllocateIPAllocator(t *testing.T) {
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			_, cidr, err := netutils.ParseCIDRSloppy(tc.cidr)
+			cidr, err := netutils.ParseIPNet(tc.cidr)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -199,7 +199,7 @@ func TestAllocateIPAllocator(t *testing.T) {
 }
 
 func TestAllocateTinyIPAllocator(t *testing.T) {
-	_, cidr, err := netutils.ParseCIDRSloppy("192.168.1.0/32")
+	cidr, err := netutils.ParseIPNet("192.168.1.0/32")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -219,7 +219,7 @@ func TestAllocateTinyIPAllocator(t *testing.T) {
 }
 
 func TestAllocateReservedIPAllocator(t *testing.T) {
-	_, cidr, err := netutils.ParseCIDRSloppy("192.168.1.0/25")
+	cidr, err := netutils.ParseIPNet("192.168.1.0/25")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -270,7 +270,7 @@ func TestAllocateReservedIPAllocator(t *testing.T) {
 }
 
 func TestAllocateSmallIPAllocator(t *testing.T) {
-	_, cidr, err := netutils.ParseCIDRSloppy("192.168.1.240/30")
+	cidr, err := netutils.ParseIPNet("192.168.1.240/30")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -315,7 +315,7 @@ func TestAllocateSmallIPAllocator(t *testing.T) {
 }
 
 func TestForEachIPAllocator(t *testing.T) {
-	_, cidr, err := netutils.ParseCIDRSloppy("192.168.1.0/24")
+	cidr, err := netutils.ParseIPNet("192.168.1.0/24")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -359,7 +359,7 @@ func TestIPAllocatorClusterIPMetrics(t *testing.T) {
 	clearMetrics()
 	// create IPv4 allocator
 	cidrIPv4 := "10.0.0.0/24"
-	_, clusterCIDRv4, _ := netutils.ParseCIDRSloppy(cidrIPv4)
+	clusterCIDRv4, _ := netutils.ParseIPNet(cidrIPv4)
 	a, err := newTestAllocator(clusterCIDRv4)
 	if err != nil {
 		t.Fatal(err)
@@ -367,7 +367,7 @@ func TestIPAllocatorClusterIPMetrics(t *testing.T) {
 	a.EnableMetrics()
 	// create IPv6 allocator
 	cidrIPv6 := "2001:db8::/112"
-	_, clusterCIDRv6, _ := netutils.ParseCIDRSloppy(cidrIPv6)
+	clusterCIDRv6, _ := netutils.ParseIPNet(cidrIPv6)
 	b, err := newTestAllocator(clusterCIDRv6)
 	if err != nil {
 		t.Fatalf("unexpected error creating CidrSet: %v", err)
@@ -471,7 +471,7 @@ func TestIPAllocatorClusterIPAllocatedMetrics(t *testing.T) {
 	clearMetrics()
 	// create IPv4 allocator
 	cidrIPv4 := "10.0.0.0/25"
-	_, clusterCIDRv4, _ := netutils.ParseCIDRSloppy(cidrIPv4)
+	clusterCIDRv4, _ := netutils.ParseIPNet(cidrIPv4)
 	a, err := newTestAllocator(clusterCIDRv4)
 	if err != nil {
 		t.Fatal(err)
@@ -739,7 +739,7 @@ func Test_hostsPerNetwork(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		_, cidr, err := netutils.ParseCIDRSloppy(tc.cidr)
+		cidr, err := netutils.ParseIPNet(tc.cidr)
 		if err != nil {
 			t.Errorf("failed to parse cidr for test %s, unexpected error: '%s'", tc.name, err)
 		}
@@ -911,7 +911,7 @@ func Test_ipIterator_Number(t *testing.T) {
 }
 
 func TestAllocateNextFC(t *testing.T) {
-	_, cidr, err := netutils.ParseCIDRSloppy("fc::/112")
+	cidr, err := netutils.ParseIPNet("fc::/112")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -930,7 +930,7 @@ func TestAllocateNextFC(t *testing.T) {
 }
 
 func BenchmarkIPAllocatorAllocateNextIPv4Size1048574(b *testing.B) {
-	_, cidr, err := netutils.ParseCIDRSloppy("10.0.0.0/12")
+	cidr, err := netutils.ParseIPNet("10.0.0.0/12")
 	if err != nil {
 		b.Fatal(err)
 	}
@@ -946,7 +946,7 @@ func BenchmarkIPAllocatorAllocateNextIPv4Size1048574(b *testing.B) {
 }
 
 func BenchmarkIPAllocatorAllocateNextIPv6Size65535(b *testing.B) {
-	_, cidr, err := netutils.ParseCIDRSloppy("fd00::/120")
+	cidr, err := netutils.ParseIPNet("fd00::/120")
 	if err != nil {
 		b.Fatal(err)
 	}

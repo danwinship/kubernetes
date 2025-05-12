@@ -107,7 +107,7 @@ func MapCIDRsByIPFamily(cidrsStrings []string) map[v1.IPFamily][]*net.IPNet {
 	ipFamilyMap := map[v1.IPFamily][]*net.IPNet{}
 	for _, cidrStrUntrimmed := range cidrsStrings {
 		cidrStr := strings.TrimSpace(cidrStrUntrimmed)
-		_, cidr, err := netutils.ParseCIDRSloppy(cidrStr)
+		cidr, err := netutils.ParseIPNet(cidrStr)
 		if err != nil {
 			// Ignore empty strings. Same as in MapIPsByIPFamily
 			if len(cidrStr) != 0 {

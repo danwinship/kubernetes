@@ -47,7 +47,7 @@ func TestCIDRSetFullyAllocated(t *testing.T) {
 		},
 	}
 	for _, tc := range cases {
-		_, clusterCIDR, _ := netutils.ParseCIDRSloppy(tc.clusterCIDRStr)
+		clusterCIDR, _ := netutils.ParseIPNet(tc.clusterCIDRStr)
 		a, err := NewCIDRSet(clusterCIDR, tc.subNetMaskSize)
 		if err != nil {
 			t.Fatalf("unexpected error: %v for %v", err, tc.description)
@@ -198,7 +198,7 @@ func TestIndexToCIDRBlock(t *testing.T) {
 		},
 	}
 	for _, tc := range cases {
-		_, clusterCIDR, _ := netutils.ParseCIDRSloppy(tc.clusterCIDRStr)
+		clusterCIDR, _ := netutils.ParseIPNet(tc.clusterCIDRStr)
 		a, err := NewCIDRSet(clusterCIDR, tc.subnetMaskSize)
 		if err != nil {
 			t.Fatalf("error for %v ", tc.description)
@@ -225,7 +225,7 @@ func TestCIDRSet_RandomishAllocation(t *testing.T) {
 		},
 	}
 	for _, tc := range cases {
-		_, clusterCIDR, _ := netutils.ParseCIDRSloppy(tc.clusterCIDRStr)
+		clusterCIDR, _ := netutils.ParseIPNet(tc.clusterCIDRStr)
 		a, err := NewCIDRSet(clusterCIDR, 24)
 		if err != nil {
 			t.Fatalf("Error allocating CIDRSet for %v", tc.description)
@@ -286,7 +286,7 @@ func TestCIDRSet_AllocationOccupied(t *testing.T) {
 		},
 	}
 	for _, tc := range cases {
-		_, clusterCIDR, _ := netutils.ParseCIDRSloppy(tc.clusterCIDRStr)
+		clusterCIDR, _ := netutils.ParseIPNet(tc.clusterCIDRStr)
 		a, err := NewCIDRSet(clusterCIDR, 24)
 		if err != nil {
 			t.Fatalf("Error allocating CIDRSet for %v", tc.description)
@@ -399,7 +399,7 @@ func TestDoubleOccupyRelease(t *testing.T) {
 	// operations have been executed.
 	numAllocatable24s := (1 << 8) - 3
 
-	_, clusterCIDR, _ := netutils.ParseCIDRSloppy(clusterCIDRStr)
+	clusterCIDR, _ := netutils.ParseIPNet(clusterCIDRStr)
 	a, err := NewCIDRSet(clusterCIDR, 24)
 	if err != nil {
 		t.Fatalf("Error allocating CIDRSet")
@@ -407,7 +407,7 @@ func TestDoubleOccupyRelease(t *testing.T) {
 
 	// Execute the operations
 	for _, op := range operations {
-		_, cidr, _ := netutils.ParseCIDRSloppy(op.cidrStr)
+		cidr, _ := netutils.ParseIPNet(op.cidrStr)
 		switch op.operation {
 		case "occupy":
 			a.Occupy(cidr)
@@ -558,7 +558,7 @@ func TestGetBitforCIDR(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.description, func(t *testing.T) {
-			_, clusterCIDR, err := netutils.ParseCIDRSloppy(tc.clusterCIDRStr)
+			clusterCIDR, err := netutils.ParseIPNet(tc.clusterCIDRStr)
 			if err != nil {
 				t.Fatalf("unexpected error: %v", err)
 			}
@@ -567,7 +567,7 @@ func TestGetBitforCIDR(t *testing.T) {
 			if err != nil {
 				t.Fatalf("Error allocating CIDRSet")
 			}
-			_, subnetCIDR, err := netutils.ParseCIDRSloppy(tc.subNetCIDRStr)
+			subnetCIDR, err := netutils.ParseIPNet(tc.subNetCIDRStr)
 			if err != nil {
 				t.Fatalf("unexpected error: %v", err)
 			}
@@ -728,7 +728,7 @@ func TestOccupy(t *testing.T) {
 	}
 
 	for _, tc := range cases {
-		_, clusterCIDR, err := netutils.ParseCIDRSloppy(tc.clusterCIDRStr)
+		clusterCIDR, err := netutils.ParseIPNet(tc.clusterCIDRStr)
 		if err != nil {
 			t.Fatalf("unexpected error: %v for %v", err, tc.description)
 		}
@@ -738,7 +738,7 @@ func TestOccupy(t *testing.T) {
 			t.Fatalf("Error allocating CIDRSet for %v", tc.description)
 		}
 
-		_, subnetCIDR, err := netutils.ParseCIDRSloppy(tc.subNetCIDRStr)
+		subnetCIDR, err := netutils.ParseIPNet(tc.subNetCIDRStr)
 		if err != nil {
 			t.Fatalf("unexpected error: %v for %v", err, tc.description)
 		}
@@ -797,7 +797,7 @@ func TestCIDRSetv6(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.description, func(t *testing.T) {
-			_, clusterCIDR, _ := netutils.ParseCIDRSloppy(tc.clusterCIDRStr)
+			clusterCIDR, _ := netutils.ParseIPNet(tc.clusterCIDRStr)
 			a, err := NewCIDRSet(clusterCIDR, tc.subNetMaskSize)
 			if gotErr := err != nil; gotErr != tc.expectErr {
 				t.Fatalf("NewCIDRSet(%v, %v) = %v, %v; gotErr = %t, want %t", clusterCIDR, tc.subNetMaskSize, a, err, gotErr, tc.expectErr)
@@ -835,7 +835,7 @@ func TestCIDRSetv6(t *testing.T) {
 
 func TestCidrSetMetrics(t *testing.T) {
 	cidr := "10.0.0.0/16"
-	_, clusterCIDR, _ := netutils.ParseCIDRSloppy(cidr)
+	clusterCIDR, _ := netutils.ParseIPNet(cidr)
 	clearMetrics(map[string]string{"clusterCIDR": cidr})
 
 	// We have 256 free cidrs
@@ -895,7 +895,7 @@ func TestCidrSetMetrics(t *testing.T) {
 
 func TestCidrSetMetricsHistogram(t *testing.T) {
 	cidr := "10.0.0.0/16"
-	_, clusterCIDR, _ := netutils.ParseCIDRSloppy(cidr)
+	clusterCIDR, _ := netutils.ParseIPNet(cidr)
 	clearMetrics(map[string]string{"clusterCIDR": cidr})
 
 	// We have 256 free cidrs
@@ -946,7 +946,7 @@ func TestCidrSetMetricsHistogram(t *testing.T) {
 func TestCidrSetMetricsDual(t *testing.T) {
 	// create IPv4 cidrSet
 	cidrIPv4 := "10.0.0.0/16"
-	_, clusterCIDRv4, _ := netutils.ParseCIDRSloppy(cidrIPv4)
+	clusterCIDRv4, _ := netutils.ParseIPNet(cidrIPv4)
 	clearMetrics(map[string]string{"clusterCIDR": cidrIPv4})
 
 	a, err := NewCIDRSet(clusterCIDRv4, 24)
@@ -967,7 +967,7 @@ func TestCidrSetMetricsDual(t *testing.T) {
 
 	// create IPv6 cidrSet
 	cidrIPv6 := "2001:db8::/48"
-	_, clusterCIDRv6, _ := netutils.ParseCIDRSloppy(cidrIPv6)
+	clusterCIDRv6, _ := netutils.ParseIPNet(cidrIPv6)
 	clearMetrics(map[string]string{"clusterCIDR": cidrIPv6})
 
 	b, err := NewCIDRSet(clusterCIDRv6, 64)
@@ -1030,10 +1030,10 @@ func TestCidrSetMetricsDual(t *testing.T) {
 
 func Test_getMaxCIDRs(t *testing.T) {
 	cidrIPv4 := "10.0.0.0/16"
-	_, clusterCIDRv4, _ := netutils.ParseCIDRSloppy(cidrIPv4)
+	clusterCIDRv4, _ := netutils.ParseIPNet(cidrIPv4)
 
 	cidrIPv6 := "2001:db8::/48"
-	_, clusterCIDRv6, _ := netutils.ParseCIDRSloppy(cidrIPv6)
+	clusterCIDRv6, _ := netutils.ParseIPNet(cidrIPv6)
 
 	tests := []struct {
 		name             string
@@ -1114,7 +1114,7 @@ func expectMetrics(t *testing.T, label string, em testMetrics) {
 
 // Benchmarks
 func benchmarkAllocateAllIPv6(cidr string, subnetMaskSize int, b *testing.B) {
-	_, clusterCIDR, _ := netutils.ParseCIDRSloppy(cidr)
+	clusterCIDR, _ := netutils.ParseIPNet(cidr)
 	a, _ := NewCIDRSet(clusterCIDR, subnetMaskSize)
 	for n := 0; n < b.N; n++ {
 		// Allocate the whole range + 1

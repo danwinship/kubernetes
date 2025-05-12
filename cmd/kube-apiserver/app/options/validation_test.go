@@ -38,14 +38,14 @@ func makeOptionsWithCIDRs(serviceCIDR string, secondaryServiceCIDR string) *Serv
 
 	var primaryCIDR, secondaryCIDR net.IPNet
 	if len(serviceCIDR) > 0 {
-		_, cidr, _ := netutils.ParseCIDRSloppy(serviceCIDR)
+		cidr, _ := netutils.ParseIPNet(serviceCIDR)
 		if cidr != nil {
 			primaryCIDR = *(cidr)
 		}
 	}
 
 	if len(secondaryServiceCIDR) > 0 {
-		_, cidr, _ := netutils.ParseCIDRSloppy(secondaryServiceCIDR)
+		cidr, _ := netutils.ParseIPNet(secondaryServiceCIDR)
 		if cidr != nil {
 			secondaryCIDR = *(cidr)
 		}
