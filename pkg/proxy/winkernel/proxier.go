@@ -376,7 +376,8 @@ func (info *endpointInfo) Port() int {
 // This ensures mac addresses are unique for proper load balancing
 // There is a possibility of MAC collisions but this Mac address is used for remote endpoints only
 // and not sent on the wire.
-func conjureMac(macPrefix string, ip net.IP) string {
+func conjureMac(macPrefix string, ipStr string) string {
+	ip, _ := netutils.ParseIP(ipStr)
 	if ip4 := ip.To4(); ip4 != nil {
 		a, b, c, d := ip4[0], ip4[1], ip4[2], ip4[3]
 		return fmt.Sprintf("%v-%02x-%02x-%02x-%02x", macPrefix, a, b, c, d)
@@ -501,7 +502,7 @@ func (proxier *Proxier) newEndpointInfo(baseInfo *proxy.BaseEndpointInfo, _ *pro
 		ip:         baseInfo.IP(),
 		port:       uint16(baseInfo.Port()),
 		isLocal:    baseInfo.IsLocal(),
-		macAddress: conjureMac("02-11", netutils.ParseIPSloppy(baseInfo.IP())),
+		macAddress: conjureMac("02-11", baseInfo.IP()),
 		refCount:   new(uint16),
 		hnsID:      "",
 		hns:        proxier.hns,
@@ -616,17 +617,18 @@ func (proxier *Proxier) newServiceInfo(port *v1.ServicePort, service *v1.Service
 	return info
 }
 
-func (network hnsNetworkInfo) findRemoteSubnetProviderAddress(ip string) string {
+func (network hnsNetworkInfo) findRemoteSubnetProviderAddress(ipStr string) string {
 	var providerAddress string
 	for _, rs := range network.remoteSubnets {
 		_, ipNet, err := netutils.ParseCIDRSloppy(rs.destinationPrefix)
 		if err != nil {
 			klog.ErrorS(err, "Failed to parse CIDR")
 		}
-		if ipNet.Contains(netutils.ParseIPSloppy(ip)) {
+		ip, _ := netutils.ParseIP(ipStr)
+		if ipNet.Contains(ip) {
 			providerAddress = rs.providerAddress
 		}
-		if ip == rs.providerAddress {
+		if ipStr == rs.providerAddress {
 			providerAddress = rs.providerAddress
 		}
 	}
@@ -1403,7 +1405,7 @@ func (proxier *Proxier) syncProxyRules() (retryError error) {
 					hnsEndpoint := &endpointInfo{
 						ip:              ep.ip,
 						isLocal:         false,
-						macAddress:      conjureMac("02-11", netutils.ParseIPSloppy(ep.ip)),
+						macAddress:      conjureMac("02-11", ep.ip),
 						providerAddress: providerAddress,
 					}
 

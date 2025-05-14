@@ -228,7 +228,8 @@ func (cache *EndpointSliceCache) addEndpoints(svcPortName *ServicePortName, port
 			}
 		}
 
-		endpointIP := netutils.ParseIPSloppy(endpoint.Addresses[0]).String()
+		parsedEndpointIP, _ := netutils.ParseIP(endpoint.Addresses[0])
+		endpointIP := parsedEndpointIP.String()
 		endpointInfo := newBaseEndpointInfo(endpointIP, portNum, isLocal,
 			ready, serving, terminating, zoneHints, nodeHints)
 

@@ -182,9 +182,9 @@ func newBaseServiceInfo(service *v1.Service, ipFamily v1.IPFamily, port *v1.Serv
 		stickyMaxAgeSeconds = int(*service.Spec.SessionAffinityConfig.ClientIP.TimeoutSeconds)
 	}
 
-	clusterIP := proxyutil.GetClusterIPByFamily(ipFamily, service)
+	clusterIP, _ := netutils.ParseIP(proxyutil.GetClusterIPByFamily(ipFamily, service))
 	info := &BaseServicePortInfo{
-		clusterIP:           netutils.ParseIPSloppy(clusterIP),
+		clusterIP:           clusterIP,
 		port:                int(port.Port),
 		protocol:            port.Protocol,
 		nodePort:            int(port.NodePort),
@@ -222,7 +222,7 @@ func newBaseServiceInfo(service *v1.Service, ipFamily v1.IPFamily, port *v1.Serv
 			continue
 		}
 
-		ip := netutils.ParseIPSloppy(ing.IP) // (already verified as an IP-address)
+		ip, _ := netutils.ParseIP(ing.IP) // (already verified as an IP-address)
 		if ingFamily := proxyutil.GetIPFamilyFromIP(ip); ingFamily == ipFamily {
 			info.loadBalancerVIPs = append(info.loadBalancerVIPs, ip)
 		}

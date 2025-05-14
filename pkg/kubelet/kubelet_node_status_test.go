@@ -2722,7 +2722,8 @@ func TestValidateNodeIPParam(t *testing.T) {
 		tests = append(tests, successTest)
 	}
 	for _, test := range tests {
-		err := validateNodeIP(netutils.ParseIPSloppy(test.nodeIP))
+		ip, _ := netutils.ParseIP(test.nodeIP)
+		err := validateNodeIP(ip)
 		if test.success {
 			assert.NoErrorf(t, err, "test %s", test.testName)
 		} else {

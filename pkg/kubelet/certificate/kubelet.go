@@ -183,7 +183,9 @@ func addressesToHostnamesAndIPs(addresses []v1.NodeAddress) (dnsNames []string, 
 		dnsNames = append(dnsNames, dnsName)
 	}
 	for ip := range seenIPs {
-		ips = append(ips, netutils.ParseIPSloppy(ip))
+		if parsedIP, _ := netutils.ParseIP(ip); parsedIP != nil {
+			ips = append(ips, parsedIP)
+		}
 	}
 
 	// return in stable order

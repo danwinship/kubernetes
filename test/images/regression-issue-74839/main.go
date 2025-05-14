@@ -123,7 +123,7 @@ func probe(ip string) {
 
 				data := []byte("boom!!!")
 				remoteIP := netutils.MustParseIP(addr.String())
-				localIP := netutils.ParseIPSloppy(conn.LocalAddr().String())
+				localIP := netutils.MustParseIP(conn.LocalAddr().String())
 				_, err := conn.WriteTo(badPkt.encode(localIP, remoteIP, data[:]), addr)
 				if err != nil {
 					log.Printf("conn.WriteTo() error: %v", err)

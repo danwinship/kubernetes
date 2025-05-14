@@ -312,7 +312,7 @@ func SourceIPs(req *http.Request) []net.IP {
 		// Use the first valid one.
 		parts := strings.Split(hdrForwardedFor, ",")
 		for _, part := range parts {
-			ip := netutils.ParseIPSloppy(strings.TrimSpace(part))
+			ip, _ := netutils.ParseIP(strings.TrimSpace(part))
 			if ip != nil {
 				srcIPs = append(srcIPs, ip)
 			}
@@ -416,7 +416,7 @@ func NewProxierWithNoProxyCIDR(delegate func(req *http.Request) (*url.URL, error
 	}
 
 	return func(req *http.Request) (*url.URL, error) {
-		ip := netutils.ParseIPSloppy(req.URL.Hostname())
+		ip, _ := netutils.ParseIP(req.URL.Hostname())
 		if ip == nil {
 			return delegate(req)
 		}

@@ -958,9 +958,7 @@ func (proxier *Proxier) syncProxyRules() (retryError error) {
 	var nodeIPs []net.IP
 	if hasNodePort {
 		if proxier.nodePortAddresses.MatchAll() {
-			for _, ipStr := range nodeAddressSet.UnsortedList() {
-				nodeIPs = append(nodeIPs, netutils.ParseIPSloppy(ipStr))
-			}
+			nodeIPs, _ = netutils.ParseIPList(nodeAddressSet.UnsortedList()...)
 		} else {
 			allNodeIPs, err := proxier.nodePortAddresses.GetNodeIPs(proxier.networkInterfacer)
 			if err != nil {
@@ -1849,6 +1847,11 @@ func (proxier *Proxier) syncEndpoint(svcPortName proxy.ServicePortName, onlyNode
 			proxier.logger.Error(err, "Failed to parse endpoint", "endpoint", ep)
 			continue
 		}
+		address, err := netutils.ParseIP(ip)
+		if err != nil {
+			proxier.logger.Error(err, "Failed to parse endpoint address", "address", ip)
+			continue
+		}
 		portNum, err := strconv.Atoi(port)
 		if err != nil {
 			proxier.logger.Error(err, "Failed to parse endpoint port", "port", port)
@@ -1856,7 +1859,7 @@ func (proxier *Proxier) syncEndpoint(svcPortName proxy.ServicePortName, onlyNode
 		}
 
 		newDest := &utilipvs.RealServer{
-			Address: netutils.ParseIPSloppy(ip),
+			Address: address,
 			Port:    uint16(portNum),
 			Weight:  1,
 		}
@@ -1906,6 +1909,11 @@ func (proxier *Proxier) syncEndpoint(svcPortName proxy.ServicePortName, onlyNode
 			proxier.logger.Error(err, "Failed to parse endpoint", "endpoint", ep)
 			continue
 		}
+		address, err := netutils.ParseIP(ip)
+		if err != nil {
+			proxier.logger.Error(err, "Failed to parse endpoint address", "address", ip)
+			continue
+		}
 		portNum, err := strconv.Atoi(port)
 		if err != nil {
 			proxier.logger.Error(err, "Failed to parse endpoint port", "port", port)
@@ -1913,7 +1921,7 @@ func (proxier *Proxier) syncEndpoint(svcPortName proxy.ServicePortName, onlyNode
 		}
 
 		delDest := &utilipvs.RealServer{
-			Address: netutils.ParseIPSloppy(ip),
+			Address: address,
 			Port:    uint16(portNum),
 		}
 

@@ -69,7 +69,8 @@ func GetNodeAddressesFromNodeIP(providedNodeIP string, cloudNodeAddresses []v1.N
 
 		matched := false
 		for _, nodeAddress := range cloudNodeAddresses {
-			if netutils.ParseIPSloppy(nodeAddress.Address).Equal(nodeIP) {
+			parsedAddress, _ := netutils.ParseIP(nodeAddress.Address)
+			if parsedAddress.Equal(nodeIP) {
 				enforcedNodeAddresses = append(enforcedNodeAddresses, v1.NodeAddress{Type: nodeAddress.Type, Address: nodeAddress.Address})
 				nodeIPTypes[nodeAddress.Type] = true
 				matched = true

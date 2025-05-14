@@ -427,7 +427,8 @@ func (c *MetaAllocator) ForEach(f func(ip net.IP)) {
 		return
 	}
 	for _, ip := range ips {
-		f(netutils.ParseIPSloppy(ip.Name))
+		parsedIP, _ := netutils.ParseIP(ip.Name)
+		f(parsedIP)
 	}
 }
 

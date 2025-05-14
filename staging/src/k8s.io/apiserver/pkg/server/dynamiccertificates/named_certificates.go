@@ -77,7 +77,8 @@ func getCertificateNames(cert *x509.Certificate) []string {
 	var names []string
 
 	cn := cert.Subject.CommonName
-	cnIsIP := netutils.ParseIPSloppy(cn) != nil
+	cnIP, _ := netutils.ParseIP(cn)
+	cnIsIP := cnIP != nil
 	cnIsValidDomain := cn == "*" || len(validation.IsDNS1123Subdomain(strings.TrimPrefix(cn, "*."))) == 0
 	// don't use the CN if it is a valid IP because our IP serving detection may unexpectedly use it to terminate the connection.
 	if !cnIsIP && cnIsValidDomain {

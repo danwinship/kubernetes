@@ -8291,7 +8291,7 @@ func ValidateLoadBalancerStatus(status, oldStatus *core.LoadBalancerStatus, fldP
 				for _, msg := range validation.IsDNS1123Subdomain(ingress.Hostname) {
 					allErrs = append(allErrs, field.Invalid(idxPath.Child("hostname"), ingress.Hostname, msg))
 				}
-				if isIP := (netutils.ParseIPSloppy(ingress.Hostname) != nil); isIP {
+				if _, err := netutils.ParseIP(ingress.Hostname); err == nil {
 					allErrs = append(allErrs, field.Invalid(idxPath.Child("hostname"), ingress.Hostname, "must be a DNS name, not an IP address"))
 				}
 			}

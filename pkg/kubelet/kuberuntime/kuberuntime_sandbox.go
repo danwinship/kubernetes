@@ -324,7 +324,7 @@ func (m *kubeGenericRuntimeManager) determinePodSandboxIPs(ctx context.Context, 
 
 	// pick additional ips, if cri reported them
 	for _, podIP := range podSandbox.Network.AdditionalIps {
-		if nil == netutils.ParseIPSloppy(podIP.Ip) {
+		if _, err := netutils.ParseIP(podIP.Ip); err != nil {
 			logger.Info("Pod Sandbox reported an unparseable additional IP", "pod", klog.KRef(podNamespace, podName), "IP", podIP.Ip)
 			return nil
 		}
