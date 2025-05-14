@@ -5540,7 +5540,7 @@ func TestIpIsValidForSet(t *testing.T) {
 	for _, tc := range testCases {
 		v := &netlinkHandle{}
 		v.isIPv6 = tc.isIPv6
-		ip := netutils.ParseIPSloppy(tc.ip)
+		ip, _ := netutils.ParseIP(tc.ip)
 		if ip == nil {
 			t.Errorf("Parse error: %s", tc.ip)
 		}

@@ -165,13 +165,13 @@ func addressesToHostnamesAndIPs(addresses []v1.NodeAddress) (dnsNames []string, 
 
 		switch address.Type {
 		case v1.NodeHostName:
-			if ip := netutils.ParseIPSloppy(address.Address); ip != nil {
+			if ip, _ := netutils.ParseIP(address.Address); ip != nil {
 				seenIPs[address.Address] = true
 			} else {
 				seenDNSNames[address.Address] = true
 			}
 		case v1.NodeExternalIP, v1.NodeInternalIP:
-			if ip := netutils.ParseIPSloppy(address.Address); ip != nil {
+			if ip, _ := netutils.ParseIP(address.Address); ip != nil {
 				seenIPs[address.Address] = true
 			}
 		case v1.NodeExternalDNS, v1.NodeInternalDNS:

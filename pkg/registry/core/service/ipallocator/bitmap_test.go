@@ -125,7 +125,7 @@ func TestAllocate(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			released := netutils.ParseIPSloppy(tc.released)
+			released, _ := netutils.ParseIP(tc.released)
 			if err := r.Release(released); err != nil {
 				t.Fatal(err)
 			}
@@ -305,7 +305,7 @@ func TestForEach(t *testing.T) {
 			t.Fatal(err)
 		}
 		for ips := range tc {
-			ip := netutils.ParseIPSloppy(ips)
+			ip, _ := netutils.ParseIP(ips)
 			if err := r.Allocate(ip); err != nil {
 				t.Errorf("[%d] error allocating IP %v: %v", i, ip, err)
 			}

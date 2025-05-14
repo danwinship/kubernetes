@@ -249,7 +249,7 @@ func isLocalHost(u *url.URL) bool {
 		return true
 	}
 
-	netIP := netutils.ParseIPSloppy(host)
+	netIP, _ := netutils.ParseIP(host)
 	if netIP != nil {
 		return netIP.IsLoopback()
 	}

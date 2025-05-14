@@ -55,7 +55,7 @@ func (v *IPVar) Set(s string) error {
 		v.Val = nil
 		return nil
 	}
-	if netutils.ParseIPSloppy(s) == nil {
+	if _, err := netutils.ParseIP(s); err != nil {
 		return fmt.Errorf("%q is not a valid IP address", s)
 	}
 	if v.Val == nil {
@@ -98,7 +98,7 @@ func (v *IPPortVar) Set(s string) error {
 
 	// Both IP and IP:port are valid.
 	// Attempt to parse into IP first.
-	if netutils.ParseIPSloppy(s) != nil {
+	if _, err := netutils.ParseIP(s); err == nil {
 		*v.Val = s
 		return nil
 	}
@@ -108,7 +108,7 @@ func (v *IPPortVar) Set(s string) error {
 	if err != nil {
 		return fmt.Errorf("%q is not in a valid format (ip or ip:port): %v", s, err)
 	}
-	if netutils.ParseIPSloppy(host) == nil {
+	if _, err := netutils.ParseIP(host); err != nil {
 		return fmt.Errorf("%q is not a valid IP address", host)
 	}
 	if _, err := netutils.ParsePort(port, true); err != nil {

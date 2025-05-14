@@ -226,7 +226,7 @@ func podToEndpointAddressForService(svc *v1.Service, pod *v1.Pod) (*v1.EndpointA
 	// Find an IP that matches the family. We parse and restringify the IP in case the
 	// value on the Pod is in an irregular format.
 	for _, podIP := range pod.Status.PodIPs {
-		ip := netutils.ParseIPSloppy(podIP.IP)
+		ip, _ := netutils.ParseIP(podIP.IP)
 		if wantIPv6 == netutils.IsIPv6(ip) {
 			endpointIP = ip.String()
 			break

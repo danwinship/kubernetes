@@ -176,7 +176,7 @@ func newNFTablesTracer(t *testing.T, nft *knftables.Fake, nodeIPs []string) *nft
 }
 
 func (tracer *nftablesTracer) addressMatches(ipStr string, wantMatch bool, ruleAddress string) bool {
-	ip := netutils.ParseIPSloppy(ipStr)
+	ip, _ := netutils.ParseIP(ipStr)
 	if ip == nil {
 		tracer.t.Fatalf("Bad IP in test case: %s", ipStr)
 	}
@@ -189,7 +189,7 @@ func (tracer *nftablesTracer) addressMatches(ipStr string, wantMatch bool, ruleA
 		}
 		match = cidr.Contains(ip)
 	} else {
-		ip2 := netutils.ParseIPSloppy(ruleAddress)
+		ip2, _ := netutils.ParseIP(ruleAddress)
 		if ip2 == nil {
 			tracer.t.Errorf("Bad IP/CIDR in kube-proxy output: %s", ruleAddress)
 		}

@@ -322,7 +322,7 @@ func SourceIPs(req *http.Request) []net.IP {
 	// Try the X-Real-Ip header.
 	hdrRealIp := hdr.Get("X-Real-Ip")
 	if hdrRealIp != "" {
-		ip := netutils.ParseIPSloppy(hdrRealIp)
+		ip, _ := netutils.ParseIP(hdrRealIp)
 		// Only append the X-Real-Ip if it's not already contained in the X-Forwarded-For chain.
 		if ip != nil && !containsIP(srcIPs, ip) {
 			srcIPs = append(srcIPs, ip)
@@ -334,11 +334,11 @@ func SourceIPs(req *http.Request) []net.IP {
 	// Remote Address in Go's HTTP server is in the form host:port so we need to split that first.
 	host, _, err := net.SplitHostPort(req.RemoteAddr)
 	if err == nil {
-		remoteIP = netutils.ParseIPSloppy(host)
+		remoteIP, _ = netutils.ParseIP(host)
 	}
 	// Fallback if Remote Address was just IP.
 	if remoteIP == nil {
-		remoteIP = netutils.ParseIPSloppy(req.RemoteAddr)
+		remoteIP, _ = netutils.ParseIP(req.RemoteAddr)
 	}
 
 	// Don't duplicate remote IP if it's already the last address in the chain.

@@ -135,7 +135,7 @@ func SetNodeRegistrationDynamicDefaults(cfg *kubeadmapi.NodeRegistrationOptions,
 // SetAPIEndpointDynamicDefaults checks and sets configuration values for the APIEndpoint object
 func SetAPIEndpointDynamicDefaults(cfg *kubeadmapi.APIEndpoint) error {
 	// validate cfg.API.AdvertiseAddress.
-	addressIP := netutils.ParseIPSloppy(cfg.AdvertiseAddress)
+	addressIP, _ := netutils.ParseIP(cfg.AdvertiseAddress)
 	if addressIP == nil && cfg.AdvertiseAddress != "" {
 		return errors.Errorf("couldn't use \"%s\" as \"apiserver-advertise-address\", must be ipv4 or ipv6 address", cfg.AdvertiseAddress)
 	}

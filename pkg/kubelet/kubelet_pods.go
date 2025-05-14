@@ -2031,14 +2031,14 @@ func (kl *Kubelet) sortPodIPs(podIPs []string) []string {
 
 	// We parse and re-stringify the IPs in case the values from CRI use an irregular format.
 	for _, ipStr := range podIPs {
-		ip := netutils.ParseIPSloppy(ipStr)
+		ip, _ := netutils.ParseIP(ipStr)
 		if validPrimaryIP(ip) {
 			ips = append(ips, ip.String())
 			break
 		}
 	}
 	for _, ipStr := range podIPs {
-		ip := netutils.ParseIPSloppy(ipStr)
+		ip, _ := netutils.ParseIP(ipStr)
 		if validSecondaryIP(ip) {
 			ips = append(ips, ip.String())
 			break

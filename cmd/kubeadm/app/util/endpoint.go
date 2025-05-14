@@ -99,7 +99,7 @@ func ParseHostPort(hostport string) (string, string, error) {
 	}
 
 	// if host is a valid IP, returns it
-	if ip := netutils.ParseIPSloppy(host); ip != nil {
+	if ip, _ := netutils.ParseIP(host); ip != nil {
 		return host, port, nil
 	}
 
@@ -132,7 +132,7 @@ func parseAPIEndpoint(localEndpoint *kubeadmapi.APIEndpoint) (net.IP, string, er
 	}
 
 	// parse the AdvertiseAddress
-	var ip = netutils.ParseIPSloppy(localEndpoint.AdvertiseAddress)
+	var ip, _ = netutils.ParseIP(localEndpoint.AdvertiseAddress)
 	if ip == nil {
 		return nil, "", errors.Errorf("invalid value `%s` given for api.advertiseAddress", localEndpoint.AdvertiseAddress)
 	}

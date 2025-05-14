@@ -366,7 +366,7 @@ func ValidateCertSANs(altnames []string, fldPath *field.Path) field.ErrorList {
 	for _, altname := range altnames {
 		if errs := validation.IsDNS1123Subdomain(altname); len(errs) != 0 {
 			if errs2 := validation.IsWildcardDNS1123Subdomain(altname); len(errs2) != 0 {
-				if netutils.ParseIPSloppy(altname) == nil {
+				if _, err := netutils.ParseIP(altname); err != nil {
 					allErrs = append(allErrs, field.Invalid(fldPath, altname, fmt.Sprintf("altname is not a valid IP address, DNS label or a DNS label with subdomain wildcards: %s; %s", strings.Join(errs, "; "), strings.Join(errs2, "; "))))
 				}
 			}
@@ -397,7 +397,7 @@ func ValidateURLs(urls []string, requireHTTPS bool, fldPath *field.Path) field.E
 // ValidateIPFromString validates ip address
 func ValidateIPFromString(ipaddr string, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
-	if netutils.ParseIPSloppy(ipaddr) == nil {
+	if _, err := netutils.ParseIP(ipaddr); err != nil {
 		allErrs = append(allErrs, field.Invalid(fldPath, ipaddr, "ip address is not valid"))
 	}
 	return allErrs

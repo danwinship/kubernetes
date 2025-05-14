@@ -321,7 +321,7 @@ func GenerateRSACerts(host string, isCA bool) ([]byte, []byte, error) {
 
 	hosts := strings.Split(host, ",")
 	for _, h := range hosts {
-		if ip := netutils.ParseIPSloppy(h); ip != nil {
+		if ip, _ := netutils.ParseIP(h); ip != nil {
 			template.IPAddresses = append(template.IPAddresses, ip)
 		} else {
 			template.DNSNames = append(template.DNSNames, h)

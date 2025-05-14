@@ -160,7 +160,7 @@ func NodeAddress(nodeIPs []net.IP, // typically Kubelet.nodeIPs
 			// unless nodeIP is "::", in which case it is reversed.
 			if nodeIPSpecified {
 				ipAddr = nodeIP
-			} else if addr := netutils.ParseIPSloppy(hostname); addr != nil {
+			} else if addr, _ := netutils.ParseIP(hostname); addr != nil {
 				ipAddr = addr
 			} else {
 				var addrs []net.IP

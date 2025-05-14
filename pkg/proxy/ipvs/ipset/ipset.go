@@ -191,7 +191,7 @@ func (e *Entry) Validate(set *IPSet) bool {
 		}
 
 		// IP2 can not be empty for `hash:ip,port,ip` type ip set
-		if netutils.ParseIPSloppy(e.IP2) == nil {
+		if _, err := netutils.ParseIP(e.IP2); err != nil {
 			klog.ErrorS(validationError, "error parsing second ip address", "entry", e, "ip", e.IP2, "ipset", set)
 			return false
 		}
@@ -265,7 +265,7 @@ func (e *Entry) checkIPandProtocol(set *IPSet) bool {
 
 // checkIP checks if IP of Entry is valid.
 func (e *Entry) checkIP(set *IPSet) bool {
-	if netutils.ParseIPSloppy(e.IP) == nil {
+	if _, err := netutils.ParseIP(e.IP); err != nil {
 		klog.ErrorS(validationError, "error parsing ip address", "entry", e, "ip", e.IP, "ipset", set)
 		return false
 	}

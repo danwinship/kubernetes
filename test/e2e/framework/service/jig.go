@@ -817,7 +817,7 @@ func testReachabilityOverServiceName(ctx context.Context, serviceName string, sp
 
 func testReachabilityOverClusterIP(ctx context.Context, clusterIP string, sp v1.ServicePort, execPod *v1.Pod) error {
 	// If .spec.clusterIP is set to "" or "None" for service, ClusterIP is not created, so reachability can not be tested over clusterIP:servicePort
-	if netutils.ParseIPSloppy(clusterIP) == nil {
+	if _, err := netutils.ParseIP(clusterIP); err != nil {
 		return fmt.Errorf("unable to parse ClusterIP: %s", clusterIP)
 	}
 	return testEndpointReachability(ctx, clusterIP, sp.Port, sp.Protocol, execPod)
@@ -868,7 +868,7 @@ func testReachabilityOverNodePorts(ctx context.Context, nodes *v1.NodeList, sp v
 // isInvalidOrLocalhostAddress returns `true` if the provided `ip` is either not
 // parsable or the loopback address. Otherwise it will return `false`.
 func isInvalidOrLocalhostAddress(ip string) bool {
-	parsedIP := netutils.ParseIPSloppy(ip)
+	parsedIP, _ := netutils.ParseIP(ip)
 	if parsedIP == nil || parsedIP.IsLoopback() {
 		return true
 	}

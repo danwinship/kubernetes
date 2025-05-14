@@ -166,7 +166,7 @@ var _ = Describe("networking [setup-networking]", func() {
 // ipWithinSubnet returns true if an IP (targetIP) falls within the reference subnet (refIPNet)
 func ipWithinSubnet(refIPNet, targetIP string) bool {
 	_, rNet, _ := netutils.ParseCIDRSloppy(refIPNet)
-	tIP := netutils.ParseIPSloppy(targetIP)
+	tIP, _ := netutils.ParseIP(targetIP)
 	return rNet.Contains(tIP)
 }
 

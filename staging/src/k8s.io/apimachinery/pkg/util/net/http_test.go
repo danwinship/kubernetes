@@ -36,7 +36,7 @@ import (
 
 func TestGetClientIP(t *testing.T) {
 	ipString := "10.0.0.1"
-	ip := netutils.ParseIPSloppy(ipString)
+	ip, _ := netutils.ParseIP(ipString)
 	invalidIPString := "invalidIPString"
 	testCases := []struct {
 		Request    http.Request

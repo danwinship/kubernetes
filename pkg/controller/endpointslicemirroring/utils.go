@@ -105,7 +105,7 @@ func getEndpointSlicePrefix(serviceName string) string {
 // addressToEndpoint converts an address from an Endpoints resource to an
 // EndpointSlice endpoint and AddressType.
 func addressToEndpoint(address corev1.EndpointAddress, ready bool) (*discovery.Endpoint, *discovery.AddressType) {
-	ip := netutils.ParseIPSloppy(address.IP)
+	ip, _ := netutils.ParseIP(address.IP)
 	if ip == nil {
 		return nil, nil
 	}

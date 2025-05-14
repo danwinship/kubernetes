@@ -175,7 +175,7 @@ func ListenAndServeKubeletServer(
 	auth AuthInterface,
 	tp oteltrace.TracerProvider) {
 
-	address := netutils.ParseIPSloppy(kubeCfg.Address)
+	address, _ := netutils.ParseIP(kubeCfg.Address)
 	port := uint(kubeCfg.Port)
 	klog.InfoS("Starting to listen", "address", address, "port", port)
 	handler := NewServer(host, resourceAnalyzer, checkers, flagz, auth, kubeCfg)

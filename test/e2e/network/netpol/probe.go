@@ -116,7 +116,7 @@ func probeWorker(prober Prober, jobs <-chan *ProbeJob, results chan<- *ProbeJobR
 	for job := range jobs {
 		podFrom := job.PodFrom
 		// defensive programming: this should not be possible as we already check in initializeClusterFromModel
-		if netutils.ParseIPSloppy(job.PodTo.ServiceIP) == nil {
+		if _, err := netutils.ParseIP(job.PodTo.ServiceIP); err != nil {
 			results <- &ProbeJobResults{
 				Job:         job,
 				IsConnected: false,

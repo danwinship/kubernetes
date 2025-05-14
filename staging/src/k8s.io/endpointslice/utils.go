@@ -107,7 +107,7 @@ func getEndpointAddresses(podStatus v1.PodStatus, service *v1.Service, addressTy
 
 	for _, podIP := range podStatus.PodIPs {
 		// We parse and restringify the pod IP in case it is in an irregular format.
-		ip := netutils.ParseIPSloppy(podIP.IP)
+		ip, _ := netutils.ParseIP(podIP.IP)
 		isIPv6PodIP := netutils.IsIPv6(ip)
 		if isIPv6PodIP && addressType == discovery.AddressTypeIPv6 {
 			addresses = append(addresses, ip.String())

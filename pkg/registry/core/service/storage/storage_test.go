@@ -1132,7 +1132,7 @@ func callName(before, after *api.Service) string {
 
 func ipIsAllocated(t *testing.T, alloc ipallocator.Interface, ipstr string) bool {
 	t.Helper()
-	ip := netutils.ParseIPSloppy(ipstr)
+	ip, _ := netutils.ParseIP(ipstr)
 	if ip == nil {
 		t.Errorf("error parsing IP %q", ipstr)
 		return false
@@ -6580,11 +6580,11 @@ func TestCreateDryRun(t *testing.T) {
 			createdSvc := createdObj.(*api.Service)
 
 			// Ensure IPs were assigned
-			if netutils.ParseIPSloppy(createdSvc.Spec.ClusterIP) == nil {
+			if _, err := netutils.ParseIP(createdSvc.Spec.ClusterIP); err != nil {
 				t.Errorf("expected valid clusterIP: %q", createdSvc.Spec.ClusterIP)
 			}
 			for _, ip := range createdSvc.Spec.ClusterIPs {
-				if netutils.ParseIPSloppy(ip) == nil {
+				if _, err := netutils.ParseIP(ip); err != nil {
 					t.Errorf("expected valid clusterIP: %q", createdSvc.Spec.ClusterIP)
 				}
 			}
@@ -6825,11 +6825,11 @@ func TestUpdateDryRun(t *testing.T) {
 			if tc.verifyDryAllocs {
 				// Dry allocs means the values are assigned but not
 				// allocated.
-				if netutils.ParseIPSloppy(updatedSvc.Spec.ClusterIP) == nil {
+				if _, err := netutils.ParseIP(updatedSvc.Spec.ClusterIP); err != nil {
 					t.Errorf("expected valid clusterIP: %q", updatedSvc.Spec.ClusterIP)
 				}
 				for _, ip := range updatedSvc.Spec.ClusterIPs {
-					if netutils.ParseIPSloppy(ip) == nil {
+					if _, err := netutils.ParseIP(ip); err != nil {
 						t.Errorf("expected valid clusterIP: %q", updatedSvc.Spec.ClusterIP)
 					}
 				}

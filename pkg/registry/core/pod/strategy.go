@@ -569,7 +569,7 @@ func ResourceLocation(ctx context.Context, getter ResourceGetter, rt http.RoundT
 		}
 	}
 	podIP := getPodIP(pod)
-	if ip := netutils.ParseIPSloppy(podIP); ip == nil || !ip.IsGlobalUnicast() {
+	if ip, _ := netutils.ParseIP(podIP); ip == nil || !ip.IsGlobalUnicast() {
 		return nil, nil, errors.NewBadRequest("address not allowed")
 	}
 

@@ -7919,7 +7919,7 @@ func validateEndpointAddress(address *core.EndpointAddress, fldPath *field.Path)
 // addresses rather than destination addresses).
 func ValidateEndpointIP(ipAddress string, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
-	ip := netutils.ParseIPSloppy(ipAddress)
+	ip, _ := netutils.ParseIP(ipAddress)
 	if ip == nil {
 		allErrs = append(allErrs, field.Invalid(fldPath, ipAddress, "must be a valid IP address").WithOrigin("format=ip-sloppy"))
 		return allErrs

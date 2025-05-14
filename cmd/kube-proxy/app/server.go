@@ -392,7 +392,7 @@ func badCIDRs(cidrs []string, wrongFamily netutils.IPFamily) bool {
 // non-zero IP of wrongFamily.
 func badBindAddress(bindAddress string, wrongFamily netutils.IPFamily) bool {
 	if host, _, _ := net.SplitHostPort(bindAddress); host != "" {
-		ip := netutils.ParseIPSloppy(host)
+		ip, _ := netutils.ParseIP(host)
 		if ip != nil && netutils.IPFamilyOf(ip) == wrongFamily && !ip.IsUnspecified() {
 			return true
 		}
@@ -670,7 +670,7 @@ func detectNodeIPs(ctx context.Context, rawNodeIPs []net.IP, bindAddress string)
 	}
 
 	// If a bindAddress is passed, override the primary IP
-	bindIP := netutils.ParseIPSloppy(bindAddress)
+	bindIP, _ := netutils.ParseIP(bindAddress)
 	if bindIP != nil && !bindIP.IsUnspecified() {
 		if netutils.IsIPv4(bindIP) {
 			primaryFamily = v1.IPv4Protocol

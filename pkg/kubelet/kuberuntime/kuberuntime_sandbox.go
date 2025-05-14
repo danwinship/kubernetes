@@ -315,7 +315,7 @@ func (m *kubeGenericRuntimeManager) determinePodSandboxIPs(ctx context.Context, 
 
 	// pick primary IP
 	if len(podSandbox.Network.Ip) != 0 {
-		if netutils.ParseIPSloppy(podSandbox.Network.Ip) == nil {
+		if _, err := netutils.ParseIP(podSandbox.Network.Ip); err != nil {
 			logger.Info("Pod Sandbox reported an unparseable primary IP", "pod", klog.KRef(podNamespace, podName), "IP", podSandbox.Network.Ip)
 			return nil
 		}

@@ -111,9 +111,9 @@ func NewFakeProxier(ipFamily v1.IPFamily) (*knftables.Fake, *Proxier) {
 
 	var nodeIP net.IP
 	if ipFamily == v1.IPv4Protocol {
-		nodeIP = netutils.ParseIPSloppy(testNodeIP)
+		nodeIP, _ = netutils.ParseIP(testNodeIP)
 	} else {
-		nodeIP = netutils.ParseIPSloppy(testNodeIPv6)
+		nodeIP, _ = netutils.ParseIP(testNodeIPv6)
 	}
 	p := &Proxier{
 		ipFamily:            ipFamily,

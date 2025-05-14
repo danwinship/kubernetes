@@ -171,7 +171,7 @@ func LowercaseSANs(sans []string) {
 // VerifyAPIServerBindAddress can be used to verify if a bind address for the API Server is 0.0.0.0,
 // in which case this address is not valid and should not be used.
 func VerifyAPIServerBindAddress(address string) error {
-	ip := netutils.ParseIPSloppy(address)
+	ip, _ := netutils.ParseIP(address)
 	if ip == nil {
 		return errors.Errorf("cannot parse IP address: %s", address)
 	}
@@ -196,7 +196,7 @@ func ChooseAPIServerBindAddress(bindAddress net.IP) (net.IP, error) {
 	if err != nil {
 		if netutil.IsNoRoutesError(err) {
 			klog.Warningf("WARNING: could not obtain a bind address for the API Server: %v; using: %s", err, constants.DefaultAPIServerBindAddress)
-			defaultIP := netutils.ParseIPSloppy(constants.DefaultAPIServerBindAddress)
+			defaultIP, _ := netutils.ParseIP(constants.DefaultAPIServerBindAddress)
 			if defaultIP == nil {
 				return nil, errors.Errorf("cannot parse default IP address: %s", constants.DefaultAPIServerBindAddress)
 			}

@@ -762,7 +762,7 @@ func parseAddresses(addresses string) ([]string, error) {
 	res := make([]string, 0)
 	split := strings.Split(addresses, ",")
 	for _, address := range split {
-		netAddr := netutils.ParseIPSloppy(address)
+		netAddr, _ := netutils.ParseIP(address)
 		if netAddr == nil {
 			return nil, fmt.Errorf("parseAddress: invalid address %s", address)
 		}

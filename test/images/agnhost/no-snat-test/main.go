@@ -83,10 +83,10 @@ func (m *masqTester) Run() error {
 	}
 
 	// validate that pip and nip are ip addresses.
-	if netutils.ParseIPSloppy(pip) == nil {
+	if _, err := netutils.ParseIP(pip); err != nil {
 		return fmt.Errorf("POD_IP env var contained %q, which is not an IP address", pip)
 	}
-	if netutils.ParseIPSloppy(nip) == nil {
+	if _, err := netutils.ParseIP(nip); err != nil {
 		return fmt.Errorf("NODE_IP env var contained %q, which is not an IP address", nip)
 	}
 

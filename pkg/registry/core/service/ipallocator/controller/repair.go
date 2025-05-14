@@ -221,7 +221,7 @@ func (c *Repair) doRunOnce() error {
 		}
 
 		for _, ip := range svc.Spec.ClusterIPs {
-			ip := netutils.ParseIPSloppy(ip)
+			ip, _ := netutils.ParseIP(ip)
 			if ip == nil {
 				// cluster IP is corrupt
 				clusterIPRepairIPErrors.WithLabelValues("invalid").Inc()

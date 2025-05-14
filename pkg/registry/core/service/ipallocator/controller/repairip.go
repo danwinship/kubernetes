@@ -347,7 +347,7 @@ func (r *RepairIPAddress) syncService(key string) error {
 	}
 
 	for _, clusterIP := range svc.Spec.ClusterIPs {
-		ip := netutils.ParseIPSloppy(clusterIP)
+		ip, _ := netutils.ParseIP(clusterIP)
 		if ip == nil {
 			// ClusterIP is corrupt, ClusterIPs are already validated, but double checking here
 			// in case there are some inconsistencies with the parsers

@@ -722,7 +722,7 @@ func Test_ServiceLoadBalancerIPMode(t *testing.T) {
 			defer framework.DeleteNamespaceOrDie(client, ns, t)
 
 			controller, cloud, informer := newServiceController(t, client)
-			cloud.ExternalIP = netutils.ParseIPSloppy(tc.externalIP)
+			cloud.ExternalIP, _ = netutils.ParseIP(tc.externalIP)
 			cloud.BalancerIPMode = tc.expectedIngress.IPMode
 
 			ctx, cancel := context.WithCancel(context.Background())

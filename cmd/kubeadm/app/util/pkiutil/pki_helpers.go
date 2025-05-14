@@ -374,7 +374,7 @@ func pathForCSR(pkiPath, name string) string {
 // GetAPIServerAltNames builds an AltNames object for to be used when generating apiserver certificate
 func GetAPIServerAltNames(cfg *kubeadmapi.InitConfiguration) (*certutil.AltNames, error) {
 	// advertise address
-	advertiseAddress := netutils.ParseIPSloppy(cfg.LocalAPIEndpoint.AdvertiseAddress)
+	advertiseAddress, _ := netutils.ParseIP(cfg.LocalAPIEndpoint.AdvertiseAddress)
 	if advertiseAddress == nil {
 		return nil, errors.Errorf("error parsing LocalAPIEndpoint AdvertiseAddress %v: is not a valid textual representation of an IP address",
 			cfg.LocalAPIEndpoint.AdvertiseAddress)
@@ -403,7 +403,7 @@ func GetAPIServerAltNames(cfg *kubeadmapi.InitConfiguration) (*certutil.AltNames
 	// add cluster controlPlaneEndpoint if present (dns or ip)
 	if len(cfg.ControlPlaneEndpoint) > 0 {
 		if host, _, err := kubeadmutil.ParseHostPort(cfg.ControlPlaneEndpoint); err == nil {
-			if ip := netutils.ParseIPSloppy(host); ip != nil {
+			if ip, _ := netutils.ParseIP(host); ip != nil {
 				altNames.IPs = append(altNames.IPs, ip)
 			} else {
 				altNames.DNSNames = append(altNames.DNSNames, host)
@@ -435,7 +435,7 @@ func GetEtcdPeerAltNames(cfg *kubeadmapi.InitConfiguration) (*certutil.AltNames,
 // getAltNames builds an AltNames object with the cfg and certName.
 func getAltNames(cfg *kubeadmapi.InitConfiguration, certName string) (*certutil.AltNames, error) {
 	// advertise address
-	advertiseAddress := netutils.ParseIPSloppy(cfg.LocalAPIEndpoint.AdvertiseAddress)
+	advertiseAddress, _ := netutils.ParseIP(cfg.LocalAPIEndpoint.AdvertiseAddress)
 	if advertiseAddress == nil {
 		return nil, errors.Errorf("error parsing LocalAPIEndpoint AdvertiseAddress %v: is not a valid textual representation of an IP address",
 			cfg.LocalAPIEndpoint.AdvertiseAddress)
@@ -465,7 +465,7 @@ func getAltNames(cfg *kubeadmapi.InitConfiguration, certName string) (*certutil.
 // certNames is used to print user facing warnings and should be the name of the cert the altNames will be used for
 func appendSANsToAltNames(altNames *certutil.AltNames, SANs []string, certName string) {
 	for _, altname := range SANs {
-		if ip := netutils.ParseIPSloppy(altname); ip != nil {
+		if ip, _ := netutils.ParseIP(altname); ip != nil {
 			altNames.IPs = append(altNames.IPs, ip)
 		} else if len(validation.IsDNS1123Subdomain(altname)) == 0 {
 			altNames.DNSNames = append(altNames.DNSNames, altname)

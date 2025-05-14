@@ -69,7 +69,7 @@ func Validate(config *kubeproxyconfig.KubeProxyConfiguration) field.ErrorList {
 		allErrs = append(allErrs, field.Invalid(newPath.Child("SyncPeriod"), config.MinSyncPeriod, fmt.Sprintf("must be greater than or equal to %s", newPath.Child("MinSyncPeriod").String())))
 	}
 
-	if netutils.ParseIPSloppy(config.BindAddress) == nil {
+	if _, err := netutils.ParseIP(config.BindAddress); err != nil {
 		allErrs = append(allErrs, field.Invalid(newPath.Child("BindAddress"), config.BindAddress, "not a valid textual representation of an IP address"))
 	}
 
@@ -227,7 +227,7 @@ func validateHostPort(input string, fldPath *field.Path) field.ErrorList {
 		return allErrs
 	}
 
-	if ip := netutils.ParseIPSloppy(hostIP); ip == nil {
+	if ip, _ := netutils.ParseIP(hostIP); ip == nil {
 		allErrs = append(allErrs, field.Invalid(fldPath, hostIP, "must be a valid IP"))
 	}
 

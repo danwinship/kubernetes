@@ -102,7 +102,7 @@ func (k *kubeManager) initializeClusterFromModel(ctx context.Context, model *Mod
 			if err != nil {
 				return err
 			}
-			if netutils.ParseIPSloppy(svc.Spec.ClusterIP) == nil {
+			if _, err := netutils.ParseIP(svc.Spec.ClusterIP); err != nil {
 				return fmt.Errorf("empty IP address found for service %s/%s", svc.Namespace, svc.Name)
 			}
 

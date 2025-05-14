@@ -48,7 +48,7 @@ func (h *netlinkHandle) EnsureAddressBind(address, devName string) (exist bool, 
 	if err != nil {
 		return false, fmt.Errorf("error get interface: %s, err: %v", devName, err)
 	}
-	addr := netutils.ParseIPSloppy(address)
+	addr, _ := netutils.ParseIP(address)
 	if addr == nil {
 		return false, fmt.Errorf("error parse ip address: %s", address)
 	}
@@ -68,7 +68,7 @@ func (h *netlinkHandle) UnbindAddress(address, devName string) error {
 	if err != nil {
 		return fmt.Errorf("error get interface: %s, err: %v", devName, err)
 	}
-	addr := netutils.ParseIPSloppy(address)
+	addr, _ := netutils.ParseIP(address)
 	if addr == nil {
 		return fmt.Errorf("error parse ip address: %s", address)
 	}

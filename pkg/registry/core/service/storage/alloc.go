@@ -418,7 +418,7 @@ func (al *Allocators) allocIPs(service *api.Service, toAlloc map[api.IPFamily]st
 			}
 			allocated[family] = allocatedIP.String()
 		} else {
-			parsedIP := netutils.ParseIPSloppy(ip)
+			parsedIP, _ := netutils.ParseIP(ip)
 			if parsedIP == nil {
 				return allocated, errors.NewInternalError(fmt.Errorf("failed to parse service IP %q", ip))
 			}
@@ -460,7 +460,7 @@ func (al *Allocators) releaseIPs(toRelease map[api.IPFamily]string) (map[api.IPF
 			continue
 		}
 
-		parsedIP := netutils.ParseIPSloppy(ip)
+		parsedIP, _ := netutils.ParseIP(ip)
 		if parsedIP == nil {
 			return released, errors.NewInternalError(fmt.Errorf("failed to parse service IP %q", ip))
 		}

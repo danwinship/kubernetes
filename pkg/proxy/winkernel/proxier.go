@@ -609,7 +609,7 @@ func (proxier *Proxier) newServiceInfo(port *v1.ServicePort, service *v1.Service
 	}
 
 	for _, ingress := range service.Status.LoadBalancer.Ingress {
-		if netutils.ParseIPSloppy(ingress.IP) != nil {
+		if _, err := netutils.ParseIP(ingress.IP); err == nil {
 			info.loadBalancerIngressIPs = append(info.loadBalancerIngressIPs, &loadBalancerIngressInfo{ip: ingress.IP})
 		}
 	}

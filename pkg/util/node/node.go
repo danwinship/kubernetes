@@ -67,7 +67,7 @@ func GetNodeHostIPs(node *v1.Node) ([]net.IP, error) {
 	allIPs := make([]net.IP, 0, len(node.Status.Addresses))
 	for _, addr := range node.Status.Addresses {
 		if addr.Type == v1.NodeInternalIP {
-			ip := netutils.ParseIPSloppy(addr.Address)
+			ip, _ := netutils.ParseIP(addr.Address)
 			if ip != nil {
 				allIPs = append(allIPs, ip)
 			}
@@ -75,7 +75,7 @@ func GetNodeHostIPs(node *v1.Node) ([]net.IP, error) {
 	}
 	for _, addr := range node.Status.Addresses {
 		if addr.Type == v1.NodeExternalIP {
-			ip := netutils.ParseIPSloppy(addr.Address)
+			ip, _ := netutils.ParseIP(addr.Address)
 			if ip != nil {
 				allIPs = append(allIPs, ip)
 			}

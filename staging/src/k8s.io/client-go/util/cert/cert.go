@@ -224,7 +224,7 @@ func GenerateSelfSignedCertKeyWithOptions(opts SelfSignedCertKeyOptions) ([]byte
 		BasicConstraintsValid: true,
 	}
 
-	if ip := netutils.ParseIPSloppy(host); ip != nil {
+	if ip, _ := netutils.ParseIP(host); ip != nil {
 		template.IPAddresses = append(template.IPAddresses, ip)
 	} else {
 		template.DNSNames = append(template.DNSNames, host)

@@ -27,7 +27,7 @@ import (
 // part is an IPv6 address enclosed in brackets (e.g. "[fd00:1::5]:9999"),
 // then the brackets are stripped as well.
 func IPPart(s string) string {
-	if ip := netutils.ParseIPSloppy(s); ip != nil {
+	if ip, _ := netutils.ParseIP(s); ip != nil {
 		// IP address without port
 		return s
 	}
@@ -38,7 +38,7 @@ func IPPart(s string) string {
 		return ""
 	}
 	// Check if host string is a valid IP address
-	ip := netutils.ParseIPSloppy(host)
+	ip, _ := netutils.ParseIP(host)
 	if ip == nil {
 		klog.ErrorS(nil, "Failed to parse IP", "input", host)
 		return ""

@@ -85,7 +85,7 @@ func AddressSet(isValid func(ip net.IP) bool, addrs []net.Addr) sets.Set[string]
 func MapIPsByIPFamily(ipStrings []string) map[v1.IPFamily][]net.IP {
 	ipFamilyMap := map[v1.IPFamily][]net.IP{}
 	for _, ipStr := range ipStrings {
-		ip := netutils.ParseIPSloppy(ipStr)
+		ip, _ := netutils.ParseIP(ipStr)
 		if ip != nil {
 			// Since ip is parsed ok, GetIPFamilyFromIP will never return v1.IPFamilyUnknown
 			ipFamily := GetIPFamilyFromIP(ip)
@@ -141,7 +141,7 @@ func AppendPortIfNeeded(addr string, port int32) string {
 	}
 
 	// Simply return for invalid case. This should be caught by validation instead.
-	ip := netutils.ParseIPSloppy(addr)
+	ip, _ := netutils.ParseIP(addr)
 	if ip == nil {
 		return addr
 	}

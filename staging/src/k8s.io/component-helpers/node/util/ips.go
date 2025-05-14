@@ -38,7 +38,7 @@ func parseNodeIP(nodeIP string, allowDual, sloppy bool) ([]net.IP, []string, err
 			if sloppy {
 				ip = strings.TrimSpace(ip)
 			}
-			parsedNodeIP := netutils.ParseIPSloppy(ip)
+			parsedNodeIP, _ := netutils.ParseIP(ip)
 			if parsedNodeIP == nil {
 				invalidIPs = append(invalidIPs, ip)
 				if !sloppy {

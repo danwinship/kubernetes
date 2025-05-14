@@ -1467,7 +1467,7 @@ func initializeResources(ctx context.Context, f *framework.Framework, protocols 
 // makeLargeCIDRForIP returns a CIDR that matches the given IP and many many many other
 // IPs. (Specifically, it returns the /4 that contains the IP.)
 func makeLargeCIDRForIP(ip string) string {
-	podIP := netutils.ParseIPSloppy(ip)
+	podIP, _ := netutils.ParseIP(ip)
 	if ip4 := podIP.To4(); ip4 != nil {
 		podIP = ip4
 	}

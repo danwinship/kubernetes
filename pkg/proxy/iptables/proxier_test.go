@@ -1143,7 +1143,7 @@ func assertIPTablesChainEqual(t *testing.T, line int, table utiliptables.Table, 
 // ipStr. address.Value is either an IP address ("1.2.3.4") or a CIDR string
 // ("1.2.3.0/24").
 func addressMatches(t *testing.T, address *iptablestest.IPTablesValue, ipStr string) bool {
-	ip := netutils.ParseIPSloppy(ipStr)
+	ip, _ := netutils.ParseIP(ipStr)
 	if ip == nil {
 		t.Fatalf("Bad IP in test case: %s", ipStr)
 	}
@@ -1156,7 +1156,7 @@ func addressMatches(t *testing.T, address *iptablestest.IPTablesValue, ipStr str
 		}
 		matches = cidr.Contains(ip)
 	} else {
-		ip2 := netutils.ParseIPSloppy(address.Value)
+		ip2, _ := netutils.ParseIP(address.Value)
 		if ip2 == nil {
 			t.Errorf("Bad IP/CIDR in kube-proxy output: %s", address.Value)
 		}

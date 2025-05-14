@@ -31,7 +31,7 @@ func APIEndpointFromString(apiEndpoint string) (APIEndpoint, error) {
 	if err != nil {
 		return APIEndpoint{}, errors.Wrapf(err, "invalid advertise address endpoint: %s", apiEndpoint)
 	}
-	if netutils.ParseIPSloppy(apiEndpointHost) == nil {
+	if _, err := netutils.ParseIP(apiEndpointHost); err != nil {
 		return APIEndpoint{}, errors.Errorf("invalid API endpoint IP: %s", apiEndpointHost)
 	}
 	apiEndpointPort, err := net.LookupPort("tcp", apiEndpointPortStr)

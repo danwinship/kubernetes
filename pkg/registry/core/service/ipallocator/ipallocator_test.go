@@ -149,7 +149,7 @@ func TestAllocateIPAllocator(t *testing.T) {
 			if !found.Has(tc.released) {
 				t.Fatalf("not allocated address to be releases %s found %d", tc.released, len(found))
 			}
-			released := netutils.ParseIPSloppy(tc.released)
+			released, _ := netutils.ParseIP(tc.released)
 			if err := r.Release(released); err != nil {
 				t.Fatal(err)
 			}
@@ -334,7 +334,7 @@ func TestForEachIPAllocator(t *testing.T) {
 		defer r.Destroy()
 
 		for ips := range tc {
-			ip := netutils.ParseIPSloppy(ips)
+			ip, _ := netutils.ParseIP(ips)
 			if err := r.Allocate(ip); err != nil {
 				t.Errorf("[%d] error allocating IP %v: %v", i, ip, err)
 			}

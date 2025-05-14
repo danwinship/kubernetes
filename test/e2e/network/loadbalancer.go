@@ -81,7 +81,7 @@ func getSubnetPrefix(ctx context.Context, c clientset.Interface) (*net.IPNet, er
 	if err != nil {
 		return nil, fmt.Errorf("error getting Node internal IP, err: %w", err)
 	}
-	ip := netutils.ParseIPSloppy(internalIP)
+	ip, _ := netutils.ParseIP(internalIP)
 	if ip == nil {
 		return nil, fmt.Errorf("invalid IP address format: %s", internalIP)
 	}
@@ -1069,7 +1069,7 @@ var _ = common.SIGDescribe("LoadBalancers ExternalTrafficPolicy: Local", feature
 		if err != nil {
 			framework.Failf("SplitHostPort returned unexpected error: %q", clientIPPort)
 		}
-		ip := netutils.ParseIPSloppy(host)
+		ip, _ := netutils.ParseIP(host)
 		if ip == nil {
 			framework.Failf("Invalid client IP address format: %q", host)
 		}

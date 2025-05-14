@@ -572,7 +572,7 @@ func NewMainKubelet(ctx context.Context,
 
 	clusterDNS := make([]net.IP, 0, len(kubeCfg.ClusterDNS))
 	for _, ipEntry := range kubeCfg.ClusterDNS {
-		ip := netutils.ParseIPSloppy(ipEntry)
+		ip, _ := netutils.ParseIP(ipEntry)
 		if ip == nil {
 			klog.InfoS("Invalid clusterDNS IP", "IP", ipEntry)
 		} else {

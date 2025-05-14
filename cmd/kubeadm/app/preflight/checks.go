@@ -943,7 +943,7 @@ func InitNodeChecks(execer utilsexec.Interface, cfg *kubeadmapi.InitConfiguratio
 		checks = addCommonChecks(execer, cfg.KubernetesVersion, &cfg.NodeRegistration, checks)
 
 		// Check if Bridge-netfilter and IPv6 relevant flags are set
-		if ip := netutils.ParseIPSloppy(cfg.LocalAPIEndpoint.AdvertiseAddress); ip != nil {
+		if ip, _ := netutils.ParseIP(cfg.LocalAPIEndpoint.AdvertiseAddress); ip != nil {
 			if !IPV4Check && netutils.IsIPv4(ip) {
 				IPV4Check = true
 			}
@@ -1019,7 +1019,7 @@ func JoinNodeChecks(execer utilsexec.Interface, cfg *kubeadmapi.JoinConfiguratio
 			checks = append(checks,
 				HTTPProxyCheck{Proto: "https", Host: ipstr},
 			)
-			if ip := netutils.ParseIPSloppy(ipstr); ip != nil {
+			if ip, _ := netutils.ParseIP(ipstr); ip != nil {
 				if netutils.IsIPv4(ip) {
 					checks = addIPv4Checks(checks)
 				}
