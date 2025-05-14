@@ -17,7 +17,6 @@ limitations under the License.
 package options
 
 import (
-	"net"
 	"reflect"
 	"testing"
 	"time"
@@ -317,7 +316,7 @@ func TestAddFlags(t *testing.T) {
 
 		Extra: Extra{
 			ServiceNodePortRange:   kubeoptions.DefaultServiceNodePortRange,
-			ServiceClusterIPRanges: (&net.IPNet{IP: netutils.MustParseIP("192.168.128.0"), Mask: net.CIDRMask(17, 32)}).String(),
+			ServiceClusterIPRanges: (netutils.MustParseIPNet("192.168.128.0/17")).String(),
 			EndpointReconcilerType: string(reconcilers.LeaseEndpointReconcilerType),
 			AllowPrivileged:        false,
 			KubeletConfig: kubeletclient.KubeletClientConfig{

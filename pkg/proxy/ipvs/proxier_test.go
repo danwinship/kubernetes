@@ -2127,9 +2127,9 @@ func TestOnlyLocalNodePorts(t *testing.T) {
 	)
 
 	itf := net.Interface{Index: 0, MTU: 0, Name: "eth0", HardwareAddr: nil, Flags: 0}
-	addrs := []net.Addr{&net.IPNet{IP: netutils.MustParseIP("100.101.102.103"), Mask: net.CIDRMask(24, 32)}}
+	addrs := []net.Addr{netutils.MustParseIPAsIPNet("100.101.102.103/24")}
 	itf1 := net.Interface{Index: 1, MTU: 0, Name: "eth1", HardwareAddr: nil, Flags: 0}
-	addrs1 := []net.Addr{&net.IPNet{IP: netutils.MustParseIP("2001:db8::"), Mask: net.CIDRMask(64, 128)}}
+	addrs1 := []net.Addr{netutils.MustParseIPNet("2001:db8::/64")}
 	fp.networkInterfacer.(*proxyutiltest.FakeNetwork).AddInterfaceAddr(&itf, addrs)
 	fp.networkInterfacer.(*proxyutiltest.FakeNetwork).AddInterfaceAddr(&itf1, addrs1)
 	fp.nodePortAddresses = proxyutil.NewNodePortAddresses(v1.IPv4Protocol, []string{"100.101.102.0/24"})
@@ -2215,9 +2215,9 @@ func TestHealthCheckNodePort(t *testing.T) {
 	)
 
 	itf := net.Interface{Index: 0, MTU: 0, Name: "eth0", HardwareAddr: nil, Flags: 0}
-	addrs := []net.Addr{&net.IPNet{IP: netutils.MustParseIP("100.101.102.103"), Mask: net.CIDRMask(24, 32)}}
+	addrs := []net.Addr{netutils.MustParseIPAsIPNet("100.101.102.103/24")}
 	itf1 := net.Interface{Index: 1, MTU: 0, Name: "eth1", HardwareAddr: nil, Flags: 0}
-	addrs1 := []net.Addr{&net.IPNet{IP: netutils.MustParseIP("2001:db8::"), Mask: net.CIDRMask(64, 128)}}
+	addrs1 := []net.Addr{netutils.MustParseIPNet("2001:db8::/64")}
 	fp.networkInterfacer.(*proxyutiltest.FakeNetwork).AddInterfaceAddr(&itf, addrs)
 	fp.networkInterfacer.(*proxyutiltest.FakeNetwork).AddInterfaceAddr(&itf1, addrs1)
 	fp.nodePortAddresses = proxyutil.NewNodePortAddresses(v1.IPv4Protocol, []string{"100.101.102.0/24"})
