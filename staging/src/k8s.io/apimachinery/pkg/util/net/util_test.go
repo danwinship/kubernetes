@@ -34,11 +34,6 @@ import (
 	netutils "k8s.io/utils/net/v2"
 )
 
-func getIPNet(cidr string) *net.IPNet {
-	_, ipnet, _ := netutils.ParseCIDRSloppy(cidr)
-	return ipnet
-}
-
 func TestIPNetEqual(t *testing.T) {
 	testCases := []struct {
 		ipnet1 *net.IPNet
@@ -47,28 +42,28 @@ func TestIPNetEqual(t *testing.T) {
 	}{
 		// null case
 		{
-			getIPNet("10.0.0.1/24"),
-			getIPNet(""),
+			netutils.MustParseIPNet("10.0.0.1/24"),
+			nil,
 			false,
 		},
 		{
-			getIPNet("10.0.0.0/24"),
-			getIPNet("10.0.0.0/24"),
+			netutils.MustParseIPNet("10.0.0.0/24"),
+			netutils.MustParseIPNet("10.0.0.0/24"),
 			true,
 		},
 		{
-			getIPNet("10.0.0.0/24"),
-			getIPNet("10.0.0.1/24"),
+			netutils.MustParseIPNet("10.0.0.0/24"),
+			netutils.MustParseIPNet("10.0.0.1/24"),
 			true,
 		},
 		{
-			getIPNet("10.0.0.0/25"),
-			getIPNet("10.0.0.0/24"),
+			netutils.MustParseIPNet("10.0.0.0/25"),
+			netutils.MustParseIPNet("10.0.0.0/24"),
 			false,
 		},
 		{
-			getIPNet("10.0.1.0/24"),
-			getIPNet("10.0.0.0/24"),
+			netutils.MustParseIPNet("10.0.1.0/24"),
+			netutils.MustParseIPNet("10.0.0.0/24"),
 			false,
 		},
 	}

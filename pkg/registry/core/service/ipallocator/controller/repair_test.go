@@ -267,10 +267,7 @@ func makeRangeRegistry(t *testing.T, cidrRange string) *mockRangeRegistry {
 func makeFakeClientSet() *fake.Clientset {
 	return fake.NewSimpleClientset()
 }
-func makeIPNet(cidr string) *net.IPNet {
-	_, net, _ := netutils.ParseCIDRSloppy(cidr)
-	return net
-}
+
 func TestShouldWorkOnSecondary(t *testing.T) {
 	testCases := []struct {
 		name             string
@@ -281,26 +278,26 @@ func TestShouldWorkOnSecondary(t *testing.T) {
 		{
 			name:             "primary only (v4)",
 			expectedFamilies: []corev1.IPFamily{corev1.IPv4Protocol},
-			primaryNet:       makeIPNet("10.0.0.0/16"),
+			primaryNet:       netutils.MustParseIPNet("10.0.0.0/16"),
 			secondaryNet:     nil,
 		},
 		{
 			name:             "primary only (v6)",
 			expectedFamilies: []corev1.IPFamily{corev1.IPv6Protocol},
-			primaryNet:       makeIPNet("2000::/120"),
+			primaryNet:       netutils.MustParseIPNet("2000::/120"),
 			secondaryNet:     nil,
 		},
 		{
 			name:             "primary and secondary provided (v4,v6)",
 			expectedFamilies: []corev1.IPFamily{corev1.IPv4Protocol, corev1.IPv6Protocol},
-			primaryNet:       makeIPNet("10.0.0.0/16"),
-			secondaryNet:     makeIPNet("2000::/120"),
+			primaryNet:       netutils.MustParseIPNet("10.0.0.0/16"),
+			secondaryNet:     netutils.MustParseIPNet("2000::/120"),
 		},
 		{
 			name:             "primary and secondary provided (v6,v4)",
 			expectedFamilies: []corev1.IPFamily{corev1.IPv6Protocol, corev1.IPv4Protocol},
-			primaryNet:       makeIPNet("2000::/120"),
-			secondaryNet:     makeIPNet("10.0.0.0/16"),
+			primaryNet:       netutils.MustParseIPNet("2000::/120"),
+			secondaryNet:     netutils.MustParseIPNet("10.0.0.0/16"),
 		},
 	}
 	for _, tc := range testCases {

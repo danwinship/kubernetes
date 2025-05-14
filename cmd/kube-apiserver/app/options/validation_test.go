@@ -203,15 +203,8 @@ func TestClusterServiceIPRange(t *testing.T) {
 }
 
 func TestValidatePublicIPServiceClusterIPRangeIPFamilies(t *testing.T) {
-	_, ipv4cidr, err := netutils.ParseCIDRSloppy("192.168.0.0/24")
-	if err != nil {
-		t.Fatalf("Unexpected error %v", err)
-	}
-
-	_, ipv6cidr, err := netutils.ParseCIDRSloppy("2001:db8::/112")
-	if err != nil {
-		t.Fatalf("Unexpected error %v", err)
-	}
+	ipv4cidr := netutils.MustParseIPNet("192.168.0.0/24")
+	ipv6cidr := netutils.MustParseIPNet("2001:db8::/112")
 
 	ipv4address := netutils.MustParseIP("192.168.1.1")
 	ipv6address := netutils.MustParseIP("2001:db8::1")
@@ -332,11 +325,6 @@ func TestValidatePublicIPServiceClusterIPRangeIPFamilies(t *testing.T) {
 	}
 }
 
-func getIPnetFromCIDR(cidr string) *net.IPNet {
-	_, ipnet, _ := netutils.ParseCIDRSloppy(cidr)
-	return ipnet
-}
-
 func TestValidateServiceNodePort(t *testing.T) {
 	testCases := []struct {
 		name         string
@@ -410,7 +398,7 @@ func TestValidateMaxCIDRRange(t *testing.T) {
 	}{
 		{
 			name:                 "valid ipv4 cidr",
-			cidr:                 *getIPnetFromCIDR("10.92.0.0/12"),
+			cidr:                 *netutils.MustParseIPNet("10.92.0.0/12"),
 			maxCIDRBits:          20,
 			cidrFlag:             "--service-cluster-ip-range",
 			expectedErrorMessage: "",
@@ -418,7 +406,7 @@ func TestValidateMaxCIDRRange(t *testing.T) {
 		},
 		{
 			name:                 "valid ipv6 cidr",
-			cidr:                 *getIPnetFromCIDR("3000::/108"),
+			cidr:                 *netutils.MustParseIPNet("3000::/108"),
 			maxCIDRBits:          20,
 			cidrFlag:             "--service-cluster-ip-range",
 			expectedErrorMessage: "",
@@ -426,7 +414,7 @@ func TestValidateMaxCIDRRange(t *testing.T) {
 		},
 		{
 			name:                 "ipv4 cidr too big",
-			cidr:                 *getIPnetFromCIDR("10.92.0.0/8"),
+			cidr:                 *netutils.MustParseIPNet("10.92.0.0/8"),
 			maxCIDRBits:          20,
 			cidrFlag:             "--service-cluster-ip-range",
 			expectedErrorMessage: "specified --service-cluster-ip-range is too large; for 32-bit addresses, the mask must be >= 12",
@@ -434,7 +422,7 @@ func TestValidateMaxCIDRRange(t *testing.T) {
 		},
 		{
 			name:                 "ipv6 cidr too big",
-			cidr:                 *getIPnetFromCIDR("3000::/64"),
+			cidr:                 *netutils.MustParseIPNet("3000::/64"),
 			maxCIDRBits:          20,
 			cidrFlag:             "--service-cluster-ip-range",
 			expectedErrorMessage: "specified --service-cluster-ip-range is too large; for 128-bit addresses, the mask must be >= 108",

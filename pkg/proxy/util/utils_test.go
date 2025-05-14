@@ -539,13 +539,6 @@ func mustParseIPAddr(str string) net.Addr {
 	}
 	return a
 }
-func mustParseIPNet(str string) net.Addr {
-	_, n, err := netutils.ParseCIDRSloppy(str)
-	if err != nil {
-		panic("mustParseIPNet")
-	}
-	return n
-}
 func mustParseUnix(str string) net.Addr {
 	n, err := net.ResolveUnixAddr("unix", str)
 	if err != nil {
@@ -562,10 +555,7 @@ func (v *cidrValidator) isValid(ip net.IP) bool {
 	return v.cidr.Contains(ip)
 }
 func newCidrValidator(cidr string) func(ip net.IP) bool {
-	_, n, err := netutils.ParseCIDRSloppy(cidr)
-	if err != nil {
-		panic("mustParseIPNet")
-	}
+	n := netutils.MustParseIPNet(cidr)
 	obj := cidrValidator{n}
 	return obj.isValid
 }
@@ -605,8 +595,8 @@ func TestAddressSet(t *testing.T) {
 			"Accept IPNet x 2",
 			func(ip net.IP) bool { return true },
 			[]net.Addr{
-				mustParseIPNet("8.8.8.8/32"),
-				mustParseIPNet("1000::/128"),
+				netutils.MustParseIPNet("8.8.8.8/32"),
+				netutils.MustParseIPNet("1000::/128"),
 			},
 			sets.New("8.8.8.8", "1000::"),
 		},
