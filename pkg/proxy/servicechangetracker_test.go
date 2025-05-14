@@ -38,7 +38,7 @@ const testHostname = "test-hostname"
 
 func makeTestServiceInfo(clusterIP string, port int, protocol string, healthcheckNodePort int, svcInfoFuncs ...func(*BaseServicePortInfo)) *BaseServicePortInfo {
 	bsvcPortInfo := &BaseServicePortInfo{
-		clusterIP: netutils.ParseIPSloppy(clusterIP),
+		clusterIP: netutils.MustParseIP(clusterIP),
 		port:      port,
 		protocol:  v1.Protocol(protocol),
 	}
@@ -90,7 +90,7 @@ func makeServicePortName(ns, name, port string, protocol v1.Protocol) ServicePor
 func makeIPs(ipStr ...string) []net.IP {
 	var ips []net.IP
 	for _, s := range ipStr {
-		ips = append(ips, netutils.ParseIPSloppy(s))
+		ips = append(ips, netutils.MustParseIP(s))
 	}
 	return ips
 }

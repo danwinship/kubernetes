@@ -751,7 +751,7 @@ var _ = common.SIGDescribe("LoadBalancers", feature.LoadBalancer, func() {
 			if err != nil {
 				framework.Failf("Failed to resolve local address: %v", err)
 			}
-			raddr := net.UDPAddr{IP: netutils.ParseIPSloppy(udpIngressIP), Port: port}
+			raddr := net.UDPAddr{IP: netutils.MustParseIP(udpIngressIP), Port: port}
 
 			for {
 				select {
@@ -885,7 +885,7 @@ var _ = common.SIGDescribe("LoadBalancers", feature.LoadBalancer, func() {
 			if err != nil {
 				framework.Failf("Failed to resolve local address: %v", err)
 			}
-			raddr := net.UDPAddr{IP: netutils.ParseIPSloppy(udpIngressIP), Port: port}
+			raddr := net.UDPAddr{IP: netutils.MustParseIP(udpIngressIP), Port: port}
 
 			for {
 				select {

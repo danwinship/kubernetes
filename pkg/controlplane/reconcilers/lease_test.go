@@ -350,7 +350,7 @@ func TestLeaseEndpointReconciler(t *testing.T) {
 
 			epAdapter := NewEndpointsAdapter(clientset.CoreV1(), clientset.DiscoveryV1())
 			r := NewLeaseEndpointReconciler(epAdapter, fakeLeases)
-			err = r.ReconcileEndpoints(test.serviceName, netutils.ParseIPSloppy(test.ip), test.endpointPorts, true)
+			err = r.ReconcileEndpoints(test.serviceName, netutils.MustParseIP(test.ip), test.endpointPorts, true)
 			if err != nil {
 				t.Errorf("unexpected error reconciling: %v", err)
 			}
@@ -428,7 +428,7 @@ func TestLeaseEndpointReconciler(t *testing.T) {
 			clientset := fake.NewSimpleClientset(test.initialState...)
 			epAdapter := NewEndpointsAdapter(clientset.CoreV1(), clientset.DiscoveryV1())
 			r := NewLeaseEndpointReconciler(epAdapter, fakeLeases)
-			err = r.ReconcileEndpoints(test.serviceName, netutils.ParseIPSloppy(test.ip), test.endpointPorts, false)
+			err = r.ReconcileEndpoints(test.serviceName, netutils.MustParseIP(test.ip), test.endpointPorts, false)
 			if err != nil {
 				t.Errorf("unexpected error reconciling: %v", err)
 			}
@@ -541,7 +541,7 @@ func TestLeaseRemoveEndpoints(t *testing.T) {
 			if !test.apiServerStartup {
 				r.StopReconciling()
 			}
-			err = r.RemoveEndpoints(test.serviceName, netutils.ParseIPSloppy(test.ip), test.endpointPorts)
+			err = r.RemoveEndpoints(test.serviceName, netutils.MustParseIP(test.ip), test.endpointPorts)
 			// if the ip is not on the endpoints, it must return an storage error and stop reconciling
 			if !contains(test.endpointKeys, test.ip) {
 				if !storage.IsNotFound(err) {
@@ -664,25 +664,25 @@ func TestApiserverShutdown(t *testing.T) {
 			if test.shutDownBeforeReconcile {
 				// shutdown apiserver first
 				r.StopReconciling()
-				err = r.RemoveEndpoints(test.serviceName, netutils.ParseIPSloppy(test.ip), test.endpointPorts)
+				err = r.RemoveEndpoints(test.serviceName, netutils.MustParseIP(test.ip), test.endpointPorts)
 				if err != nil {
 					t.Errorf("unexpected error remove endpoints: %v", err)
 				}
 
 				// reconcile endpoints in another goroutine
-				err = r.ReconcileEndpoints(test.serviceName, netutils.ParseIPSloppy(test.ip), test.endpointPorts, false)
+				err = r.ReconcileEndpoints(test.serviceName, netutils.MustParseIP(test.ip), test.endpointPorts, false)
 				if err != nil {
 					t.Errorf("unexpected error reconciling: %v", err)
 				}
 			} else {
 				// reconcile endpoints first
-				err = r.ReconcileEndpoints(test.serviceName, netutils.ParseIPSloppy(test.ip), test.endpointPorts, false)
+				err = r.ReconcileEndpoints(test.serviceName, netutils.MustParseIP(test.ip), test.endpointPorts, false)
 				if err != nil {
 					t.Errorf("unexpected error reconciling: %v", err)
 				}
 
 				r.StopReconciling()
-				err = r.RemoveEndpoints(test.serviceName, netutils.ParseIPSloppy(test.ip), test.endpointPorts)
+				err = r.RemoveEndpoints(test.serviceName, netutils.MustParseIP(test.ip), test.endpointPorts)
 				if err != nil {
 					t.Errorf("unexpected error remove endpoints: %v", err)
 				}

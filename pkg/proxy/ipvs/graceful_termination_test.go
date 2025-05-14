@@ -437,12 +437,12 @@ func makeListItem(i, j int) *listItem {
 	rs := fmt.Sprintf("%d.%d.%d.%d", 1, 1, i, j)
 	return &listItem{
 		VirtualServer: &utilipvs.VirtualServer{
-			Address:  netutils.ParseIPSloppy(vs),
+			Address:  netutils.MustParseIP(vs),
 			Protocol: "tcp",
 			Port:     uint16(80),
 		},
 		RealServer: &utilipvs.RealServer{
-			Address: netutils.ParseIPSloppy(rs),
+			Address: netutils.MustParseIP(rs),
 			Port:    uint16(80),
 		},
 	}

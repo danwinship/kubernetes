@@ -77,13 +77,13 @@ func generateConntrackEntry(origDst string, origPortDst uint16, replySrc string,
 		},
 		Reverse: netlink.IPTuple{
 			Protocol: proto,
-			SrcIP:    netutils.ParseIPSloppy(replySrc),
+			SrcIP:    netutils.MustParseIP(replySrc),
 			SrcPort:  replyPortSrc,
 		},
 	}
 	// we don't match on --orig-dst for node port services (*:NodePort), --orig-dst is thus handled separately
 	if origDst != "" {
-		entry.Forward.DstIP = netutils.ParseIPSloppy(origDst)
+		entry.Forward.DstIP = netutils.MustParseIP(origDst)
 	}
 	return entry
 }
@@ -297,13 +297,13 @@ func TestCleanStaleEntries(t *testing.T) {
 			entry := &netlink.ConntrackFlow{
 				FamilyType: unix.AF_INET,
 				Forward: netlink.IPTuple{
-					DstIP:    netutils.ParseIPSloppy(ip),
+					DstIP:    netutils.MustParseIP(ip),
 					DstPort:  port,
 					Protocol: unix.IPPROTO_UDP,
 				},
 				Reverse: netlink.IPTuple{
 					Protocol: unix.IPPROTO_UDP,
-					SrcIP:    netutils.ParseIPSloppy(ip),
+					SrcIP:    netutils.MustParseIP(ip),
 				},
 			}
 

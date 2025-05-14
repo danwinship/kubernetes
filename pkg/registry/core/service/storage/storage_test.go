@@ -7951,7 +7951,7 @@ func TestUpdateIPsFromSingleStack(t *testing.T) {
 		beforeUpdate: func(t *testing.T, storage *wrapperRESTForTests) {
 			alloc := storage.alloc.serviceIPAllocatorsByFamily[api.IPv6Protocol]
 			ip := "2000::1"
-			if err := alloc.Allocate(netutils.ParseIPSloppy(ip)); err != nil {
+			if err := alloc.Allocate(netutils.MustParseIP(ip)); err != nil {
 				t.Fatalf("test is incorrect, unable to preallocate IP %q: %v", ip, err)
 			}
 		},
@@ -8659,7 +8659,7 @@ func TestUpdateIPsFromSingleStack(t *testing.T) {
 		beforeUpdate: func(t *testing.T, storage *wrapperRESTForTests) {
 			alloc := storage.alloc.serviceIPAllocatorsByFamily[api.IPv4Protocol]
 			ip := "10.0.0.1"
-			if err := alloc.Allocate(netutils.ParseIPSloppy(ip)); err != nil {
+			if err := alloc.Allocate(netutils.MustParseIP(ip)); err != nil {
 				t.Fatalf("test is incorrect, unable to preallocate IP %q: %v", ip, err)
 			}
 		},

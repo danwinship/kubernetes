@@ -147,12 +147,12 @@ func TestAllocate(t *testing.T) {
 				t.Fatal(err)
 			}
 			for _, outOfRange := range tc.outOfRange {
-				err = r.Allocate(netutils.ParseIPSloppy(outOfRange))
+				err = r.Allocate(netutils.MustParseIP(outOfRange))
 				if _, ok := err.(*ErrNotInRange); !ok {
 					t.Fatal(err)
 				}
 			}
-			if err := r.Allocate(netutils.ParseIPSloppy(tc.alreadyAllocated)); err != ErrAllocated {
+			if err := r.Allocate(netutils.MustParseIP(tc.alreadyAllocated)); err != ErrAllocated {
 				t.Fatal(err)
 			}
 			if f := r.Free(); f != 1 {
@@ -211,7 +211,7 @@ func TestAllocateReserved(t *testing.T) {
 	}
 	for i := dynamicOffset; i < r.max; i++ {
 		ip := fmt.Sprintf("192.168.1.%d", i+1)
-		if !r.Has(netutils.ParseIPSloppy(ip)) {
+		if !r.Has(netutils.MustParseIP(ip)) {
 			t.Errorf("IP %s expected to be allocated", ip)
 		}
 	}
@@ -221,7 +221,7 @@ func TestAllocateReserved(t *testing.T) {
 	// allocate all addresses on the static block
 	for i := 0; i < dynamicOffset; i++ {
 		ip := fmt.Sprintf("192.168.1.%d", i+1)
-		if err := r.Allocate(netutils.ParseIPSloppy(ip)); err != nil {
+		if err := r.Allocate(netutils.MustParseIP(ip)); err != nil {
 			t.Errorf("Unexpected error trying to allocate IP %s: %v", ip, err)
 		}
 	}
@@ -264,10 +264,10 @@ func TestAllocateSmall(t *testing.T) {
 		found.Insert(ip.String())
 	}
 	for s := range found {
-		if !r.Has(netutils.ParseIPSloppy(s)) {
+		if !r.Has(netutils.MustParseIP(s)) {
 			t.Fatalf("missing: %s", s)
 		}
-		if err := r.Allocate(netutils.ParseIPSloppy(s)); err != ErrAllocated {
+		if err := r.Allocate(netutils.MustParseIP(s)); err != ErrAllocated {
 			t.Fatal(err)
 		}
 	}
@@ -488,10 +488,10 @@ func TestClusterIPMetrics(t *testing.T) {
 
 	// try to allocate the same IP addresses
 	for s := range found {
-		if !a.Has(netutils.ParseIPSloppy(s)) {
+		if !a.Has(netutils.MustParseIP(s)) {
 			t.Fatalf("missing: %s", s)
 		}
-		if err := a.Allocate(netutils.ParseIPSloppy(s)); err != ErrAllocated {
+		if err := a.Allocate(netutils.MustParseIP(s)); err != ErrAllocated {
 			t.Fatal(err)
 		}
 	}
@@ -505,10 +505,10 @@ func TestClusterIPMetrics(t *testing.T) {
 
 	// release the addresses allocated
 	for s := range found {
-		if !a.Has(netutils.ParseIPSloppy(s)) {
+		if !a.Has(netutils.MustParseIP(s)) {
 			t.Fatalf("missing: %s", s)
 		}
-		if err := a.Release(netutils.ParseIPSloppy(s)); err != nil {
+		if err := a.Release(netutils.MustParseIP(s)); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -584,10 +584,10 @@ func TestClusterIPAllocatedMetrics(t *testing.T) {
 
 	// try to allocate the same IP addresses
 	for s := range found {
-		if !a.Has(netutils.ParseIPSloppy(s)) {
+		if !a.Has(netutils.MustParseIP(s)) {
 			t.Fatalf("missing: %s", s)
 		}
-		if err := a.Allocate(netutils.ParseIPSloppy(s)); err != ErrAllocated {
+		if err := a.Allocate(netutils.MustParseIP(s)); err != ErrAllocated {
 			t.Fatal(err)
 		}
 	}

@@ -136,7 +136,7 @@ func TestAllocateReserved(t *testing.T) {
 	}
 	for i := dynamicOffset; i < max; i++ {
 		ip := fmt.Sprintf("192.168.1.%d", i+1)
-		if !storage.Has(netutils.ParseIPSloppy(ip)) {
+		if !storage.Has(netutils.MustParseIP(ip)) {
 			t.Errorf("IP %s expected to be allocated", ip)
 		}
 	}
@@ -144,7 +144,7 @@ func TestAllocateReserved(t *testing.T) {
 	// allocate all addresses on the static block
 	for i := 0; i < dynamicOffset; i++ {
 		ip := fmt.Sprintf("192.168.1.%d", i+1)
-		if err := storage.Allocate(netutils.ParseIPSloppy(ip)); err != nil {
+		if err := storage.Allocate(netutils.MustParseIP(ip)); err != nil {
 			t.Errorf("Unexpected error trying to allocate IP %s: %v", ip, err)
 		}
 	}
@@ -182,7 +182,7 @@ func TestAllocateReservedDynamicBlockExhausted(t *testing.T) {
 	}
 	for i := 0; i < max; i++ {
 		ip := fmt.Sprintf("192.168.1.%d", i+1)
-		if !storage.Has(netutils.ParseIPSloppy(ip)) {
+		if !storage.Has(netutils.MustParseIP(ip)) {
 			t.Errorf("IP %s expected to be allocated", ip)
 		}
 	}

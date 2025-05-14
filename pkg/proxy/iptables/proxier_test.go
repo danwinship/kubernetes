@@ -106,11 +106,11 @@ func NewFakeProxier(ipt utiliptables.Interface) *Proxier {
 	networkInterfacer.AddInterfaceAddr(&itf, addrs)
 	itf1 := net.Interface{Index: 1, MTU: 0, Name: "eth0", HardwareAddr: nil, Flags: 0}
 	addrs1 := []net.Addr{
-		&net.IPNet{IP: netutils.ParseIPSloppy(testNodeIP), Mask: net.CIDRMask(24, 32)},
-		&net.IPNet{IP: netutils.ParseIPSloppy(testNodeIPAlt), Mask: net.CIDRMask(24, 32)},
-		&net.IPNet{IP: netutils.ParseIPSloppy(testExternalIP), Mask: net.CIDRMask(24, 32)},
-		&net.IPNet{IP: netutils.ParseIPSloppy(testNodeIPv6), Mask: net.CIDRMask(64, 128)},
-		&net.IPNet{IP: netutils.ParseIPSloppy(testNodeIPv6Alt), Mask: net.CIDRMask(64, 128)},
+		&net.IPNet{IP: netutils.MustParseIP(testNodeIP), Mask: net.CIDRMask(24, 32)},
+		&net.IPNet{IP: netutils.MustParseIP(testNodeIPAlt), Mask: net.CIDRMask(24, 32)},
+		&net.IPNet{IP: netutils.MustParseIP(testExternalIP), Mask: net.CIDRMask(24, 32)},
+		&net.IPNet{IP: netutils.MustParseIP(testNodeIPv6), Mask: net.CIDRMask(64, 128)},
+		&net.IPNet{IP: netutils.MustParseIP(testNodeIPv6Alt), Mask: net.CIDRMask(64, 128)},
 	}
 	networkInterfacer.AddInterfaceAddr(&itf1, addrs1)
 
@@ -134,7 +134,7 @@ func NewFakeProxier(ipt utiliptables.Interface) *Proxier {
 		filterRules:              proxyutil.NewLineBuffer(),
 		natChains:                proxyutil.NewLineBuffer(),
 		natRules:                 proxyutil.NewLineBuffer(),
-		nodeIP:                   netutils.ParseIPSloppy(testNodeIP),
+		nodeIP:                   netutils.MustParseIP(testNodeIP),
 		localhostNodePorts:       true,
 		nodePortAddresses:        proxyutil.NewNodePortAddresses(ipfamily, nil),
 		networkInterfacer:        networkInterfacer,

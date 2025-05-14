@@ -122,7 +122,7 @@ func probe(ip string) {
 				}
 
 				data := []byte("boom!!!")
-				remoteIP := netutils.ParseIPSloppy(addr.String())
+				remoteIP := netutils.MustParseIP(addr.String())
 				localIP := netutils.ParseIPSloppy(conn.LocalAddr().String())
 				_, err := conn.WriteTo(badPkt.encode(localIP, remoteIP, data[:]), addr)
 				if err != nil {
@@ -143,10 +143,10 @@ func getIPs() []net.IP {
 	podIP, podIPs := os.Getenv("POD_IP"), os.Getenv("POD_IPS")
 	if podIPs != "" {
 		for _, ip := range strings.Split(podIPs, ",") {
-			ips = append(ips, netutils.ParseIPSloppy(ip))
+			ips = append(ips, netutils.MustParseIP(ip))
 		}
 	} else if podIP != "" {
-		ips = append(ips, netutils.ParseIPSloppy(podIP))
+		ips = append(ips, netutils.MustParseIP(podIP))
 	}
 	return ips
 }

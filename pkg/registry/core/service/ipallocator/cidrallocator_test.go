@@ -413,7 +413,7 @@ func TestCIDRAllocateShrink(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, ip := range found.List() {
-		err = r.Release(netutils.ParseIPSloppy(ip))
+		err = r.Release(netutils.MustParseIP(ip))
 		if err != nil {
 			t.Fatalf("unexpected error releasing ip %s", err)
 		}
