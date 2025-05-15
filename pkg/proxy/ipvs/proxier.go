@@ -359,7 +359,7 @@ func NewProxier(
 	serviceHealthServer := healthcheck.NewServiceHealthServer(nodeName, recorder, nodePortAddresses, healthzServer)
 
 	// excludeCIDRs has been validated before, here we just parse it to IPNet list
-	parsedExcludeCIDRs, _ := netutils.ParseCIDRs(excludeCIDRs)
+	parsedExcludeCIDRs, _ := netutils.ParseIPNetList(excludeCIDRs...)
 
 	proxier := &Proxier{
 		ipFamily:              ipFamily,

@@ -147,7 +147,7 @@ func startRouteController(ctx context.Context, initContext ControllerInitContext
 func processCIDRs(cidrsList string) ([]*net.IPNet, bool, error) {
 	cidrsSplit := strings.Split(strings.TrimSpace(cidrsList), ",")
 
-	cidrs, err := netutils.ParseCIDRs(cidrsSplit)
+	cidrs, err := netutils.ParseIPNetList(cidrsSplit...)
 	if err != nil {
 		return nil, false, err
 	}

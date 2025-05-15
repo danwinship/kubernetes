@@ -684,7 +684,7 @@ func GetKubernetesServiceCIDR(svcSubnetList string) (*net.IPNet, error) {
 	// The default service address family for the cluster is the address family of the first
 	// service cluster IP range configured via the `--service-cluster-ip-range` flag
 	// of the kube-controller-manager and kube-apiserver.
-	svcSubnets, err := netutils.ParseCIDRs(strings.Split(svcSubnetList, ","))
+	svcSubnets, err := netutils.ParseIPNetList(strings.Split(svcSubnetList, ",")...)
 	if err != nil {
 		return nil, errors.Wrapf(err, "unable to parse ServiceSubnet %v", svcSubnetList)
 	}

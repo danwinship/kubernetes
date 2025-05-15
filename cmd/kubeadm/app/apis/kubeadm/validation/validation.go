@@ -424,7 +424,7 @@ func ValidateHostPort(endpoint string, fldPath *field.Path) field.ErrorList {
 // ValidateIPNetFromString validates network portion of ip address
 func ValidateIPNetFromString(subnetStr string, minAddrs int64, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
-	subnets, err := netutils.ParseCIDRs(strings.Split(subnetStr, ","))
+	subnets, err := netutils.ParseIPNetList(strings.Split(subnetStr, ",")...)
 	if err != nil {
 		allErrs = append(allErrs, field.Invalid(fldPath, subnetStr, "couldn't parse subnet"))
 		return allErrs
@@ -456,7 +456,7 @@ func ValidateIPNetFromString(subnetStr string, minAddrs int64, fldPath *field.Pa
 func ValidateServiceSubnetSize(subnetStr string, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 	// subnets were already validated
-	subnets, _ := netutils.ParseCIDRs(strings.Split(subnetStr, ","))
+	subnets, _ := netutils.ParseIPNetList(strings.Split(subnetStr, ",")...)
 	for _, serviceSubnet := range subnets {
 		ones, bits := serviceSubnet.Mask.Size()
 		if bits-ones > constants.MaximumBitsForServiceSubnet {
@@ -471,7 +471,7 @@ func ValidateServiceSubnetSize(subnetStr string, fldPath *field.Path) field.Erro
 func ValidatePodSubnetNodeMask(subnetStr string, c *kubeadm.ClusterConfiguration, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 	// subnets were already validated
-	subnets, _ := netutils.ParseCIDRs(strings.Split(subnetStr, ","))
+	subnets, _ := netutils.ParseIPNetList(strings.Split(subnetStr, ",")...)
 	for _, podSubnet := range subnets {
 		// obtain podSubnet mask
 		mask := podSubnet.Mask

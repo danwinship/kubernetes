@@ -808,7 +808,7 @@ func validateCIDRs(cidrsList string) ([]*net.IPNet, error) {
 func processCIDRs(cidrsList string) ([]*net.IPNet, error) {
 	cidrsSplit := strings.Split(strings.TrimSpace(cidrsList), ",")
 
-	return netutils.ParseCIDRs(cidrsSplit)
+	return netutils.ParseIPNetList(cidrsSplit...)
 }
 
 // setNodeCIDRMaskSizes returns the IPv4 and IPv6 node cidr mask sizes to the value provided
