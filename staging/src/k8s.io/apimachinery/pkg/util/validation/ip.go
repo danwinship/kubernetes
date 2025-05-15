@@ -30,7 +30,7 @@ import (
 func parseIP(fldPath *field.Path, value string, strictValidation bool) (net.IP, field.ErrorList) {
 	var allErrors field.ErrorList
 
-	ip := netutils.ParseIPSloppy(value)
+	ip, _ := netutils.ParseIP(value)
 	if ip == nil {
 		allErrors = append(allErrors, field.Invalid(fldPath, value, "must be a valid IP address, (e.g. 10.9.8.7 or 2001:db8::ffff)"))
 		return nil, allErrors
@@ -39,8 +39,8 @@ func parseIP(fldPath *field.Path, value string, strictValidation bool) (net.IP, 
 	if strictValidation {
 		addr, err := netip.ParseAddr(value)
 		if err != nil {
-			// If netutils.ParseIPSloppy parsed it, but netip.ParseAddr
-			// doesn't, then it must have illegal leading 0s.
+			// If netutils.ParseIP parsed it, but netip.ParseAddr doesn't,
+			// then it must have illegal leading 0s.
 			allErrors = append(allErrors, field.Invalid(fldPath, value, "must not have leading 0s"))
 		}
 		if addr.Is4In6() {
@@ -103,7 +103,7 @@ func IsValidIP(fldPath *field.Path, value string) field.ErrorList {
 // GetWarningsForIP returns warnings for IP address values in non-standard forms. This
 // should only be used with fields that are validated with IsValidIPForLegacyField().
 func GetWarningsForIP(fldPath *field.Path, value string) []string {
-	ip := netutils.ParseIPSloppy(value)
+	ip, _ := netutils.ParseIP(value)
 	if ip == nil {
 		klog.ErrorS(nil, "GetWarningsForIP called on value that was not validated with IsValidIPForLegacyField", "field", fldPath, "value", value)
 		return nil
@@ -111,7 +111,7 @@ func GetWarningsForIP(fldPath *field.Path, value string) []string {
 
 	addr, _ := netip.ParseAddr(value)
 	if !addr.IsValid() || addr.Is4In6() {
-		// This catches 2 cases: leading 0s (if ParseIPSloppy() accepted it but
+		// This catches 2 cases: leading 0s (if ParseIP() accepted it but
 		// ParseAddr() doesn't) or IPv4-mapped IPv6 (.Is4In6()). Either way,
 		// re-stringifying the net.IP value will give the preferred form.
 		return []string{
@@ -119,7 +119,7 @@ func GetWarningsForIP(fldPath *field.Path, value string) []string {
 		}
 	}
 
-	// If ParseIPSloppy() and ParseAddr() both accept it then it's fully valid, though
+	// If ParseIP() and ParseAddr() both accept it then it's fully valid, though
 	// it may be non-canonical.
 	if addr.Is6() && addr.String() != value {
 		return []string{
@@ -130,10 +130,12 @@ func GetWarningsForIP(fldPath *field.Path, value string) []string {
 	return nil
 }
 
+// note that the return *net.IPNet contains only the subnet/mask information from value,
+// and ignores any bits that are set beyond the prefix length.
 func parseCIDR(fldPath *field.Path, value string, strictValidation bool) (*net.IPNet, field.ErrorList) {
 	var allErrors field.ErrorList
 
-	_, ipnet, err := netutils.ParseCIDRSloppy(value)
+	ipnet, err := netutils.ParseIPNet(value)
 	if err != nil {
 		allErrors = append(allErrors, field.Invalid(fldPath, value, "must be a valid CIDR value, (e.g. 10.9.8.0/24 or 2001:db8::/64)"))
 		return nil, allErrors
@@ -209,7 +211,7 @@ func IsValidCIDR(fldPath *field.Path, value string) field.ErrorList {
 // GetWarningsForCIDR returns warnings for CIDR values in non-standard forms. This should
 // only be used with fields that are validated with IsValidCIDRForLegacyField().
 func GetWarningsForCIDR(fldPath *field.Path, value string) []string {
-	ip, ipnet, err := netutils.ParseCIDRSloppy(value)
+	ipnet, err := netutils.ParseIPAsIPNet(value)
 	if err != nil {
 		klog.ErrorS(err, "GetWarningsForCIDR called on value that was not validated with IsValidCIDRForLegacyField", "field", fldPath, "value", value)
 		return nil
@@ -218,18 +220,20 @@ func GetWarningsForCIDR(fldPath *field.Path, value string) []string {
 	var warnings []string
 
 	// Check for bits set after prefix length
-	if !ip.Equal(ipnet.IP) {
-		_, addrlen := ipnet.Mask.Size()
-		singleIPCIDR := fmt.Sprintf("%s/%d", ip.String(), addrlen)
+	maskedIP := ipnet.IP.Mask(ipnet.Mask)
+	if !ipnet.IP.Equal(maskedIP) {
+		prefixlen, addrlen := ipnet.Mask.Size()
+		singleIPCIDR := fmt.Sprintf("%s/%d", ipnet.IP.String(), addrlen)
+		subnetCIDR := fmt.Sprintf("%s/%d", maskedIP.String(), prefixlen)
 		warnings = append(warnings,
-			fmt.Sprintf("%s: CIDR value %q is ambiguous in this context (should be %q or %q?)", fldPath, value, ipnet.String(), singleIPCIDR),
+			fmt.Sprintf("%s: CIDR value %q is ambiguous in this context (should be %q or %q?)", fldPath, value, subnetCIDR, singleIPCIDR),
 		)
 	}
 
 	prefix, _ := netip.ParsePrefix(value)
 	addr := prefix.Addr()
 	if !prefix.IsValid() || addr.Is4In6() {
-		// This catches 2 cases: leading 0s (if ParseCIDRSloppy() accepted it but
+		// This catches 2 cases: leading 0s (if ParseIPNet() accepted it but
 		// ParsePrefix() doesn't) or IPv4-mapped IPv6 (.Is4In6()). Either way,
 		// re-stringifying the net.IPNet value will give the preferred form.
 		warnings = append(warnings,
@@ -237,7 +241,7 @@ func GetWarningsForCIDR(fldPath *field.Path, value string) []string {
 		)
 	}
 
-	// If ParseCIDRSloppy() and ParsePrefix() both accept it then it's fully valid,
+	// If ParseIPNet() and ParsePrefix() both accept it then it's fully valid,
 	// though it may be non-canonical. But only check this if there are no other
 	// warnings, since either of the other warnings would also cause a round-trip
 	// failure.
@@ -256,21 +260,13 @@ func GetWarningsForCIDR(fldPath *field.Path, value string) []string {
 // "192.168.1.0/24").
 func IsValidInterfaceAddress(fldPath *field.Path, value string) field.ErrorList {
 	var allErrors field.ErrorList
-	ip, ipnet, err := netutils.ParseCIDRSloppy(value)
+	ipnet, err := netutils.ParseIPAsIPNet(value)
 	if err != nil {
 		allErrors = append(allErrors, field.Invalid(fldPath, value, "must be a valid address in CIDR form, (e.g. 10.9.8.7/24 or 2001:db8::1/64)"))
 		return allErrors
 	}
 
-	// The canonical form of `value` is not `ipnet.String()`, because `ipnet` doesn't
-	// include the bits after the prefix. We need to construct the canonical form
-	// ourselves from `ip` and `ipnet.Mask`.
-	maskSize, _ := ipnet.Mask.Size()
-	if netutils.IsIPv4(ip) && maskSize > net.IPv4len*8 {
-		// "::ffff:192.168.0.1/120" -> "192.168.0.1/24"
-		maskSize -= (net.IPv6len - net.IPv4len) * 8
-	}
-	canonical := fmt.Sprintf("%s/%d", ip.String(), maskSize)
+	canonical := ipnet.String()
 	if value != canonical {
 		allErrors = append(allErrors, field.Invalid(fldPath, value, fmt.Sprintf("must be in canonical form (%q)", canonical)))
 	}
