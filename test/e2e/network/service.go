@@ -3758,7 +3758,7 @@ var _ = common.SIGDescribe("Services", func() {
 		podname1 := "pod1"
 		ginkgo.By("creating pod " + podname1 + " in namespace " + ns)
 		createPodOrFail(ctx, f, ns, podname1, testLabels, containerPorts, "netexec", "--http-port", strconv.Itoa(containerPort), "--udp-port", strconv.Itoa(containerPort))
-		validateEndpointsPortsWithProtocolsOrFail(cs, ns, serviceName, fullPortsByPodName{podname1: containerPorts})
+		validateEndpointsPortsWithProtocolsOrFail(ctx, cs, ns, serviceName, fullPortsByPodName{podname1: containerPorts})
 
 		ginkgo.By("Checking if the Service forwards traffic to the TCP and UDP port")
 		execPod := e2epod.CreateExecPodOrFail(ctx, cs, ns, "execpod", nil)
@@ -3876,7 +3876,7 @@ var _ = common.SIGDescribe("Services", func() {
 		podname1 := "pod1"
 
 		createPodOrFail(ctx, f, ns, podname1, jig.Labels, containerPorts, "netexec", "--http-port", strconv.Itoa(containerPort), "--udp-port", strconv.Itoa(containerPort))
-		validateEndpointsPortsWithProtocolsOrFail(cs, ns, serviceName, fullPortsByPodName{podname1: containerPorts})
+		validateEndpointsPortsWithProtocolsOrFail(ctx, cs, ns, serviceName, fullPortsByPodName{podname1: containerPorts})
 
 		ginkgo.By("Checking if the Service forwards traffic to pods")
 		execPod := e2epod.CreateExecPodOrFail(ctx, cs, ns, "execpod", nil)
@@ -4558,6 +4558,25 @@ func checkServiceReachabilityFromExecPod(ctx context.Context, client clientset.I
 	}
 }
 
+// pollForEndpoints is a helper for the Endpoints/EndpointSlice validation helpers
+func pollForEndpoints(ctx context.Context, cs clientset.Interface, namespace, serviceName string, expectedEndpoints any, pollFunc wait.ConditionWithContextFunc) {
+	ginkgo.By(fmt.Sprintf("waiting up to %v for service %s in namespace %s to expose endpoints %v", framework.ServiceStartTimeout, serviceName, namespace, expectedEndpoints))
+	pollErr := wait.PollUntilContextTimeout(ctx, time.Second, framework.ServiceStartTimeout, true, pollFunc)
+	if pollErr == nil {
+		framework.Logf("successfully validated that service %s in namespace %s exposes endpoints %v",
+			serviceName, namespace, expectedEndpoints)
+	} else {
+		if pods, err := cs.CoreV1().Pods(metav1.NamespaceAll).List(ctx, metav1.ListOptions{}); err == nil {
+			for _, pod := range pods.Items {
+				framework.Logf("Pod %s\t%s\t%s\t%s", pod.Namespace, pod.Name, pod.Spec.NodeName, pod.DeletionTimestamp)
+			}
+		} else {
+			framework.Logf("Can't list pod debug info: %v", err)
+		}
+		framework.ExpectNoError(pollErr, "error waiting for service %s in namespace %s to expose endpoints %v", serviceName, namespace, expectedEndpoints)
+	}
+}
+
 func validatePorts(ep, expectedEndpoints portsByPodUID) error {
 	if len(ep) != len(expectedEndpoints) {
 		// should not happen because we check this condition before
@@ -4595,15 +4614,11 @@ func translatePodNameToUID(ctx context.Context, c clientset.Interface, ns string
 
 // validateEndpointsPortsOrFail validates that the given service exists and is served by the given expectedEndpoints.
 func validateEndpointsPortsOrFail(ctx context.Context, c clientset.Interface, namespace, serviceName string, expectedEndpoints portsByPodName) {
-	ginkgo.By(fmt.Sprintf("waiting up to %v for service %s in namespace %s to expose endpoints %v", framework.ServiceStartTimeout, serviceName, namespace, expectedEndpoints))
 	expectedPortsByPodUID, err := translatePodNameToUID(ctx, c, namespace, expectedEndpoints)
 	framework.ExpectNoError(err, "failed to translate pod name to UID, ns:%s, expectedEndpoints:%v", namespace, expectedEndpoints)
 
-	var (
-		pollErr error
-		i       = 0
-	)
-	if pollErr = wait.PollImmediate(time.Second, framework.ServiceStartTimeout, func() (bool, error) {
+	i := 0
+	pollForEndpoints(ctx, c, namespace, serviceName, expectedEndpoints, func(ctx context.Context) (bool, error) {
 		i++
 
 		ep, err := c.CoreV1().Endpoints(namespace).Get(ctx, serviceName, metav1.GetOptions{})
@@ -4637,19 +4652,9 @@ func validateEndpointsPortsOrFail(ctx context.Context, c clientset.Interface, na
 			}
 			return false, nil
 		}
-		framework.Logf("successfully validated that service %s in namespace %s exposes endpoints %v",
-			serviceName, namespace, expectedEndpoints)
+
 		return true, nil
-	}); pollErr != nil {
-		if pods, err := c.CoreV1().Pods(metav1.NamespaceAll).List(ctx, metav1.ListOptions{}); err == nil {
-			for _, pod := range pods.Items {
-				framework.Logf("Pod %s\t%s\t%s\t%s", pod.Namespace, pod.Name, pod.Spec.NodeName, pod.DeletionTimestamp)
-			}
-		} else {
-			framework.Logf("Can't list pod debug info: %v", err)
-		}
-	}
-	framework.ExpectNoError(pollErr, "error waithing for service %s in namespace %s to expose endpoints %v: %v", serviceName, namespace, expectedEndpoints)
+	})
 }
 
 func restartApiserver(ctx context.Context, namespace string, cs clientset.Interface) error {
@@ -4675,19 +4680,15 @@ func restartComponent(ctx context.Context, cs clientset.Interface, cName, ns str
 }
 
 // validateEndpointsPortsWithProtocolsOrFail validates that the given service exists and is served by the given expectedEndpoints.
-func validateEndpointsPortsWithProtocolsOrFail(c clientset.Interface, namespace, serviceName string, expectedEndpoints fullPortsByPodName) {
-	ginkgo.By(fmt.Sprintf("waiting up to %v for service %s in namespace %s to expose endpoints %v", framework.ServiceStartTimeout, serviceName, namespace, expectedEndpoints))
+func validateEndpointsPortsWithProtocolsOrFail(ctx context.Context, c clientset.Interface, namespace, serviceName string, expectedEndpoints fullPortsByPodName) {
 	expectedPortsByPodUID, err := translatePortsByPodNameToPortsByPodUID(c, namespace, expectedEndpoints)
 	framework.ExpectNoError(err, "failed to translate pod name to UID, ns:%s, expectedEndpoints:%v", namespace, expectedEndpoints)
 
-	var (
-		pollErr error
-		i       = 0
-	)
-	if pollErr = wait.PollImmediate(time.Second, framework.ServiceStartTimeout, func() (bool, error) {
+	i := 0
+	pollForEndpoints(ctx, c, namespace, serviceName, expectedEndpoints, func(ctx context.Context) (bool, error) {
 		i++
 
-		ep, err := c.CoreV1().Endpoints(namespace).Get(context.TODO(), serviceName, metav1.GetOptions{})
+		ep, err := c.CoreV1().Endpoints(namespace).Get(ctx, serviceName, metav1.GetOptions{})
 		if err != nil {
 			framework.Logf("Failed go get Endpoints object: %v", err)
 			// Retry the error
@@ -4705,7 +4706,7 @@ func validateEndpointsPortsWithProtocolsOrFail(c clientset.Interface, namespace,
 		opts := metav1.ListOptions{
 			LabelSelector: "kubernetes.io/service-name=" + serviceName,
 		}
-		es, err := c.DiscoveryV1().EndpointSlices(namespace).List(context.TODO(), opts)
+		es, err := c.DiscoveryV1().EndpointSlices(namespace).List(ctx, opts)
 		if err != nil {
 			framework.Logf("Failed go list EndpointSlice objects: %v", err)
 			// Retry the error
@@ -4718,19 +4719,9 @@ func validateEndpointsPortsWithProtocolsOrFail(c clientset.Interface, namespace,
 			}
 			return false, nil
 		}
-		framework.Logf("successfully validated that service %s in namespace %s exposes endpoints %v",
-			serviceName, namespace, expectedEndpoints)
+
 		return true, nil
-	}); pollErr != nil {
-		if pods, err := c.CoreV1().Pods(metav1.NamespaceAll).List(context.TODO(), metav1.ListOptions{}); err == nil {
-			for _, pod := range pods.Items {
-				framework.Logf("Pod %s\t%s\t%s\t%s", pod.Namespace, pod.Name, pod.Spec.NodeName, pod.DeletionTimestamp)
-			}
-		} else {
-			framework.Logf("Can't list pod debug info: %v", err)
-		}
-	}
-	framework.ExpectNoError(pollErr, "error waithing for service %s in namespace %s to expose endpoints %v: %v", serviceName, namespace, expectedEndpoints)
+	})
 }
 
 func translatePortsByPodNameToPortsByPodUID(c clientset.Interface, ns string, expectedEndpoints fullPortsByPodName) (fullPortsByPodUID, error) {
