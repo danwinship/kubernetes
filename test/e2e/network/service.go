@@ -746,12 +746,25 @@ var _ = common.SIGDescribe("Services", func() {
 	})
 
 	/*
-		Release: v1.9
-		Testname: Service, endpoints
-		Description: Create a service with a endpoint without any Pods, the service MUST run and show empty endpoints. Add a pod to the service and the service MUST validate to show all the endpoints for the ports exposed by the Pod. Add another Pod then the list of all Ports exposed by both the Pods MUST be valid and have corresponding service endpoint. Once the second Pod is deleted then set of endpoint MUST be validated to show only ports from the first container that are exposed. Once both pods are deleted the endpoints from the service MUST be empty.
+		Release: v1.9, v1.21, v1.34
+		Testname: Service, EndpointSlice
+		Description: Create a service without any Pods. The service MUST be
+		assigned a clusterIP. There MUST NOT be EndpointSlices for the
+		service containing endpoints.
+	        Add a pod to the service. There MUST be EndpointSlices for the service
+		containing only an endpoint for that pod and its port. It MUST be possible
+		to connect to the service via the clusterIP.
+	        Add another pod. There MUST be EndpointSlices for the service containing
+		endpoints for both pods. It MUST be possible to connect to the service via
+		the clusterIP.
+	        Delete the first pod. There MUST be EndpointSlices containing only an
+		endpoint for the second pod. It MUST still be possible to connect to the
+		service via the clusterIP.
+	        Delete the second pod. There MUST NOT be EndpointSlices for the
+		service containing endpoints.
 	*/
 	framework.ConformanceIt("should serve a basic endpoint from pods", func(ctx context.Context) {
-		serviceName := "endpoint-test2"
+		serviceName := "endpointslice-test"
 		ns := f.Namespace.Name
 		jig := e2eservice.NewTestJig(cs, ns, serviceName)
 
@@ -759,14 +772,13 @@ var _ = common.SIGDescribe("Services", func() {
 		svc, err := jig.CreateTCPServiceWithPort(ctx, nil, 80)
 		framework.ExpectNoError(err)
 
-		validateEndpointsPortsOrFail(ctx, cs, ns, serviceName, portsByPodName{})
 		validateEndpointSlicePortsOrFail(ctx, cs, ns, serviceName, portsByPodName{})
 
 		name1 := "pod1"
 		name2 := "pod2"
 
+		ginkgo.By("Creating pod1 and validating that it is added to the EndpointSlice")
 		createPodOrFail(ctx, f, ns, name1, jig.Labels, []v1.ContainerPort{{ContainerPort: 80}}, "netexec", "--http-port", "80")
-		validateEndpointsPortsOrFail(ctx, cs, ns, serviceName, portsByPodName{name1: {80}})
 		validateEndpointSlicePortsOrFail(ctx, cs, ns, serviceName, portsByPodName{name1: {80}})
 
 		ginkgo.By("Checking if the Service forwards traffic to pod1")
@@ -774,35 +786,50 @@ var _ = common.SIGDescribe("Services", func() {
 		err = jig.CheckServiceReachability(ctx, svc, execPod)
 		framework.ExpectNoError(err)
 
+		ginkgo.By("Creating pod2 and validating that it is added to the EndpointSlice")
 		createPodOrFail(ctx, f, ns, name2, jig.Labels, []v1.ContainerPort{{ContainerPort: 80}}, "netexec", "--http-port", "80")
-		validateEndpointsPortsOrFail(ctx, cs, ns, serviceName, portsByPodName{name1: {80}, name2: {80}})
 		validateEndpointSlicePortsOrFail(ctx, cs, ns, serviceName, portsByPodName{name1: {80}, name2: {80}})
 
 		ginkgo.By("Checking if the Service forwards traffic to pod1 and pod2")
+		// (FWIW, this doesn't actually check that traffic is being forwarded to
+		// *both* pods. But that functionality is covered by other tests.)
 		err = jig.CheckServiceReachability(ctx, svc, execPod)
 		framework.ExpectNoError(err)
 
+		ginkgo.By("Deleting pod1 and validating that it is removed from the EndpointSlice")
 		e2epod.DeletePodOrFail(ctx, cs, ns, name1)
-		validateEndpointsPortsOrFail(ctx, cs, ns, serviceName, portsByPodName{name2: {80}})
 		validateEndpointSlicePortsOrFail(ctx, cs, ns, serviceName, portsByPodName{name2: {80}})
 
 		ginkgo.By("Checking if the Service forwards traffic to pod2")
 		err = jig.CheckServiceReachability(ctx, svc, execPod)
 		framework.ExpectNoError(err)
 
+		ginkgo.By("Deleting pod2 and validating that it is removed from the EndpointSlice")
 		e2epod.DeletePodOrFail(ctx, cs, ns, name2)
-		validateEndpointsPortsOrFail(ctx, cs, ns, serviceName, portsByPodName{})
 		validateEndpointSlicePortsOrFail(ctx, cs, ns, serviceName, portsByPodName{})
 	})
 
 	/*
-		Release: v1.9
-		Testname: Service, endpoints with multiple ports
-		Description: Create a service with two ports but no Pods are added to the service yet.  The service MUST run and show empty set of endpoints. Add a Pod to the first port, service MUST list one endpoint for the Pod on that port. Add another Pod to the second port, service MUST list both the endpoints. Delete the first Pod and the service MUST list only the endpoint to the second Pod. Delete the second Pod and the service must now have empty set of endpoints.
+		Release: v1.9, v1.21, v1.34
+		Testname: Service, EndpointSlice with multiple ports
+		Description: Create a service with two ports but no Pods. The service MUST
+		be assigned a clusterIP. There MUST NOT be EndpointSlices for the service
+		containing endpoints.
+	        Add a pod to the service that serves only the first port. There MUST be
+		EndpointSlices for the service containing only an endpoint for that pod
+		and its port.
+	        Add a second pod serving only the second port. There MUST be EndpointSlices
+		for the service containing endpoints for both pods. It MUST be possible to
+		reach each pod via the clusterIP and the correct port.
+	        Delete the first pod. There MUST be an EndpointSlices containing only an
+		endpoint for the second pod.
+	        Delete the second pod; There MUST NOT be EndpointSlices for the service
+		containing endpoints.
+	        (The test does not check how many EndpointSlices exist, only that the set
+		of all EndpointSlices for the Service contains the right endpoints.)
 	*/
 	framework.ConformanceIt("should serve multiport endpoints from pods", func(ctx context.Context) {
-		// repacking functionality is intentionally not tested here - it's better to test it in an integration test.
-		serviceName := "multi-endpoint-test"
+		serviceName := "multi-endpointslice-test"
 		ns := f.Namespace.Name
 		jig := e2eservice.NewTestJig(cs, ns, serviceName)
 
@@ -828,7 +855,6 @@ var _ = common.SIGDescribe("Services", func() {
 
 		port1 := 100
 		port2 := 101
-		validateEndpointsPortsOrFail(ctx, cs, ns, serviceName, portsByPodName{})
 		validateEndpointSlicePortsOrFail(ctx, cs, ns, serviceName, portsByPodName{})
 
 		containerPorts1 := []v1.ContainerPort{
@@ -847,26 +873,104 @@ var _ = common.SIGDescribe("Services", func() {
 		podname1 := "pod1"
 		podname2 := "pod2"
 
+		ginkgo.By("Creating pod1 to serve port1, and validating that it is added to the EndpointSlice")
 		createPodOrFail(ctx, f, ns, podname1, jig.Labels, containerPorts1, "netexec", "--http-port", strconv.Itoa(port1))
-		validateEndpointsPortsOrFail(ctx, cs, ns, serviceName, portsByPodName{podname1: {port1}})
 		validateEndpointSlicePortsOrFail(ctx, cs, ns, serviceName, portsByPodName{podname1: {port1}})
 
+		ginkgo.By("Creating pod2 to serve port2, and validating that it is added to the EndpointSlice")
 		createPodOrFail(ctx, f, ns, podname2, jig.Labels, containerPorts2, "netexec", "--http-port", strconv.Itoa(port2))
-		validateEndpointsPortsOrFail(ctx, cs, ns, serviceName, portsByPodName{podname1: {port1}, podname2: {port2}})
 		validateEndpointSlicePortsOrFail(ctx, cs, ns, serviceName, portsByPodName{podname1: {port1}, podname2: {port2}})
 
 		ginkgo.By("Checking if the Service forwards traffic to pods")
 		execPod := e2epod.CreateExecPodOrFail(ctx, cs, ns, "execpod", nil)
+		// CheckServiceReachability will ensure that *all* of the service's ports
+		// are reachable.
 		err = jig.CheckServiceReachability(ctx, svc, execPod)
 		framework.ExpectNoError(err)
 
+		ginkgo.By("Deleting pod1 and validating that it is removed from the EndpointSlice")
 		e2epod.DeletePodOrFail(ctx, cs, ns, podname1)
-		validateEndpointsPortsOrFail(ctx, cs, ns, serviceName, portsByPodName{podname2: {port2}})
 		validateEndpointSlicePortsOrFail(ctx, cs, ns, serviceName, portsByPodName{podname2: {port2}})
 
+		ginkgo.By("Deleting pod2 and validating that it is removed from the EndpointSlice")
+		e2epod.DeletePodOrFail(ctx, cs, ns, podname2)
+		validateEndpointSlicePortsOrFail(ctx, cs, ns, serviceName, portsByPodName{})
+	})
+
+	/*
+		Release: v1.9, v1.34
+		Testname: Service, Endpoints with multiple ports
+		Description: Create a service with two ports but no Pods. The service MUST
+		be assigned a clusterIP. There MUST be an Endpoints containing no
+		endpoints.
+	        Add a pod to the service that serves only the first port. The Endpoints
+		MUST contain a subset with an endpoint for the first pod IP and port.
+	        Add a second pod serving only the second port. The Endpoints MUST contain
+	        a second subset with an endpoint for the second pod IP and port.
+	        Delete the first pod. The first Endpoints subset MUST be removed.
+	        Delete the second pod; The Endpoints MUST contain no endpoints.
+	*/
+	framework.ConformanceIt("should manage Endpoints for a service", func(ctx context.Context) {
+		// repacking functionality is intentionally not tested here - it's better to test it in an integration test.
+		serviceName := "multi-endpoint-test"
+		ns := f.Namespace.Name
+		jig := e2eservice.NewTestJig(cs, ns, serviceName)
+
+		svc1port := "svc1"
+		svc2port := "svc2"
+
+		ginkgo.By("creating service " + serviceName + " in namespace " + ns)
+		_, err := jig.CreateTCPService(ctx, func(service *v1.Service) {
+			service.Spec.Ports = []v1.ServicePort{
+				{
+					Name:       "portname1",
+					Port:       80,
+					TargetPort: intstr.FromString(svc1port),
+				},
+				{
+					Name:       "portname2",
+					Port:       81,
+					TargetPort: intstr.FromString(svc2port),
+				},
+			}
+		})
+		framework.ExpectNoError(err)
+
+		port1 := 100
+		port2 := 101
+		validateEndpointsPortsOrFail(ctx, cs, ns, serviceName, portsByPodName{})
+
+		containerPorts1 := []v1.ContainerPort{
+			{
+				Name:          svc1port,
+				ContainerPort: int32(port1),
+			},
+		}
+		containerPorts2 := []v1.ContainerPort{
+			{
+				Name:          svc2port,
+				ContainerPort: int32(port2),
+			},
+		}
+
+		podname1 := "pod1"
+		podname2 := "pod2"
+
+		ginkgo.By("Creating pod1 to serve port1, and validating that it is added to the Endpoints")
+		createPodOrFail(ctx, f, ns, podname1, jig.Labels, containerPorts1, "netexec", "--http-port", strconv.Itoa(port1))
+		validateEndpointsPortsOrFail(ctx, cs, ns, serviceName, portsByPodName{podname1: {port1}})
+
+		ginkgo.By("Creating pod2 to serve port2, and validating that it is added to the Endpoints")
+		createPodOrFail(ctx, f, ns, podname2, jig.Labels, containerPorts2, "netexec", "--http-port", strconv.Itoa(port2))
+		validateEndpointsPortsOrFail(ctx, cs, ns, serviceName, portsByPodName{podname1: {port1}, podname2: {port2}})
+
+		ginkgo.By("Deleting pod1 and validating that it is removed from the Endpoints")
+		e2epod.DeletePodOrFail(ctx, cs, ns, podname1)
+		validateEndpointsPortsOrFail(ctx, cs, ns, serviceName, portsByPodName{podname2: {port2}})
+
+		ginkgo.By("Deleting pod2 and validating that it is removed from the Endpoints")
 		e2epod.DeletePodOrFail(ctx, cs, ns, podname2)
 		validateEndpointsPortsOrFail(ctx, cs, ns, serviceName, portsByPodName{})
-		validateEndpointSlicePortsOrFail(ctx, cs, ns, serviceName, portsByPodName{})
 	})
 
 	ginkgo.It("should be updated after adding or deleting ports ", func(ctx context.Context) {
