@@ -3818,11 +3818,6 @@ var _ = common.SIGDescribe("Services", func() {
 		}).WithTimeout(30 * time.Second).WithPolling(5 * time.Second).ShouldNot(gomega.BeNil())
 	})
 
-	/*
-		Release: v1.26
-		Testname: Service, same ports with different protocols on a Load Balancer Service
-		Description: Create a LoadBalancer service with two ports that have the same value but use different protocols. Add a Pod that listens on both ports. The Pod must be reachable via the ClusterIP and both ports
-	*/
 	ginkgo.It("should serve endpoints on same port and different protocol for internal traffic on Type LoadBalancer ", func(ctx context.Context) {
 		serviceName := "multiprotocol-lb-test"
 		ns := f.Namespace.Name
