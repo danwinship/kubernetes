@@ -756,29 +756,16 @@ var _ = common.SIGDescribe("Services", func() {
 		jig := e2eservice.NewTestJig(cs, ns, serviceName)
 
 		ginkgo.By("creating service " + serviceName + " in namespace " + ns)
-		ginkgo.DeferCleanup(func(ctx context.Context) {
-			err := cs.CoreV1().Services(ns).Delete(ctx, serviceName, metav1.DeleteOptions{})
-			framework.ExpectNoError(err, "failed to delete service: %s in namespace: %s", serviceName, ns)
-		})
 		svc, err := jig.CreateTCPServiceWithPort(ctx, nil, 80)
 		framework.ExpectNoError(err)
 
 		validateEndpointsPortsOrFail(ctx, cs, ns, serviceName, portsByPodName{})
 		validateEndpointSlicePortsOrFail(ctx, cs, ns, serviceName, portsByPodName{})
 
-		names := map[string]bool{}
-		ginkgo.DeferCleanup(func(ctx context.Context) {
-			for name := range names {
-				err := cs.CoreV1().Pods(ns).Delete(ctx, name, metav1.DeleteOptions{})
-				framework.ExpectNoError(err, "failed to delete pod: %s in namespace: %s", name, ns)
-			}
-		})
-
 		name1 := "pod1"
 		name2 := "pod2"
 
 		createPodOrFail(ctx, f, ns, name1, jig.Labels, []v1.ContainerPort{{ContainerPort: 80}}, "netexec", "--http-port", "80")
-		names[name1] = true
 		validateEndpointsPortsOrFail(ctx, cs, ns, serviceName, portsByPodName{name1: {80}})
 		validateEndpointSlicePortsOrFail(ctx, cs, ns, serviceName, portsByPodName{name1: {80}})
 
@@ -788,7 +775,6 @@ var _ = common.SIGDescribe("Services", func() {
 		framework.ExpectNoError(err)
 
 		createPodOrFail(ctx, f, ns, name2, jig.Labels, []v1.ContainerPort{{ContainerPort: 80}}, "netexec", "--http-port", "80")
-		names[name2] = true
 		validateEndpointsPortsOrFail(ctx, cs, ns, serviceName, portsByPodName{name1: {80}, name2: {80}})
 		validateEndpointSlicePortsOrFail(ctx, cs, ns, serviceName, portsByPodName{name1: {80}, name2: {80}})
 
@@ -797,7 +783,6 @@ var _ = common.SIGDescribe("Services", func() {
 		framework.ExpectNoError(err)
 
 		e2epod.DeletePodOrFail(ctx, cs, ns, name1)
-		delete(names, name1)
 		validateEndpointsPortsOrFail(ctx, cs, ns, serviceName, portsByPodName{name2: {80}})
 		validateEndpointSlicePortsOrFail(ctx, cs, ns, serviceName, portsByPodName{name2: {80}})
 
@@ -806,7 +791,6 @@ var _ = common.SIGDescribe("Services", func() {
 		framework.ExpectNoError(err)
 
 		e2epod.DeletePodOrFail(ctx, cs, ns, name2)
-		delete(names, name2)
 		validateEndpointsPortsOrFail(ctx, cs, ns, serviceName, portsByPodName{})
 		validateEndpointSlicePortsOrFail(ctx, cs, ns, serviceName, portsByPodName{})
 	})
@@ -821,11 +805,6 @@ var _ = common.SIGDescribe("Services", func() {
 		serviceName := "multi-endpoint-test"
 		ns := f.Namespace.Name
 		jig := e2eservice.NewTestJig(cs, ns, serviceName)
-
-		ginkgo.DeferCleanup(func(ctx context.Context) {
-			err := cs.CoreV1().Services(ns).Delete(ctx, serviceName, metav1.DeleteOptions{})
-			framework.ExpectNoError(err, "failed to delete service: %s in namespace: %s", serviceName, ns)
-		})
 
 		svc1port := "svc1"
 		svc2port := "svc2"
@@ -852,14 +831,6 @@ var _ = common.SIGDescribe("Services", func() {
 		validateEndpointsPortsOrFail(ctx, cs, ns, serviceName, portsByPodName{})
 		validateEndpointSlicePortsOrFail(ctx, cs, ns, serviceName, portsByPodName{})
 
-		names := map[string]bool{}
-		ginkgo.DeferCleanup(func(ctx context.Context) {
-			for name := range names {
-				err := cs.CoreV1().Pods(ns).Delete(ctx, name, metav1.DeleteOptions{})
-				framework.ExpectNoError(err, "failed to delete pod: %s in namespace: %s", name, ns)
-			}
-		})
-
 		containerPorts1 := []v1.ContainerPort{
 			{
 				Name:          svc1port,
@@ -877,12 +848,10 @@ var _ = common.SIGDescribe("Services", func() {
 		podname2 := "pod2"
 
 		createPodOrFail(ctx, f, ns, podname1, jig.Labels, containerPorts1, "netexec", "--http-port", strconv.Itoa(port1))
-		names[podname1] = true
 		validateEndpointsPortsOrFail(ctx, cs, ns, serviceName, portsByPodName{podname1: {port1}})
 		validateEndpointSlicePortsOrFail(ctx, cs, ns, serviceName, portsByPodName{podname1: {port1}})
 
 		createPodOrFail(ctx, f, ns, podname2, jig.Labels, containerPorts2, "netexec", "--http-port", strconv.Itoa(port2))
-		names[podname2] = true
 		validateEndpointsPortsOrFail(ctx, cs, ns, serviceName, portsByPodName{podname1: {port1}, podname2: {port2}})
 		validateEndpointSlicePortsOrFail(ctx, cs, ns, serviceName, portsByPodName{podname1: {port1}, podname2: {port2}})
 
@@ -892,12 +861,10 @@ var _ = common.SIGDescribe("Services", func() {
 		framework.ExpectNoError(err)
 
 		e2epod.DeletePodOrFail(ctx, cs, ns, podname1)
-		delete(names, podname1)
 		validateEndpointsPortsOrFail(ctx, cs, ns, serviceName, portsByPodName{podname2: {port2}})
 		validateEndpointSlicePortsOrFail(ctx, cs, ns, serviceName, portsByPodName{podname2: {port2}})
 
 		e2epod.DeletePodOrFail(ctx, cs, ns, podname2)
-		delete(names, podname2)
 		validateEndpointsPortsOrFail(ctx, cs, ns, serviceName, portsByPodName{})
 		validateEndpointSlicePortsOrFail(ctx, cs, ns, serviceName, portsByPodName{})
 	})
