@@ -764,6 +764,7 @@ var _ = common.SIGDescribe("Services", func() {
 		framework.ExpectNoError(err)
 
 		validateEndpointsPortsOrFail(ctx, cs, ns, serviceName, portsByPodName{})
+		validateEndpointSlicePortsOrFail(ctx, cs, ns, serviceName, portsByPodName{})
 
 		names := map[string]bool{}
 		ginkgo.DeferCleanup(func(ctx context.Context) {
@@ -779,6 +780,7 @@ var _ = common.SIGDescribe("Services", func() {
 		createPodOrFail(ctx, f, ns, name1, jig.Labels, []v1.ContainerPort{{ContainerPort: 80}}, "netexec", "--http-port", "80")
 		names[name1] = true
 		validateEndpointsPortsOrFail(ctx, cs, ns, serviceName, portsByPodName{name1: {80}})
+		validateEndpointSlicePortsOrFail(ctx, cs, ns, serviceName, portsByPodName{name1: {80}})
 
 		ginkgo.By("Checking if the Service forwards traffic to pod1")
 		execPod := e2epod.CreateExecPodOrFail(ctx, cs, ns, "execpod", nil)
@@ -788,6 +790,7 @@ var _ = common.SIGDescribe("Services", func() {
 		createPodOrFail(ctx, f, ns, name2, jig.Labels, []v1.ContainerPort{{ContainerPort: 80}}, "netexec", "--http-port", "80")
 		names[name2] = true
 		validateEndpointsPortsOrFail(ctx, cs, ns, serviceName, portsByPodName{name1: {80}, name2: {80}})
+		validateEndpointSlicePortsOrFail(ctx, cs, ns, serviceName, portsByPodName{name1: {80}, name2: {80}})
 
 		ginkgo.By("Checking if the Service forwards traffic to pod1 and pod2")
 		err = jig.CheckServiceReachability(ctx, svc, execPod)
@@ -796,6 +799,7 @@ var _ = common.SIGDescribe("Services", func() {
 		e2epod.DeletePodOrFail(ctx, cs, ns, name1)
 		delete(names, name1)
 		validateEndpointsPortsOrFail(ctx, cs, ns, serviceName, portsByPodName{name2: {80}})
+		validateEndpointSlicePortsOrFail(ctx, cs, ns, serviceName, portsByPodName{name2: {80}})
 
 		ginkgo.By("Checking if the Service forwards traffic to pod2")
 		err = jig.CheckServiceReachability(ctx, svc, execPod)
@@ -804,6 +808,7 @@ var _ = common.SIGDescribe("Services", func() {
 		e2epod.DeletePodOrFail(ctx, cs, ns, name2)
 		delete(names, name2)
 		validateEndpointsPortsOrFail(ctx, cs, ns, serviceName, portsByPodName{})
+		validateEndpointSlicePortsOrFail(ctx, cs, ns, serviceName, portsByPodName{})
 	})
 
 	/*
@@ -845,6 +850,7 @@ var _ = common.SIGDescribe("Services", func() {
 		port1 := 100
 		port2 := 101
 		validateEndpointsPortsOrFail(ctx, cs, ns, serviceName, portsByPodName{})
+		validateEndpointSlicePortsOrFail(ctx, cs, ns, serviceName, portsByPodName{})
 
 		names := map[string]bool{}
 		ginkgo.DeferCleanup(func(ctx context.Context) {
@@ -873,10 +879,12 @@ var _ = common.SIGDescribe("Services", func() {
 		createPodOrFail(ctx, f, ns, podname1, jig.Labels, containerPorts1, "netexec", "--http-port", strconv.Itoa(port1))
 		names[podname1] = true
 		validateEndpointsPortsOrFail(ctx, cs, ns, serviceName, portsByPodName{podname1: {port1}})
+		validateEndpointSlicePortsOrFail(ctx, cs, ns, serviceName, portsByPodName{podname1: {port1}})
 
 		createPodOrFail(ctx, f, ns, podname2, jig.Labels, containerPorts2, "netexec", "--http-port", strconv.Itoa(port2))
 		names[podname2] = true
 		validateEndpointsPortsOrFail(ctx, cs, ns, serviceName, portsByPodName{podname1: {port1}, podname2: {port2}})
+		validateEndpointSlicePortsOrFail(ctx, cs, ns, serviceName, portsByPodName{podname1: {port1}, podname2: {port2}})
 
 		ginkgo.By("Checking if the Service forwards traffic to pods")
 		execPod := e2epod.CreateExecPodOrFail(ctx, cs, ns, "execpod", nil)
@@ -886,10 +894,12 @@ var _ = common.SIGDescribe("Services", func() {
 		e2epod.DeletePodOrFail(ctx, cs, ns, podname1)
 		delete(names, podname1)
 		validateEndpointsPortsOrFail(ctx, cs, ns, serviceName, portsByPodName{podname2: {port2}})
+		validateEndpointSlicePortsOrFail(ctx, cs, ns, serviceName, portsByPodName{podname2: {port2}})
 
 		e2epod.DeletePodOrFail(ctx, cs, ns, podname2)
 		delete(names, podname2)
 		validateEndpointsPortsOrFail(ctx, cs, ns, serviceName, portsByPodName{})
+		validateEndpointSlicePortsOrFail(ctx, cs, ns, serviceName, portsByPodName{})
 	})
 
 	ginkgo.It("should be updated after adding or deleting ports ", func(ctx context.Context) {
@@ -910,6 +920,7 @@ var _ = common.SIGDescribe("Services", func() {
 		})
 		framework.ExpectNoError(err)
 		validateEndpointsPortsOrFail(ctx, cs, ns, serviceName, portsByPodName{})
+		validateEndpointSlicePortsOrFail(ctx, cs, ns, serviceName, portsByPodName{})
 
 		podname1 := "pod1"
 		port1 := 100
@@ -921,6 +932,7 @@ var _ = common.SIGDescribe("Services", func() {
 		}
 		createPodOrFail(ctx, f, ns, podname1, jig.Labels, containerPorts1, "netexec", "--http-port", strconv.Itoa(port1))
 		validateEndpointsPortsOrFail(ctx, cs, ns, serviceName, portsByPodName{podname1: {port1}})
+		validateEndpointSlicePortsOrFail(ctx, cs, ns, serviceName, portsByPodName{podname1: {port1}})
 
 		ginkgo.By("Checking if the Service " + serviceName + " forwards traffic to " + podname1)
 		execPod := e2epod.CreateExecPodOrFail(ctx, cs, ns, "execpod", nil)
@@ -956,6 +968,7 @@ var _ = common.SIGDescribe("Services", func() {
 		}
 		createPodOrFail(ctx, f, ns, podname2, jig.Labels, containerPorts2, "netexec", "--http-port", strconv.Itoa(port2))
 		validateEndpointsPortsOrFail(ctx, cs, ns, serviceName, portsByPodName{podname1: {port1}, podname2: {port2}})
+		validateEndpointSlicePortsOrFail(ctx, cs, ns, serviceName, portsByPodName{podname1: {port1}, podname2: {port2}})
 
 		ginkgo.By("Checking if the Service forwards traffic to " + podname1 + " and " + podname2)
 		err = jig.CheckServiceReachability(ctx, svc, execPod)
@@ -975,6 +988,7 @@ var _ = common.SIGDescribe("Services", func() {
 
 		ginkgo.By("Checking if the Service forwards traffic to " + podname1 + " and not forwards to " + podname2)
 		validateEndpointsPortsOrFail(ctx, cs, ns, serviceName, portsByPodName{podname1: {port1}})
+		validateEndpointSlicePortsOrFail(ctx, cs, ns, serviceName, portsByPodName{podname1: {port1}})
 		err = jig.CheckServiceReachability(ctx, svc, execPod)
 		framework.ExpectNoError(err)
 	})
@@ -1024,7 +1038,7 @@ var _ = common.SIGDescribe("Services", func() {
 			framework.ExpectNoError(err, "failed to delete pod: %s on node", serverPodName)
 		})
 
-		validateEndpointsPortsOrFail(ctx, cs, ns, serviceName, portsByPodName{serverPodName: {servicePort}})
+		validateEndpointSlicePortsOrFail(ctx, cs, ns, serviceName, portsByPodName{serverPodName: {servicePort}})
 
 		ginkgo.By("Creating pause pod deployment")
 		deployment := createPausePodDeployment(ctx, cs, "pause-pod", ns, nodeCounts)
@@ -1079,7 +1093,7 @@ var _ = common.SIGDescribe("Services", func() {
 		framework.ExpectNoError(e2epod.WaitTimeoutForPodReadyInNamespace(ctx, f.ClientSet, pod.Name, f.Namespace.Name, framework.PodStartTimeout))
 
 		ginkgo.By("waiting for the service to expose an endpoint")
-		validateEndpointsPortsOrFail(ctx, cs, ns, serviceName, portsByPodName{serverPodName: {servicePort}})
+		validateEndpointSlicePortsOrFail(ctx, cs, ns, serviceName, portsByPodName{serverPodName: {servicePort}})
 
 		ginkgo.By("Checking if the pod can reach itself")
 		err = jig.CheckServiceReachability(ctx, svc, pod)
@@ -1981,7 +1995,7 @@ var _ = common.SIGDescribe("Services", func() {
 		if err != nil {
 			framework.Failf("error waiting for pod %s to be ready %v", webserverPod0.Name, err)
 		}
-		validateEndpointsPortsOrFail(ctx, cs, ns, serviceName, portsByPodName{webserverPod0.Name: {servicePort}})
+		validateEndpointSlicePortsOrFail(ctx, cs, ns, serviceName, portsByPodName{webserverPod0.Name: {servicePort}})
 
 		ginkgo.By("Creating 1 pause pods that will try to connect to the webservers")
 		pausePod1 := e2epod.NewAgnhostPod(ns, "pause-pod-1", nil, nil, nil)
@@ -2100,7 +2114,7 @@ var _ = common.SIGDescribe("Services", func() {
 		if err != nil {
 			framework.Failf("error waiting for pod %s to be ready %v", webserverPod0.Name, err)
 		}
-		validateEndpointsPortsOrFail(ctx, cs, ns, serviceName, portsByPodName{webserverPod0.Name: {servicePort}})
+		validateEndpointSlicePortsOrFail(ctx, cs, ns, serviceName, portsByPodName{webserverPod0.Name: {servicePort}})
 
 		ginkgo.By("Creating 1 pause pods that will try to connect to the webservers")
 		pausePod1 := e2epod.NewAgnhostPod(ns, "pause-pod-1", nil, nil, nil)
@@ -2523,7 +2537,7 @@ var _ = common.SIGDescribe("Services", func() {
 		framework.ExpectNoError(err)
 		framework.ExpectNoError(e2epod.WaitTimeoutForPodReadyInNamespace(ctx, f.ClientSet, webserverPod0.Name, f.Namespace.Name, framework.PodStartTimeout))
 
-		validateEndpointsPortsOrFail(ctx, cs, ns, serviceName, portsByPodName{webserverPod0.Name: {servicePort}})
+		validateEndpointSlicePortsOrFail(ctx, cs, ns, serviceName, portsByPodName{webserverPod0.Name: {servicePort}})
 
 		ginkgo.By("Creating 2 pause pods that will try to connect to the webservers")
 		pausePod0 := e2epod.NewAgnhostPod(ns, "pause-pod-0", nil, nil, nil)
@@ -2591,7 +2605,7 @@ var _ = common.SIGDescribe("Services", func() {
 		framework.ExpectNoError(err)
 		framework.ExpectNoError(e2epod.WaitTimeoutForPodReadyInNamespace(ctx, f.ClientSet, webserverPod0.Name, f.Namespace.Name, framework.PodStartTimeout))
 
-		validateEndpointsPortsOrFail(ctx, cs, ns, serviceName, portsByPodName{webserverPod0.Name: {servicePort}})
+		validateEndpointSlicePortsOrFail(ctx, cs, ns, serviceName, portsByPodName{webserverPod0.Name: {servicePort}})
 
 		ginkgo.By("Creating 2 pause pods that will try to connect to the webservers")
 		pausePod0 := e2epod.NewAgnhostPod(ns, "pause-pod-0", nil, nil, nil)
@@ -2665,7 +2679,7 @@ var _ = common.SIGDescribe("Services", func() {
 		framework.ExpectNoError(err)
 		framework.ExpectNoError(e2epod.WaitTimeoutForPodReadyInNamespace(ctx, f.ClientSet, webserverPod0.Name, f.Namespace.Name, framework.PodStartTimeout))
 
-		validateEndpointsPortsOrFail(ctx, cs, ns, serviceName, portsByPodName{webserverPod0.Name: {endpointPort}})
+		validateEndpointSlicePortsOrFail(ctx, cs, ns, serviceName, portsByPodName{webserverPod0.Name: {endpointPort}})
 
 		ginkgo.By("Creating 2 pause pods that will try to connect to the webserver")
 		pausePod0 := e2epod.NewAgnhostPod(ns, "pause-pod-0", nil, nil, nil)
@@ -2813,7 +2827,7 @@ var _ = common.SIGDescribe("Services", func() {
 		_, err = cs.CoreV1().Pods(ns).Create(ctx, webserverPod0, metav1.CreateOptions{})
 		framework.ExpectNoError(err)
 		framework.ExpectNoError(e2epod.WaitTimeoutForPodReadyInNamespace(ctx, f.ClientSet, webserverPod0.Name, f.Namespace.Name, framework.PodStartTimeout))
-		validateEndpointsPortsOrFail(ctx, cs, ns, serviceName, portsByPodName{webserverPod0.Name: {servicePort}})
+		validateEndpointSlicePortsOrFail(ctx, cs, ns, serviceName, portsByPodName{webserverPod0.Name: {servicePort}})
 
 		pausePod0 := e2epod.NewAgnhostPod(ns, "pause-pod-0", nil, nil, nil)
 		e2epod.SetNodeSelection(&pausePod0.Spec, e2epod.NodeSelection{Name: node0.Name})
@@ -2908,7 +2922,7 @@ var _ = common.SIGDescribe("Services", func() {
 		_, err = cs.CoreV1().Pods(ns).Create(ctx, webserverPod0, metav1.CreateOptions{})
 		framework.ExpectNoError(err)
 		framework.ExpectNoError(e2epod.WaitTimeoutForPodReadyInNamespace(ctx, f.ClientSet, webserverPod0.Name, f.Namespace.Name, framework.PodStartTimeout))
-		validateEndpointsPortsOrFail(ctx, cs, ns, serviceName, portsByPodName{webserverPod0.Name: {servicePort}})
+		validateEndpointSlicePortsOrFail(ctx, cs, ns, serviceName, portsByPodName{webserverPod0.Name: {servicePort}})
 
 		ginkgo.By("Creating 2 pause pods that will try to connect to the webservers")
 		pausePod0 := e2epod.NewAgnhostPod(ns, "pause-pod-0", nil, nil, nil)
@@ -2983,7 +2997,7 @@ var _ = common.SIGDescribe("Services", func() {
 		_, err = cs.CoreV1().Pods(ns).Create(ctx, webserverPod0, metav1.CreateOptions{})
 		framework.ExpectNoError(err)
 		framework.ExpectNoError(e2epod.WaitTimeoutForPodReadyInNamespace(ctx, f.ClientSet, webserverPod0.Name, f.Namespace.Name, framework.PodStartTimeout))
-		validateEndpointsPortsOrFail(ctx, cs, ns, serviceName, portsByPodName{webserverPod0.Name: {servicePort}})
+		validateEndpointSlicePortsOrFail(ctx, cs, ns, serviceName, portsByPodName{webserverPod0.Name: {servicePort}})
 
 		ginkgo.By("Creating 2 pause pods that will try to connect to the webservers")
 		pausePod0 := e2epod.NewAgnhostPod(ns, "pause-pod-0", nil, nil, nil)
@@ -3060,7 +3074,7 @@ var _ = common.SIGDescribe("Services", func() {
 		_, err = cs.CoreV1().Pods(ns).Create(ctx, webserverPod0, metav1.CreateOptions{})
 		framework.ExpectNoError(err)
 		framework.ExpectNoError(e2epod.WaitTimeoutForPodReadyInNamespace(ctx, f.ClientSet, webserverPod0.Name, f.Namespace.Name, framework.PodStartTimeout))
-		validateEndpointsPortsOrFail(ctx, cs, ns, serviceName, portsByPodName{webserverPod0.Name: {servicePort}})
+		validateEndpointSlicePortsOrFail(ctx, cs, ns, serviceName, portsByPodName{webserverPod0.Name: {servicePort}})
 
 		ginkgo.By("Creating 2 pause pods that will try to connect to the webservers")
 		pausePod0 := e2epod.NewAgnhostPod(ns, "pause-pod-0", nil, nil, nil)
@@ -3136,7 +3150,7 @@ var _ = common.SIGDescribe("Services", func() {
 		_, err = cs.CoreV1().Pods(ns).Create(ctx, webserverPod0, metav1.CreateOptions{})
 		framework.ExpectNoError(err)
 		framework.ExpectNoError(e2epod.WaitTimeoutForPodReadyInNamespace(ctx, f.ClientSet, webserverPod0.Name, f.Namespace.Name, framework.PodStartTimeout))
-		validateEndpointsPortsOrFail(ctx, cs, ns, serviceName, portsByPodName{webserverPod0.Name: {servicePort}})
+		validateEndpointSlicePortsOrFail(ctx, cs, ns, serviceName, portsByPodName{webserverPod0.Name: {servicePort}})
 
 		ginkgo.By("Creating 2 pause pods that will try to connect to the webservers")
 		pausePod0 := e2epod.NewAgnhostPod(ns, "pause-pod-0", nil, nil, nil)
@@ -3758,7 +3772,7 @@ var _ = common.SIGDescribe("Services", func() {
 		podname1 := "pod1"
 		ginkgo.By("creating pod " + podname1 + " in namespace " + ns)
 		createPodOrFail(ctx, f, ns, podname1, testLabels, containerPorts, "netexec", "--http-port", strconv.Itoa(containerPort), "--udp-port", strconv.Itoa(containerPort))
-		validateEndpointsPortsWithProtocolsOrFail(ctx, cs, ns, serviceName, fullPortsByPodName{podname1: containerPorts})
+		validateEndpointSlicePortsWithProtocolsOrFail(ctx, cs, ns, serviceName, fullPortsByPodName{podname1: containerPorts})
 
 		ginkgo.By("Checking if the Service forwards traffic to the TCP and UDP port")
 		execPod := e2epod.CreateExecPodOrFail(ctx, cs, ns, "execpod", nil)
@@ -3876,7 +3890,7 @@ var _ = common.SIGDescribe("Services", func() {
 		podname1 := "pod1"
 
 		createPodOrFail(ctx, f, ns, podname1, jig.Labels, containerPorts, "netexec", "--http-port", strconv.Itoa(containerPort), "--udp-port", strconv.Itoa(containerPort))
-		validateEndpointsPortsWithProtocolsOrFail(ctx, cs, ns, serviceName, fullPortsByPodName{podname1: containerPorts})
+		validateEndpointSlicePortsWithProtocolsOrFail(ctx, cs, ns, serviceName, fullPortsByPodName{podname1: containerPorts})
 
 		ginkgo.By("Checking if the Service forwards traffic to pods")
 		execPod := e2epod.CreateExecPodOrFail(ctx, cs, ns, "execpod", nil)
@@ -3909,7 +3923,7 @@ var _ = common.SIGDescribe("Services", func() {
 		framework.ExpectNoError(err, fmt.Sprintf("error while waiting for service:%s err: %v", serviceName, err))
 
 		ginkgo.By("validating endpoints do not exist yet")
-		validateEndpointsPortsOrFail(ctx, cs, ns, serviceName, portsByPodName{})
+		validateEndpointSlicePortsOrFail(ctx, cs, ns, serviceName, portsByPodName{})
 
 		ginkgo.By("creating a pod for the service")
 		names := map[string]bool{}
@@ -3926,13 +3940,13 @@ var _ = common.SIGDescribe("Services", func() {
 		})
 
 		ginkgo.By("validating endpoints exists")
-		validateEndpointsPortsOrFail(ctx, cs, ns, serviceName, portsByPodName{name1: {5060}})
+		validateEndpointSlicePortsOrFail(ctx, cs, ns, serviceName, portsByPodName{name1: {5060}})
 
 		ginkgo.By("deleting the pod")
 		e2epod.DeletePodOrFail(ctx, cs, ns, name1)
 		delete(names, name1)
 		ginkgo.By("validating endpoints do not exist anymore")
-		validateEndpointsPortsOrFail(ctx, cs, ns, serviceName, portsByPodName{})
+		validateEndpointSlicePortsOrFail(ctx, cs, ns, serviceName, portsByPodName{})
 
 		ginkgo.By("validating sctp module is still not loaded")
 		sctpLoadedAtEnd := CheckSCTPModuleLoadedOnNodes(ctx, f, nodes)
@@ -4559,8 +4573,8 @@ func checkServiceReachabilityFromExecPod(ctx context.Context, client clientset.I
 }
 
 // pollForEndpoints is a helper for the Endpoints/EndpointSlice validation helpers
-func pollForEndpoints(ctx context.Context, cs clientset.Interface, namespace, serviceName string, expectedEndpoints any, pollFunc wait.ConditionWithContextFunc) {
-	ginkgo.By(fmt.Sprintf("waiting up to %v for service %s in namespace %s to expose endpoints %v", framework.ServiceStartTimeout, serviceName, namespace, expectedEndpoints))
+func pollForEndpoints(ctx context.Context, cs clientset.Interface, namespace, serviceName string, expectedEndpoints any, objType string, pollFunc wait.ConditionWithContextFunc) {
+	ginkgo.By(fmt.Sprintf("waiting up to %v for service %s in namespace %s to expose endpoints %v according to %s", framework.ServiceStartTimeout, serviceName, namespace, expectedEndpoints, objType))
 	pollErr := wait.PollUntilContextTimeout(ctx, time.Second, framework.ServiceStartTimeout, true, pollFunc)
 	if pollErr == nil {
 		framework.Logf("successfully validated that service %s in namespace %s exposes endpoints %v",
@@ -4612,13 +4626,14 @@ func translatePodNameToUID(ctx context.Context, c clientset.Interface, ns string
 	return portsByUID, nil
 }
 
-// validateEndpointsPortsOrFail validates that the given service exists and is served by the given expectedEndpoints.
+// validateEndpointsPortsOrFail validates that the given service exists and has an Endpoints
+// object with the given expectedEndpoints. See also validateEndpointSlicePortsOrFail.
 func validateEndpointsPortsOrFail(ctx context.Context, c clientset.Interface, namespace, serviceName string, expectedEndpoints portsByPodName) {
 	expectedPortsByPodUID, err := translatePodNameToUID(ctx, c, namespace, expectedEndpoints)
 	framework.ExpectNoError(err, "failed to translate pod name to UID, ns:%s, expectedEndpoints:%v", namespace, expectedEndpoints)
 
 	i := 0
-	pollForEndpoints(ctx, c, namespace, serviceName, expectedEndpoints, func(ctx context.Context) (bool, error) {
+	pollForEndpoints(ctx, c, namespace, serviceName, expectedEndpoints, "Endpoints", func(ctx context.Context) (bool, error) {
 		i++
 
 		ep, err := c.CoreV1().Endpoints(namespace).Get(ctx, serviceName, metav1.GetOptions{})
@@ -4635,7 +4650,20 @@ func validateEndpointsPortsOrFail(ctx context.Context, c clientset.Interface, na
 			return false, nil
 		}
 
-		// Validate appropriate EndpointSlice objects were also create/updated/deleted.
+		return true, nil
+	})
+}
+
+// validateEndpointSlicePortsOrFail validates that the given service exists and has 0 or
+// more EndpointSlices containing the given expectedEndpoints.
+func validateEndpointSlicePortsOrFail(ctx context.Context, c clientset.Interface, namespace, serviceName string, expectedEndpoints portsByPodName) {
+	expectedPortsByPodUID, err := translatePodNameToUID(ctx, c, namespace, expectedEndpoints)
+	framework.ExpectNoError(err, "failed to translate pod name to UID, ns:%s, expectedEndpoints:%v", namespace, expectedEndpoints)
+
+	i := 0
+	pollForEndpoints(ctx, c, namespace, serviceName, expectedEndpoints, "EndpointSlice", func(ctx context.Context) (bool, error) {
+		i++
+
 		opts := metav1.ListOptions{
 			LabelSelector: "kubernetes.io/service-name=" + serviceName,
 		}
@@ -4645,14 +4673,13 @@ func validateEndpointsPortsOrFail(ctx context.Context, c clientset.Interface, na
 			// Retry the error
 			return false, nil
 		}
-		portsByUID = portsByPodUID(e2eendpointslice.GetContainerPortsByPodUID(es.Items))
+		portsByUID := portsByPodUID(e2eendpointslice.GetContainerPortsByPodUID(es.Items))
 		if err := validatePorts(portsByUID, expectedPortsByPodUID); err != nil {
 			if i%5 == 0 {
 				framework.Logf("Unexpected endpoint slices: found %v, expected %v, will retry", portsByUID, expectedEndpoints)
 			}
 			return false, nil
 		}
-
 		return true, nil
 	})
 }
@@ -4679,13 +4706,14 @@ func restartComponent(ctx context.Context, cs clientset.Interface, cName, ns str
 	return err
 }
 
-// validateEndpointsPortsWithProtocolsOrFail validates that the given service exists and is served by the given expectedEndpoints.
+// validateEndpointsPortsWithProtocolsOrFail validates that the given service exists and
+// has an Endpoints object with the given expectedEndpoints.
 func validateEndpointsPortsWithProtocolsOrFail(ctx context.Context, c clientset.Interface, namespace, serviceName string, expectedEndpoints fullPortsByPodName) {
 	expectedPortsByPodUID, err := translatePortsByPodNameToPortsByPodUID(c, namespace, expectedEndpoints)
 	framework.ExpectNoError(err, "failed to translate pod name to UID, ns:%s, expectedEndpoints:%v", namespace, expectedEndpoints)
 
 	i := 0
-	pollForEndpoints(ctx, c, namespace, serviceName, expectedEndpoints, func(ctx context.Context) (bool, error) {
+	pollForEndpoints(ctx, c, namespace, serviceName, expectedEndpoints, "Endpoints", func(ctx context.Context) (bool, error) {
 		i++
 
 		ep, err := c.CoreV1().Endpoints(namespace).Get(ctx, serviceName, metav1.GetOptions{})
@@ -4702,7 +4730,20 @@ func validateEndpointsPortsWithProtocolsOrFail(ctx context.Context, c clientset.
 			return false, nil
 		}
 
-		// Validate appropriate EndpointSlice objects were also create/updated/deleted.
+		return true, nil
+	})
+}
+
+// validateEndpointSlicePortsWithProtocolsOrFail validates that the given service exists
+// and has 0 or more EndpointSlices containing the given expectedEndpoints.
+func validateEndpointSlicePortsWithProtocolsOrFail(ctx context.Context, c clientset.Interface, namespace, serviceName string, expectedEndpoints fullPortsByPodName) {
+	expectedPortsByPodUID, err := translatePortsByPodNameToPortsByPodUID(c, namespace, expectedEndpoints)
+	framework.ExpectNoError(err, "failed to translate pod name to UID, ns:%s, expectedEndpoints:%v", namespace, expectedEndpoints)
+
+	i := 0
+	pollForEndpoints(ctx, c, namespace, serviceName, expectedEndpoints, "EndpointSlice", func(ctx context.Context) (bool, error) {
+		i++
+
 		opts := metav1.ListOptions{
 			LabelSelector: "kubernetes.io/service-name=" + serviceName,
 		}
@@ -4712,7 +4753,7 @@ func validateEndpointsPortsWithProtocolsOrFail(ctx context.Context, c clientset.
 			// Retry the error
 			return false, nil
 		}
-		portsByUID = fullPortsByPodUID(e2eendpointslice.GetFullContainerPortsByPodUID(es.Items))
+		portsByUID := fullPortsByPodUID(e2eendpointslice.GetFullContainerPortsByPodUID(es.Items))
 		if err := validatePortsAndProtocols(portsByUID, expectedPortsByPodUID); err != nil {
 			if i%5 == 0 {
 				framework.Logf("Unexpected endpoint slices: found %v, expected %v, will retry", portsByUID, expectedEndpoints)

@@ -792,9 +792,9 @@ var _ = common.SIGDescribe("LoadBalancers", feature.LoadBalancer, func() {
 		e2epod.SetNodeSelection(&serverPod1.Spec, nodeSelection)
 		e2epod.NewPodClient(f).CreateSync(ctx, serverPod1)
 
-		validateEndpointsPortsOrFail(ctx, cs, ns, serviceName, portsByPodName{podBackend1: {80}})
+		validateEndpointSlicePortsOrFail(ctx, cs, ns, serviceName, portsByPodName{podBackend1: {80}})
 
-		// Note that the fact that Endpoints object already exists, does NOT mean
+		// Note that the fact that EndpointSlice object already exists, does NOT mean
 		// that iptables (or whatever else is used) was already programmed.
 		// Additionally take into account that UDP conntract entries timeout is
 		// 30 seconds by default.
@@ -821,7 +821,7 @@ var _ = common.SIGDescribe("LoadBalancers", feature.LoadBalancer, func() {
 		framework.Logf("Cleaning up %s pod", podBackend1)
 		e2epod.NewPodClient(f).DeleteSync(ctx, podBackend1, metav1.DeleteOptions{}, f.Timeouts.PodDelete)
 
-		validateEndpointsPortsOrFail(ctx, cs, ns, serviceName, portsByPodName{podBackend2: {80}})
+		validateEndpointSlicePortsOrFail(ctx, cs, ns, serviceName, portsByPodName{podBackend2: {80}})
 
 		// Check that the second pod keeps receiving traffic
 		// UDP conntrack entries timeout is 30 sec by default
@@ -924,9 +924,9 @@ var _ = common.SIGDescribe("LoadBalancers", feature.LoadBalancer, func() {
 		e2epod.SetNodeSelection(&serverPod1.Spec, nodeSelection)
 		e2epod.NewPodClient(f).CreateSync(ctx, serverPod1)
 
-		validateEndpointsPortsOrFail(ctx, cs, ns, serviceName, portsByPodName{podBackend1: {80}})
+		validateEndpointSlicePortsOrFail(ctx, cs, ns, serviceName, portsByPodName{podBackend1: {80}})
 
-		// Note that the fact that Endpoints object already exists, does NOT mean
+		// Note that the fact that EndpointSlice object already exists, does NOT mean
 		// that iptables (or whatever else is used) was already programmed.
 		// Additionally take into account that UDP conntract entries timeout is
 		// 30 seconds by default.
@@ -953,7 +953,7 @@ var _ = common.SIGDescribe("LoadBalancers", feature.LoadBalancer, func() {
 		framework.Logf("Cleaning up %s pod", podBackend1)
 		e2epod.NewPodClient(f).DeleteSync(ctx, podBackend1, metav1.DeleteOptions{}, f.Timeouts.PodDelete)
 
-		validateEndpointsPortsOrFail(ctx, cs, ns, serviceName, portsByPodName{podBackend2: {80}})
+		validateEndpointSlicePortsOrFail(ctx, cs, ns, serviceName, portsByPodName{podBackend2: {80}})
 
 		// Check that the second pod keeps receiving traffic
 		// UDP conntrack entries timeout is 30 sec by default
