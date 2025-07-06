@@ -24,7 +24,6 @@ package app
 import (
 	"context"
 	"errors"
-	"fmt"
 	goruntime "runtime"
 	"time"
 
@@ -32,17 +31,12 @@ import (
 	"github.com/google/cadvisor/utils/sysfs"
 
 	v1 "k8s.io/api/core/v1"
-	utilsysctl "k8s.io/component-helpers/node/util/sysctl"
 	"k8s.io/klog/v2"
-	"k8s.io/kubernetes/pkg/proxy"
 	proxyconfigapi "k8s.io/kubernetes/pkg/proxy/apis/config"
 	"k8s.io/kubernetes/pkg/proxy/iptables"
 	"k8s.io/kubernetes/pkg/proxy/ipvs"
-	utilipset "k8s.io/kubernetes/pkg/proxy/ipvs/ipset"
-	utilipvs "k8s.io/kubernetes/pkg/proxy/ipvs/util"
 	"k8s.io/kubernetes/pkg/proxy/nftables"
 	proxyutil "k8s.io/kubernetes/pkg/proxy/util"
-	utiliptables "k8s.io/kubernetes/pkg/util/iptables"
 )
 
 // platformApplyDefaults is called after parsing command-line flags and/or reading the
@@ -69,158 +63,14 @@ func (s *ProxyServer) platformSetup(ctx context.Context) error {
 		return err
 	}
 
+	s.localDetectors = getLocalDetectors(ctx, s.PrimaryIPFamily, s.Config, s.podCIDRs)
+
 	return nil
 }
 
 // isIPTablesBased checks whether mode is based on iptables rather than nftables
 func isIPTablesBased(mode proxyconfigapi.ProxyMode) bool {
 	return mode == proxyconfigapi.ProxyModeIPTables || mode == proxyconfigapi.ProxyModeIPVS
-}
-
-// createProxier creates the Proxier
-func (s *ProxyServer) createProxier(ctx context.Context, config *proxyconfigapi.KubeProxyConfiguration, dualStack bool) (proxy.Proxier, error) {
-	logger := klog.FromContext(ctx)
-	var proxier proxy.Proxier
-	var err error
-
-	localDetectors := getLocalDetectors(logger, s.PrimaryIPFamily, config, s.podCIDRs)
-
-	if config.Mode == proxyconfigapi.ProxyModeIPTables {
-		ipts := utiliptables.NewBestEffort()
-
-		if dualStack {
-			// TODO this has side effects that should only happen when Run() is invoked.
-			proxier, err = iptables.NewDualStackProxier(
-				ctx,
-				ipts,
-				utilsysctl.New(),
-				config.SyncPeriod.Duration,
-				config.MinSyncPeriod.Duration,
-				config.Linux.MasqueradeAll,
-				*config.IPTables.LocalhostNodePorts,
-				int(*config.IPTables.MasqueradeBit),
-				localDetectors,
-				s.NodeName,
-				s.NodeIPs,
-				s.Recorder,
-				s.HealthzServer,
-				config.NodePortAddresses,
-			)
-		} else {
-			// Create a single-stack proxier if and only if the node does not support dual-stack (i.e, no iptables support).
-
-			// TODO this has side effects that should only happen when Run() is invoked.
-			proxier, err = iptables.NewProxier(
-				ctx,
-				s.PrimaryIPFamily,
-				ipts[s.PrimaryIPFamily],
-				utilsysctl.New(),
-				config.SyncPeriod.Duration,
-				config.MinSyncPeriod.Duration,
-				config.Linux.MasqueradeAll,
-				*config.IPTables.LocalhostNodePorts,
-				int(*config.IPTables.MasqueradeBit),
-				localDetectors[s.PrimaryIPFamily],
-				s.NodeName,
-				s.NodeIPs[s.PrimaryIPFamily],
-				s.Recorder,
-				s.HealthzServer,
-				config.NodePortAddresses,
-			)
-		}
-
-		if err != nil {
-			return nil, fmt.Errorf("unable to create proxier: %v", err)
-		}
-	} else if config.Mode == proxyconfigapi.ProxyModeIPVS {
-		ipsetInterface := utilipset.New()
-		ipvsInterface := utilipvs.New()
-		ipts := utiliptables.NewBestEffort()
-
-		if dualStack {
-			proxier, err = ipvs.NewDualStackProxier(
-				ctx,
-				ipts,
-				ipvsInterface,
-				ipsetInterface,
-				config.SyncPeriod.Duration,
-				config.MinSyncPeriod.Duration,
-				config.IPVS.ExcludeCIDRs,
-				config.Linux.MasqueradeAll,
-				int(*config.IPTables.MasqueradeBit),
-				localDetectors,
-				s.NodeName,
-				s.NodeIPs,
-				s.Recorder,
-				s.HealthzServer,
-				config.IPVS.Scheduler,
-				config.NodePortAddresses,
-			)
-		} else {
-			proxier, err = ipvs.NewProxier(
-				ctx,
-				s.PrimaryIPFamily,
-				ipts[s.PrimaryIPFamily],
-				ipvsInterface,
-				ipsetInterface,
-				config.SyncPeriod.Duration,
-				config.MinSyncPeriod.Duration,
-				config.IPVS.ExcludeCIDRs,
-				config.Linux.MasqueradeAll,
-				int(*config.IPTables.MasqueradeBit),
-				localDetectors[s.PrimaryIPFamily],
-				s.NodeName,
-				s.NodeIPs[s.PrimaryIPFamily],
-				s.Recorder,
-				s.HealthzServer,
-				config.IPVS.Scheduler,
-				config.NodePortAddresses,
-			)
-		}
-		if err != nil {
-			return nil, fmt.Errorf("unable to create proxier: %v", err)
-		}
-	} else if config.Mode == proxyconfigapi.ProxyModeNFTables {
-		if dualStack {
-			// TODO this has side effects that should only happen when Run() is invoked.
-			proxier, err = nftables.NewDualStackProxier(
-				ctx,
-				config.SyncPeriod.Duration,
-				config.MinSyncPeriod.Duration,
-				config.Linux.MasqueradeAll,
-				int(*config.NFTables.MasqueradeBit),
-				localDetectors,
-				s.NodeName,
-				s.NodeIPs,
-				s.Recorder,
-				s.HealthzServer,
-				config.NodePortAddresses,
-			)
-		} else {
-			// Create a single-stack proxier if and only if the node does not support dual-stack
-			// TODO this has side effects that should only happen when Run() is invoked.
-			proxier, err = nftables.NewProxier(
-				ctx,
-				s.PrimaryIPFamily,
-				config.SyncPeriod.Duration,
-				config.MinSyncPeriod.Duration,
-				config.Linux.MasqueradeAll,
-				int(*config.NFTables.MasqueradeBit),
-				localDetectors[s.PrimaryIPFamily],
-				s.NodeName,
-				s.NodeIPs[s.PrimaryIPFamily],
-				s.Recorder,
-				s.HealthzServer,
-				config.NodePortAddresses,
-			)
-		}
-
-		if err != nil {
-			return nil, fmt.Errorf("unable to create proxier: %v", err)
-		}
-	}
-
-	return proxier, nil
 }
 
 func (s *ProxyServer) setupConntrack(ctx context.Context, ct Conntracker) error {
@@ -311,7 +161,8 @@ func detectNumCPU() int {
 	return numCPU
 }
 
-func getLocalDetectors(logger klog.Logger, primaryIPFamily v1.IPFamily, config *proxyconfigapi.KubeProxyConfiguration, nodePodCIDRs []string) map[v1.IPFamily]proxyutil.LocalTrafficDetector {
+func getLocalDetectors(ctx context.Context, primaryIPFamily v1.IPFamily, config *proxyconfigapi.KubeProxyConfiguration, nodePodCIDRs []string) map[v1.IPFamily]proxyutil.LocalTrafficDetector {
+	logger := klog.FromContext(ctx)
 	localDetectors := map[v1.IPFamily]proxyutil.LocalTrafficDetector{
 		v1.IPv4Protocol: proxyutil.NewNoOpLocalDetector(),
 		v1.IPv6Protocol: proxyutil.NewNoOpLocalDetector(),

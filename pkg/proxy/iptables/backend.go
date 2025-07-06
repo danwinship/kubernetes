@@ -22,12 +22,15 @@ package iptables
 import (
 	"context"
 	"fmt"
+	"net"
 
 	v1 "k8s.io/api/core/v1"
+	"k8s.io/client-go/tools/events"
 	utilsysctl "k8s.io/component-helpers/node/util/sysctl"
 	"k8s.io/klog/v2"
 	"k8s.io/kubernetes/pkg/proxy"
 	proxyconfigapi "k8s.io/kubernetes/pkg/proxy/apis/config"
+	"k8s.io/kubernetes/pkg/proxy/healthcheck"
 	proxyutil "k8s.io/kubernetes/pkg/proxy/util"
 	utiliptables "k8s.io/kubernetes/pkg/util/iptables"
 	utilkernel "k8s.io/kubernetes/pkg/util/kernel"
@@ -114,4 +117,62 @@ func (backend *Backend) PrivilegedInit(ctx context.Context, initOnly bool) error
 	}
 
 	return nil
+}
+
+// NewProxier creates a new IPTables proxier. (Assumes Init() has been called.)
+func (backend *Backend) NewProxier(
+	ctx context.Context,
+	primaryIPFamily v1.IPFamily,
+	nodeName string,
+	nodeIPs map[v1.IPFamily]net.IP,
+	recorder events.EventRecorder,
+	healthzServer *healthcheck.ProxyHealthServer,
+	localDetectors map[v1.IPFamily]proxyutil.LocalTrafficDetector,
+) (proxy.Proxier, error) {
+	var proxier proxy.Proxier
+	var err error
+
+	if len(backend.ipts) == 2 {
+		// TODO this has side effects that should only happen when Run() is invoked.
+		proxier, err = NewDualStackProxier(
+			ctx,
+			backend.ipts,
+			utilsysctl.New(),
+			backend.config.SyncPeriod.Duration,
+			backend.config.MinSyncPeriod.Duration,
+			backend.config.Linux.MasqueradeAll,
+			*backend.config.IPTables.LocalhostNodePorts,
+			int(*backend.config.IPTables.MasqueradeBit),
+			localDetectors,
+			nodeName,
+			nodeIPs,
+			recorder,
+			healthzServer,
+			backend.config.NodePortAddresses,
+		)
+	} else {
+		// TODO this has side effects that should only happen when Run() is invoked.
+		proxier, err = NewProxier(
+			ctx,
+			primaryIPFamily,
+			backend.ipts[primaryIPFamily],
+			utilsysctl.New(),
+			backend.config.SyncPeriod.Duration,
+			backend.config.MinSyncPeriod.Duration,
+			backend.config.Linux.MasqueradeAll,
+			*backend.config.IPTables.LocalhostNodePorts,
+			int(*backend.config.IPTables.MasqueradeBit),
+			localDetectors[primaryIPFamily],
+			nodeName,
+			nodeIPs[primaryIPFamily],
+			recorder,
+			healthzServer,
+			backend.config.NodePortAddresses,
+		)
+	}
+	if err != nil {
+		return nil, fmt.Errorf("unable to create proxier: %v", err)
+	}
+
+	return proxier, nil
 }

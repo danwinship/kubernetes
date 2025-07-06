@@ -24,16 +24,16 @@ package app
 import (
 	"context"
 	"errors"
-	"fmt"
 	"net"
 
 	// Enable pprof HTTP handlers.
 	_ "net/http/pprof"
 
 	v1 "k8s.io/api/core/v1"
-	"k8s.io/kubernetes/pkg/proxy"
 	proxyconfigapi "k8s.io/kubernetes/pkg/proxy/apis/config"
-	"k8s.io/kubernetes/pkg/proxy/winkernel"
+
+	// Register the Windows proxy backend.
+	_ "k8s.io/kubernetes/pkg/proxy/winkernel"
 )
 
 // platformApplyDefaults is called after parsing command-line flags and/or reading the
@@ -55,42 +55,6 @@ func (s *ProxyServer) platformSetup(ctx context.Context) error {
 		s.NodeIPs[v1.IPv4Protocol] = net.IPv4zero
 	}
 	return nil
-}
-
-// createProxier creates the proxy.Proxier
-func (s *ProxyServer) createProxier(ctx context.Context, config *proxyconfigapi.KubeProxyConfiguration, dualStackMode bool) (proxy.Proxier, error) {
-	var proxier proxy.Proxier
-	var err error
-
-	if dualStackMode {
-		proxier, err = winkernel.NewDualStackProxier(
-			config.SyncPeriod.Duration,
-			config.MinSyncPeriod.Duration,
-			s.NodeName,
-			s.NodeIPs,
-			s.Recorder,
-			s.HealthzServer,
-			config.HealthzBindAddress,
-			config.Winkernel,
-		)
-	} else {
-		proxier, err = winkernel.NewProxier(
-			s.PrimaryIPFamily,
-			config.SyncPeriod.Duration,
-			config.MinSyncPeriod.Duration,
-			s.NodeName,
-			s.NodeIPs[s.PrimaryIPFamily],
-			s.Recorder,
-			s.HealthzServer,
-			config.HealthzBindAddress,
-			config.Winkernel,
-		)
-	}
-	if err != nil {
-		return nil, fmt.Errorf("unable to create proxier: %v", err)
-	}
-
-	return proxier, nil
 }
 
 // platformCleanup removes stale kube-proxy rules that can be safely removed.

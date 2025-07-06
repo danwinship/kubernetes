@@ -19,11 +19,15 @@ package proxy
 import (
 	"context"
 	"fmt"
+	"net"
 
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/tools/events"
 	proxyconfigapi "k8s.io/kubernetes/pkg/proxy/apis/config"
 	"k8s.io/kubernetes/pkg/proxy/config"
+	"k8s.io/kubernetes/pkg/proxy/healthcheck"
+	proxyutil "k8s.io/kubernetes/pkg/proxy/util"
 )
 
 // Backend represents an entire proxy backend (e.g., nftables, winkernel).
@@ -44,6 +48,10 @@ type Backend interface {
 	// must not return an error if the first call correctly initialized everything.
 	// (Assumes Init() has been called.)
 	PrivilegedInit(ctx context.Context, initOnly bool) error
+
+	// NewProxier creates the proxy.Proxier for a Backend. (Assumes Init() has been
+	// called.)
+	NewProxier(ctx context.Context, primaryIPFamily v1.IPFamily, nodeName string, nodeIPs map[v1.IPFamily]net.IP, recorder events.EventRecorder, healthzServer *healthcheck.ProxyHealthServer, localDetectors map[v1.IPFamily]proxyutil.LocalTrafficDetector) (Proxier, error)
 }
 
 // Backends gives the set of available backends

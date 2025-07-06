@@ -172,8 +172,10 @@ type ProxyServer struct {
 	NodeIPs         map[v1.IPFamily]net.IP
 	flagz           flagz.Reader
 
-	podCIDRs    []string // only used for LocalModeNodeCIDR
 	NodeManager *proxy.NodeManager
+	// Local-traffic detector: only used on Linux. podCIDRs only used for LocalModeNodeCIDR
+	localDetectors map[v1.IPFamily]proxyutil.LocalTrafficDetector
+	podCIDRs       []string
 
 	Proxier proxy.Proxier
 }
@@ -291,7 +293,7 @@ func newProxyServer(ctx context.Context, config *kubeproxyconfig.KubeProxyConfig
 		logger.Error(err, "Kube-proxy configuration may be incomplete or incorrect")
 	}
 
-	s.Proxier, err = s.createProxier(ctx, config, dualStackSupported)
+	s.Proxier, err = backend.NewProxier(ctx, s.PrimaryIPFamily, s.NodeName, s.NodeIPs, s.Recorder, s.HealthzServer, s.localDetectors)
 	if err != nil {
 		return nil, err
 	}

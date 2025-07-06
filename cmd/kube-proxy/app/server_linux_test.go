@@ -430,8 +430,8 @@ func Test_getLocalDetectors(t *testing.T) {
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			logger, _ := ktesting.NewTestContext(t)
-			r := getLocalDetectors(logger, c.primaryIPFamily, c.config, c.nodePodCIDRs)
+			_, ctx := ktesting.NewTestContext(t)
+			r := getLocalDetectors(ctx, c.primaryIPFamily, c.config, c.nodePodCIDRs)
 			if !reflect.DeepEqual(r, c.expected) {
 				t.Errorf("Unexpected detect-local implementation, expected: %q, got: %q", c.expected, r)
 			}

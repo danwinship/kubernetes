@@ -22,10 +22,14 @@ package winkernel
 import (
 	"context"
 	"fmt"
+	"net"
 
 	v1 "k8s.io/api/core/v1"
+	"k8s.io/client-go/tools/events"
 	"k8s.io/kubernetes/pkg/proxy"
 	proxyconfigapi "k8s.io/kubernetes/pkg/proxy/apis/config"
+	"k8s.io/kubernetes/pkg/proxy/healthcheck"
+	proxyutil "k8s.io/kubernetes/pkg/proxy/util"
 )
 
 // Backend implements the winkernel backend
@@ -79,4 +83,48 @@ func (backend *Backend) PrivilegedInit(ctx context.Context, initOnly bool) error
 	// This is still called as part of setup even when not using initOnly. In that
 	// case, there is nothing to do on Windows.
 	return nil
+}
+
+// NewProxier creates a new winkernel proxier. (Assumes Init() has been called.)
+func (backend *Backend) NewProxier(
+	ctx context.Context,
+	primaryIPFamily v1.IPFamily,
+	nodeName string,
+	nodeIPs map[v1.IPFamily]net.IP,
+	recorder events.EventRecorder,
+	healthzServer *healthcheck.ProxyHealthServer,
+	_ map[v1.IPFamily]proxyutil.LocalTrafficDetector,
+) (proxy.Proxier, error) {
+	var proxier proxy.Proxier
+	var err error
+
+	if backend.dualStackSupported {
+		proxier, err = NewDualStackProxier(
+			backend.config.SyncPeriod.Duration,
+			backend.config.MinSyncPeriod.Duration,
+			nodeName,
+			nodeIPs,
+			recorder,
+			healthzServer,
+			backend.config.HealthzBindAddress,
+			backend.config.Winkernel,
+		)
+	} else {
+		proxier, err = NewProxier(
+			primaryIPFamily,
+			backend.config.SyncPeriod.Duration,
+			backend.config.MinSyncPeriod.Duration,
+			nodeName,
+			nodeIPs[primaryIPFamily],
+			recorder,
+			healthzServer,
+			backend.config.HealthzBindAddress,
+			backend.config.Winkernel,
+		)
+	}
+	if err != nil {
+		return nil, fmt.Errorf("unable to create proxier: %v", err)
+	}
+
+	return proxier, nil
 }

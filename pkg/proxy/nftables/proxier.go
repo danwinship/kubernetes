@@ -101,6 +101,7 @@ const (
 // NewDualStackProxier creates a MetaProxier instance, with IPv4 and IPv6 proxies.
 func NewDualStackProxier(
 	ctx context.Context,
+	nfts map[v1.IPFamily]knftables.Interface,
 	syncPeriod time.Duration,
 	minSyncPeriod time.Duration,
 	masqueradeAll bool,
@@ -113,7 +114,7 @@ func NewDualStackProxier(
 	nodePortAddresses []string,
 ) (proxy.Proxier, error) {
 	// Create an ipv4 instance of the single-stack proxier
-	ipv4Proxier, err := NewProxier(ctx, v1.IPv4Protocol,
+	ipv4Proxier, err := NewProxier(ctx, v1.IPv4Protocol, nfts[v1.IPv4Protocol],
 		syncPeriod, minSyncPeriod, masqueradeAll, masqueradeBit,
 		localDetectors[v1.IPv4Protocol], nodeName, nodeIPs[v1.IPv4Protocol],
 		recorder, healthzServer, nodePortAddresses)
@@ -121,7 +122,7 @@ func NewDualStackProxier(
 		return nil, fmt.Errorf("unable to create ipv4 proxier: %v", err)
 	}
 
-	ipv6Proxier, err := NewProxier(ctx, v1.IPv6Protocol,
+	ipv6Proxier, err := NewProxier(ctx, v1.IPv6Protocol, nfts[v1.IPv6Protocol],
 		syncPeriod, minSyncPeriod, masqueradeAll, masqueradeBit,
 		localDetectors[v1.IPv6Protocol], nodeName, nodeIPs[v1.IPv6Protocol],
 		recorder, healthzServer, nodePortAddresses)
@@ -202,6 +203,7 @@ var _ proxy.Proxier = &Proxier{}
 // NewProxier returns a new single-stack NFTables proxier.
 func NewProxier(ctx context.Context,
 	ipFamily v1.IPFamily,
+	nft knftables.Interface,
 	syncPeriod time.Duration,
 	minSyncPeriod time.Duration,
 	masqueradeAll bool,
@@ -214,17 +216,6 @@ func NewProxier(ctx context.Context,
 	nodePortAddressStrings []string,
 ) (*Proxier, error) {
 	logger := klog.LoggerWithValues(klog.FromContext(ctx), "ipFamily", ipFamily)
-
-	var nft knftables.Interface
-	var err error
-	if ipFamily == v1.IPv4Protocol {
-		nft, err = knftables.New(knftables.IPv4Family, kubeProxyTable)
-	} else {
-		nft, err = knftables.New(knftables.IPv6Family, kubeProxyTable)
-	}
-	if err != nil {
-		return nil, err
-	}
 
 	// Generate the masquerade mark to use for SNAT rules.
 	masqueradeValue := 1 << uint(masqueradeBit)
