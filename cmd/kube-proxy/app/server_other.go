@@ -26,7 +26,6 @@ import (
 	"fmt"
 	"runtime"
 
-	"k8s.io/kubernetes/pkg/proxy"
 	proxyconfigapi "k8s.io/kubernetes/pkg/proxy/apis/config"
 )
 
@@ -42,11 +41,6 @@ var unsupportedError = fmt.Errorf(runtime.GOOS + "/" + runtime.GOARCH + "is unsu
 // platform-specific setup.
 func (s *ProxyServer) platformSetup(ctx context.Context) error {
 	return unsupportedError
-}
-
-// createProxier creates the proxy.Proxier
-func (s *ProxyServer) createProxier(ctx context.Context, config *proxyconfigapi.KubeProxyConfiguration, dualStackMode bool) (proxy.Proxier, error) {
-	return nil, unsupportedError
 }
 
 // platformCleanup removes stale kube-proxy rules that can be safely removed.
