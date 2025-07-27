@@ -173,6 +173,6 @@ func ipWithinSubnet(refIPNet, targetIP string) bool {
 // subnetWithinSubnet returns true if a subnet (targetNet) falls within the reference subnet (refIPNet)
 func subnetWithinSubnet(refIPNet, targetNet string) bool {
 	rNet, _ := netutils.ParseIPNet(refIPNet)
-	tNet, _, _ := netutils.ParseCIDRSloppy(targetNet)
-	return rNet.Contains(tNet)
+	tNet, _ := netutils.ParseIPNet(targetNet)
+	return rNet.Contains(tNet.IP)
 }
