@@ -139,7 +139,7 @@ func parseAddresses(addressesToParse []string) ([]listenAddress, error) {
 				ip := listenAddress{address: "::1", protocol: "tcp6", failureMode: "all"}
 				parsed[ip.address] = ip
 			}
-		} else if netutils.ParseIPSloppy(address).To4() != nil {
+		} else if netutils.IsIPv4(address) {
 			parsed[address] = listenAddress{address: address, protocol: "tcp4", failureMode: "any"}
 		} else if netutils.ParseIPSloppy(address) != nil {
 			parsed[address] = listenAddress{address: address, protocol: "tcp6", failureMode: "any"}

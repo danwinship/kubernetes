@@ -299,7 +299,7 @@ func getIPFromLoopbackInterface(forFamily AddressFamily, nw networkInterfacer) (
 
 // memberOf tells if the IP is of the desired family. Used for checking interface addresses.
 func memberOf(ip net.IP, family AddressFamily) bool {
-	if ip.To4() != nil {
+	if netutils.IsIPv4(ip) {
 		return family == familyIPv4
 	} else {
 		return family == familyIPv6

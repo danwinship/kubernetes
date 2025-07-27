@@ -119,7 +119,7 @@ func validatePublicIPServiceClusterIPRangeIPFamilies(extra Extra, generic generi
 		if err != nil {
 			return []error{fmt.Errorf("error determining service IP ranges: %w", err)}
 		}
-		if netutils.IsIPv4CIDR(&serviceIPRange) != netutils.IsIPv4(generic.AdvertiseAddress) {
+		if netutils.IPFamilyOfCIDR(&serviceIPRange) != netutils.IPFamilyOf(generic.AdvertiseAddress) {
 			return []error{fmt.Errorf("service IP family %q must match public address family %q", extra.PrimaryServiceClusterIPRange.String(), generic.AdvertiseAddress.String())}
 		}
 	}

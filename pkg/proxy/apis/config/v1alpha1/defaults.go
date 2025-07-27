@@ -143,7 +143,7 @@ func SetDefaults_KubeProxyConfiguration(obj *kubeproxyconfigv1alpha1.KubeProxyCo
 // based on the given bind address. IPv6 addresses are enclosed in square
 // brackets for appending port.
 func getDefaultAddresses(bindAddress string) (defaultHealthzAddress, defaultMetricsAddress string) {
-	if netutils.ParseIPSloppy(bindAddress).To4() != nil {
+	if netutils.IsIPv4(bindAddress) {
 		return "0.0.0.0", "127.0.0.1"
 	}
 	return "[::]", "[::1]"

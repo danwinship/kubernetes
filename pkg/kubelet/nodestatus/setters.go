@@ -71,8 +71,8 @@ func NodeAddress(nodeIPs []net.IP, // typically Kubelet.nodeIPs
 	if len(nodeIPs) > 0 {
 		nodeIP = nodeIPs[0]
 	}
-	preferIPv4 := nodeIP == nil || nodeIP.To4() != nil
-	isPreferredIPFamily := func(ip net.IP) bool { return (ip.To4() != nil) == preferIPv4 }
+	preferIPv4 := nodeIP == nil || netutils.IsIPv4(nodeIP)
+	isPreferredIPFamily := func(ip net.IP) bool { return netutils.IsIPv4(ip) == preferIPv4 }
 	nodeIPSpecified := nodeIP != nil && !nodeIP.IsUnspecified()
 
 	if len(nodeIPs) > 1 {

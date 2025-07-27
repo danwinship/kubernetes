@@ -110,7 +110,7 @@ func addressToEndpoint(address corev1.EndpointAddress, ready bool) (*discovery.E
 		return nil, nil
 	}
 	addressType := discovery.AddressTypeIPv4
-	if ip.To4() == nil {
+	if netutils.IsIPv6(ip) {
 		addressType = discovery.AddressTypeIPv6
 	}
 

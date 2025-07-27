@@ -173,7 +173,7 @@ func (h *FakeNetlinkHandle) SetLocalAddresses(dev string, ips ...string) error {
 
 func (h *FakeNetlinkHandle) isValidForSet(ipString string) bool {
 	ip := netutils.ParseIPSloppy(ipString)
-	if h.IsIPv6 != (ip.To4() == nil) {
+	if h.IsIPv6 != netutils.IsIPv6(ip) {
 		return false
 	}
 	if h.IsIPv6 && ip.IsLinkLocalUnicast() {

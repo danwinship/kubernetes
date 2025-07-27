@@ -87,7 +87,7 @@ func GetNodeHostIPs(node *v1.Node) ([]net.IP, error) {
 
 	nodeIPs := []net.IP{allIPs[0]}
 	for _, ip := range allIPs {
-		if netutils.IsIPv6(ip) != netutils.IsIPv6(nodeIPs[0]) {
+		if netutils.IPFamilyOf(ip) != netutils.IPFamilyOf(nodeIPs[0]) {
 			nodeIPs = append(nodeIPs, ip)
 			break
 		}

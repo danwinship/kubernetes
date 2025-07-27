@@ -50,7 +50,7 @@ func parseNodeIP(nodeIP string, allowDual, sloppy bool) ([]net.IP, []string, err
 		}
 	}
 
-	if len(nodeIPs) > 2 || (len(nodeIPs) == 2 && netutils.IsIPv6(nodeIPs[0]) == netutils.IsIPv6(nodeIPs[1])) {
+	if len(nodeIPs) > 2 || (len(nodeIPs) == 2 && netutils.IPFamilyOf(nodeIPs[0]) == netutils.IPFamilyOf(nodeIPs[1])) {
 		return nil, invalidIPs, fmt.Errorf("must contain either a single IP or a dual-stack pair of IPs")
 	} else if len(nodeIPs) == 2 && !allowDual {
 		return nil, invalidIPs, fmt.Errorf("dual-stack not supported in this configuration")

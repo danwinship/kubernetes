@@ -69,7 +69,7 @@ var _ = common.SIGDescribe(feature.IPv6DualStack, func() {
 
 			gomega.Expect(internalIPs).To(gomega.HaveLen(2))
 			// assert 2 ips belong to different families
-			if netutils.IsIPv4(internalIPs[0]) == netutils.IsIPv4(internalIPs[1]) {
+			if netutils.IPFamilyOf(internalIPs[0]) == netutils.IPFamilyOf(internalIPs[1]) {
 				framework.Failf("both internalIPs %s and %s belong to the same families", internalIPs[0], internalIPs[1])
 			}
 		}
@@ -104,7 +104,7 @@ var _ = common.SIGDescribe(feature.IPv6DualStack, func() {
 		// validate first ip in PodIPs is same as PodIP
 		gomega.Expect(p.Status.PodIP).To(gomega.Equal(p.Status.PodIPs[0].IP))
 		// assert 2 pod ips belong to different families
-		if netutils.IsIPv4(p.Status.PodIPs[0].IP) == netutils.IsIPv4(p.Status.PodIPs[1].IP) {
+		if netutils.IPFamilyOf(p.Status.PodIPs[0].IP) == netutils.IPFamilyOf(p.Status.PodIPs[1].IP) {
 			framework.Failf("both internalIPs %s and %s belong to the same families", p.Status.PodIPs[0].IP, p.Status.PodIPs[1].IP)
 		}
 
@@ -142,7 +142,7 @@ var _ = common.SIGDescribe(feature.IPv6DualStack, func() {
 		// validate first ip in hostIPs is same as HostIP
 		gomega.Expect(p.Status.HostIP).To(gomega.Equal(p.Status.HostIPs[0].IP))
 		// assert 2 host ips belong to different families
-		if netutils.IsIPv4(p.Status.HostIPs[0].IP) == netutils.IsIPv4(p.Status.HostIPs[1].IP) {
+		if netutils.IPFamilyOf(p.Status.HostIPs[0].IP) == netutils.IPFamilyOf(p.Status.HostIPs[1].IP) {
 			framework.Failf("both internalIPs %s and %s belong to the same families", p.Status.HostIPs[0], p.Status.HostIPs[1])
 		}
 
@@ -773,7 +773,7 @@ func assertNetworkConnectivity(ctx context.Context, f *framework.Framework, serv
 		if pod.Status.PodIPs == nil || len(pod.Status.PodIPs) != 2 {
 			framework.Failf("PodIPs list not expected value, got %v", pod.Status.PodIPs)
 		}
-		if netutils.IsIPv4(pod.Status.PodIPs[0].IP) == netutils.IsIPv4(pod.Status.PodIPs[1].IP) {
+		if netutils.IPFamilyOf(pod.Status.PodIPs[0].IP) == netutils.IPFamilyOf(pod.Status.PodIPs[1].IP) {
 			framework.Failf("PodIPs should belong to different families, got %v", pod.Status.PodIPs)
 		}
 		serverIPs = append(serverIPs, pod.Status.PodIPs[0].IP, pod.Status.PodIPs[1].IP)

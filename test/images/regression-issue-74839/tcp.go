@@ -23,6 +23,8 @@ import (
 	"encoding/binary"
 	"log"
 	"net"
+
+	netutils "k8s.io/utils/net/v2"
 )
 
 const (
@@ -145,7 +147,7 @@ func checksumTCP(src, dest net.IP, tcpHeader, data []byte) uint16 {
 	chk := &tcpChecksummer{}
 
 	// Encode pseudoheader.
-	if src.To4() != nil {
+	if netutils.IsIPv4(src) {
 		// IPv4 [ src (4) | dst (4) | rsv (1) | proto (1) | tcp length (2) ] ... | tcp header | data
 		chk.add(src.To4())
 		chk.add(dest.To4())

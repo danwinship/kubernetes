@@ -84,7 +84,7 @@ func (kp *kubeProxyConfig) Unmarshal(docmap kubeadmapi.DocumentMap) error {
 
 func kubeProxyDefaultBindAddress(localAdvertiseAddress string) string {
 	ip := netutils.ParseIPSloppy(localAdvertiseAddress)
-	if ip.To4() != nil {
+	if netutils.IsIPv4(ip) {
 		return kubeadmapiv1.DefaultProxyBindAddressv4
 	}
 	return kubeadmapiv1.DefaultProxyBindAddressv6
