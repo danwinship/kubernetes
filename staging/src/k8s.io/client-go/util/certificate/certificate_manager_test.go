@@ -24,7 +24,6 @@ import (
 	"crypto/x509/pkix"
 	"errors"
 	"fmt"
-	"net"
 	"strings"
 	"sync"
 	"testing"
@@ -402,11 +401,11 @@ func TestCertSatisfiesTemplate(t *testing.T) {
 			name: "Missing IP addresses in certificate",
 			cert: &x509.Certificate{
 				Subject:     pkix.Name{},
-				IPAddresses: []net.IP{netutils.MustParseIP("192.168.1.1")},
+				IPAddresses: netutils.MustParseIPList("192.168.1.1"),
 			},
 			template: &x509.CertificateRequest{
 				Subject:     pkix.Name{},
-				IPAddresses: []net.IP{netutils.MustParseIP("192.168.1.1"), netutils.MustParseIP("192.168.1.2")},
+				IPAddresses: netutils.MustParseIPList("192.168.1.1", "192.168.1.2"),
 			},
 			shouldSatisfy: false,
 		},
@@ -414,11 +413,11 @@ func TestCertSatisfiesTemplate(t *testing.T) {
 			name: "Extra IP addresses in certificate",
 			cert: &x509.Certificate{
 				Subject:     pkix.Name{},
-				IPAddresses: []net.IP{netutils.MustParseIP("192.168.1.1"), netutils.MustParseIP("192.168.1.2")},
+				IPAddresses: netutils.MustParseIPList("192.168.1.1", "192.168.1.2"),
 			},
 			template: &x509.CertificateRequest{
 				Subject:     pkix.Name{},
-				IPAddresses: []net.IP{netutils.MustParseIP("192.168.1.1")},
+				IPAddresses: netutils.MustParseIPList("192.168.1.1"),
 			},
 			shouldSatisfy: true,
 		},
@@ -430,7 +429,7 @@ func TestCertSatisfiesTemplate(t *testing.T) {
 					Organization: []string{"system:nodes"},
 				},
 				DNSNames:    []string{"foo.example.com"},
-				IPAddresses: []net.IP{netutils.MustParseIP("192.168.1.1")},
+				IPAddresses: netutils.MustParseIPList("192.168.1.1"),
 			},
 			template: &x509.CertificateRequest{
 				Subject: pkix.Name{
@@ -438,7 +437,7 @@ func TestCertSatisfiesTemplate(t *testing.T) {
 					Organization: []string{"system:nodes"},
 				},
 				DNSNames:    []string{"foo.example.com"},
-				IPAddresses: []net.IP{netutils.MustParseIP("192.168.1.1")},
+				IPAddresses: netutils.MustParseIPList("192.168.1.1"),
 			},
 			shouldSatisfy: true,
 		},

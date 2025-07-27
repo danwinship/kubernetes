@@ -289,12 +289,12 @@ func (o *CloudControllerManagerOptions) Config(allControllers []string, disabled
 		return nil, err
 	}
 
-	if err := o.SecureServing.MaybeDefaultWithSelfSignedCerts("localhost", nil, []net.IP{netutils.MustParseIP("127.0.0.1")}); err != nil {
+	if err := o.SecureServing.MaybeDefaultWithSelfSignedCerts("localhost", nil, netutils.MustParseIPList("127.0.0.1")); err != nil {
 		return nil, fmt.Errorf("error creating self-signed certificates: %v", err)
 	}
 
 	if o.WebhookServing != nil {
-		if err := o.WebhookServing.MaybeDefaultWithSelfSignedCerts("localhost", nil, []net.IP{netutils.MustParseIP("127.0.0.1")}); err != nil {
+		if err := o.WebhookServing.MaybeDefaultWithSelfSignedCerts("localhost", nil, netutils.MustParseIPList("127.0.0.1")); err != nil {
 			return nil, fmt.Errorf("error creating self-signed certificates for webhook: %v", err)
 		}
 	}

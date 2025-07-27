@@ -125,7 +125,7 @@ func TestNewNodeManager(t *testing.T) {
 					), metav1.UpdateOptions{})
 				},
 			},
-			expectedNodeIPs: []net.IP{netutils.MustParseIP("192.168.1.10")},
+			expectedNodeIPs: netutils.MustParseIPList("192.168.1.10"),
 		},
 		{
 			name:          "watchPodCIDRs and node object exist without PodCIDRs",
@@ -176,7 +176,7 @@ func TestNewNodeManager(t *testing.T) {
 					), metav1.UpdateOptions{})
 				},
 			},
-			expectedNodeIPs:  []net.IP{netutils.MustParseIP("192.168.1.1")},
+			expectedNodeIPs:  netutils.MustParseIPList("192.168.1.1"),
 			expectedPodCIDRs: []string{"10.0.0.0/24"},
 		},
 		{

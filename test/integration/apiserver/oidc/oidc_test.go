@@ -27,7 +27,6 @@ import (
 	"crypto/x509"
 	"encoding/json"
 	"fmt"
-	"net"
 	"net/http"
 	"net/url"
 	"os"
@@ -239,7 +238,7 @@ jwt:
 				tempDir := t.TempDir()
 				certFilePath := filepath.Join(tempDir, "localhost_127.0.0.1_.crt")
 
-				_, _, wantErr := certutil.GenerateSelfSignedCertKeyWithFixtures("localhost", []net.IP{netutils.MustParseIP("127.0.0.1")}, nil, tempDir)
+				_, _, wantErr := certutil.GenerateSelfSignedCertKeyWithFixtures("localhost", netutils.MustParseIPList("127.0.0.1"), nil, tempDir)
 				require.NoError(t, wantErr)
 
 				return configureClientWithEmptyIDToken(t, restCfg, caCert, certFilePath, oidcServerURL, oidcServerTokenURL)
@@ -2109,7 +2108,7 @@ func generateCert(t *testing.T) (cert, key []byte, certFilePath, keyFilePath str
 	certFilePath = filepath.Join(tempDir, "localhost_127.0.0.1_.crt")
 	keyFilePath = filepath.Join(tempDir, "localhost_127.0.0.1_.key")
 
-	cert, key, err := certutil.GenerateSelfSignedCertKeyWithFixtures("localhost", []net.IP{netutils.MustParseIP("127.0.0.1")}, nil, tempDir)
+	cert, key, err := certutil.GenerateSelfSignedCertKeyWithFixtures("localhost", netutils.MustParseIPList("127.0.0.1"), nil, tempDir)
 	require.NoError(t, err)
 
 	return cert, key, certFilePath, keyFilePath

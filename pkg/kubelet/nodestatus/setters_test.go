@@ -357,7 +357,7 @@ func TestNodeAddress_NoCloudProvider(t *testing.T) {
 	}{
 		{
 			name:    "Single --node-ip",
-			nodeIPs: []net.IP{netutils.MustParseIP("10.1.1.1")},
+			nodeIPs: netutils.MustParseIPList("10.1.1.1"),
 			expectedAddresses: []v1.NodeAddress{
 				{Type: v1.NodeInternalIP, Address: "10.1.1.1"},
 				{Type: v1.NodeHostName, Address: testKubeletHostname},
@@ -365,12 +365,12 @@ func TestNodeAddress_NoCloudProvider(t *testing.T) {
 		},
 		{
 			name:        "Invalid single --node-ip (using loopback)",
-			nodeIPs:     []net.IP{netutils.MustParseIP("127.0.0.1")},
+			nodeIPs:     netutils.MustParseIPList("127.0.0.1"),
 			shouldError: true,
 		},
 		{
 			name:    "Dual --node-ips",
-			nodeIPs: []net.IP{netutils.MustParseIP("10.1.1.1"), netutils.MustParseIP("fd01::1234")},
+			nodeIPs: netutils.MustParseIPList("10.1.1.1", "fd01::1234"),
 			expectedAddresses: []v1.NodeAddress{
 				{Type: v1.NodeInternalIP, Address: "10.1.1.1"},
 				{Type: v1.NodeInternalIP, Address: "fd01::1234"},
@@ -379,7 +379,7 @@ func TestNodeAddress_NoCloudProvider(t *testing.T) {
 		},
 		{
 			name:        "Dual --node-ips but with invalid secondary IP (using multicast IP)",
-			nodeIPs:     []net.IP{netutils.MustParseIP("10.1.1.1"), netutils.MustParseIP("224.0.0.0")},
+			nodeIPs:     netutils.MustParseIPList("10.1.1.1", "224.0.0.0"),
 			shouldError: true,
 		},
 	}

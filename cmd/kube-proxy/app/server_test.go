@@ -102,7 +102,7 @@ func Test_detectNodeIPs(t *testing.T) {
 		},
 		{
 			name:           "Bind address 0.0.0.0 and node with IPv4 InternalIP set",
-			rawNodeIPs:     []net.IP{netutils.MustParseIP("192.168.1.1")},
+			rawNodeIPs:     netutils.MustParseIPList("192.168.1.1"),
 			bindAddress:    "0.0.0.0",
 			expectedFamily: v1.IPv4Protocol,
 			expectedIPv4:   "192.168.1.1",
@@ -110,7 +110,7 @@ func Test_detectNodeIPs(t *testing.T) {
 		},
 		{
 			name:           "Bind address :: and node with IPv4 InternalIP set",
-			rawNodeIPs:     []net.IP{netutils.MustParseIP("192.168.1.1")},
+			rawNodeIPs:     netutils.MustParseIPList("192.168.1.1"),
 			bindAddress:    "::",
 			expectedFamily: v1.IPv4Protocol,
 			expectedIPv4:   "192.168.1.1",
@@ -118,7 +118,7 @@ func Test_detectNodeIPs(t *testing.T) {
 		},
 		{
 			name:           "Bind address 0.0.0.0 and node with IPv6 InternalIP set",
-			rawNodeIPs:     []net.IP{netutils.MustParseIP("fd00:1234::1")},
+			rawNodeIPs:     netutils.MustParseIPList("fd00:1234::1"),
 			bindAddress:    "0.0.0.0",
 			expectedFamily: v1.IPv6Protocol,
 			expectedIPv4:   "127.0.0.1",
@@ -126,7 +126,7 @@ func Test_detectNodeIPs(t *testing.T) {
 		},
 		{
 			name:           "Bind address :: and node with IPv6 InternalIP set",
-			rawNodeIPs:     []net.IP{netutils.MustParseIP("fd00:1234::1")},
+			rawNodeIPs:     netutils.MustParseIPList("fd00:1234::1"),
 			bindAddress:    "::",
 			expectedFamily: v1.IPv6Protocol,
 			expectedIPv4:   "127.0.0.1",

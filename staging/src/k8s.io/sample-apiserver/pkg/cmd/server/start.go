@@ -20,7 +20,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"net"
 
 	"github.com/spf13/cobra"
 
@@ -190,7 +189,7 @@ func (o *WardleServerOptions) Complete() error {
 // Config returns config for the api server given WardleServerOptions
 func (o *WardleServerOptions) Config() (*apiserver.Config, error) {
 	// TODO have a "real" external address
-	if err := o.RecommendedOptions.SecureServing.MaybeDefaultWithSelfSignedCerts("localhost", o.AlternateDNS, []net.IP{netutils.MustParseIP("127.0.0.1")}); err != nil {
+	if err := o.RecommendedOptions.SecureServing.MaybeDefaultWithSelfSignedCerts("localhost", o.AlternateDNS, netutils.MustParseIPList("127.0.0.1")); err != nil {
 		return nil, fmt.Errorf("error creating self-signed certificates: %v", err)
 	}
 

@@ -77,7 +77,7 @@ func TestAddressesToHostnamesAndIPs(t *testing.T) {
 				{Type: v1.NodeExternalIP, Address: "1.1.1.1"},
 			},
 			wantDNSNames: []string{"hostname"},
-			wantIPs:      []net.IP{netutils.MustParseIP("1.1.1.1")},
+			wantIPs:      netutils.MustParseIPList("1.1.1.1"),
 		},
 		{
 			name: "order values",
@@ -90,7 +90,7 @@ func TestAddressesToHostnamesAndIPs(t *testing.T) {
 				{Type: v1.NodeInternalIP, Address: "3.3.3.3"},
 			},
 			wantDNSNames: []string{"hostname-1", "hostname-2", "hostname-3"},
-			wantIPs:      []net.IP{netutils.MustParseIP("1.1.1.1"), netutils.MustParseIP("2.2.2.2"), netutils.MustParseIP("3.3.3.3")},
+			wantIPs:      netutils.MustParseIPList("1.1.1.1", "2.2.2.2", "3.3.3.3"),
 		},
 		{
 			name: "handle IP and DNS hostnames",
@@ -99,7 +99,7 @@ func TestAddressesToHostnamesAndIPs(t *testing.T) {
 				{Type: v1.NodeHostName, Address: "1.1.1.1"},
 			},
 			wantDNSNames: []string{"hostname"},
-			wantIPs:      []net.IP{netutils.MustParseIP("1.1.1.1")},
+			wantIPs:      netutils.MustParseIPList("1.1.1.1"),
 		},
 	}
 	for _, tt := range tests {

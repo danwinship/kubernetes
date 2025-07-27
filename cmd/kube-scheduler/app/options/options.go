@@ -19,7 +19,6 @@ package options
 import (
 	"context"
 	"fmt"
-	"net"
 	"os"
 	"time"
 
@@ -299,7 +298,7 @@ func (o *Options) Validate() []error {
 func (o *Options) Config(ctx context.Context) (*schedulerappconfig.Config, error) {
 	logger := klog.FromContext(ctx)
 	if o.SecureServing != nil {
-		if err := o.SecureServing.MaybeDefaultWithSelfSignedCerts("localhost", nil, []net.IP{netutils.MustParseIP("127.0.0.1")}); err != nil {
+		if err := o.SecureServing.MaybeDefaultWithSelfSignedCerts("localhost", nil, netutils.MustParseIPList("127.0.0.1")); err != nil {
 			return nil, fmt.Errorf("error creating self-signed certificates: %v", err)
 		}
 	}
