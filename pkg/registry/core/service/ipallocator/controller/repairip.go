@@ -564,7 +564,7 @@ func (r *RepairIPAddress) isIPOutOfRange(ip net.IP) bool {
 
 func newIPAddress(name string, svc *v1.Service) *networkingv1.IPAddress {
 	family := string(v1.IPv4Protocol)
-	if netutils.IsIPv6String(name) {
+	if netutils.IsIPv6(name) {
 		family = string(v1.IPv6Protocol)
 	}
 	return &networkingv1.IPAddress{
@@ -618,7 +618,7 @@ func verifyIPAddressLabels(ip *networkingv1.IPAddress) bool {
 	}
 
 	family := string(v1.IPv4Protocol)
-	if netutils.IsIPv6String(ip.Name) {
+	if netutils.IsIPv6(ip.Name) {
 		family = string(v1.IPv6Protocol)
 	}
 	if family != labelFamily {

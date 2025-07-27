@@ -122,7 +122,7 @@ func getDefaultClusterIPFamily(ctx context.Context, c clientset.Interface) strin
 		framework.Failf("Failed to get kubernetes service ClusterIP: %v", err)
 	}
 
-	if netutils.IsIPv6String(svc.Spec.ClusterIP) {
+	if netutils.IsIPv6(svc.Spec.ClusterIP) {
 		return "ipv6"
 	}
 	return "ipv4"

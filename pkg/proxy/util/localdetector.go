@@ -79,7 +79,7 @@ func NewNoOpLocalDetector() LocalTrafficDetector {
 // assumed to be valid.
 func NewDetectLocalByCIDR(cidr string) LocalTrafficDetector {
 	nftFamily := "ip"
-	if netutils.IsIPv6CIDRString(cidr) {
+	if netutils.IsIPv6CIDR(cidr) {
 		nftFamily = "ip6"
 	}
 

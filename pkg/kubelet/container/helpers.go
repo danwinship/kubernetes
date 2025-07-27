@@ -381,7 +381,7 @@ func MakePortMappings(container *v1.Container) (ports []PortMapping) {
 		// https://github.com/kubernetes/kubernetes/issues/82373
 		family := "any"
 		if p.HostIP != "" {
-			if netutils.IsIPv6String(p.HostIP) {
+			if netutils.IsIPv6(p.HostIP) {
 				family = "v6"
 			} else {
 				family = "v4"

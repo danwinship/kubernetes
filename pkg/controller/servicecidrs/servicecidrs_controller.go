@@ -376,7 +376,7 @@ func (c *Controller) canDeleteCIDR(ctx context.Context, serviceCIDR *networkinga
 	for _, cidr := range serviceCIDR.Spec.CIDRs {
 		// get all the IPv4 addresses
 		ipLabelSelector := labels.Set(map[string]string{
-			networkingapiv1.LabelIPAddressFamily: string(convertToV1IPFamily(netutils.IPFamilyOfCIDRString(cidr))),
+			networkingapiv1.LabelIPAddressFamily: string(convertToV1IPFamily(netutils.IPFamilyOfCIDR(cidr))),
 			networkingapiv1.LabelManagedBy:       ipallocator.ControllerName,
 		}).AsSelectorPreValidated()
 		ips, err := c.ipAddressLister.List(ipLabelSelector)

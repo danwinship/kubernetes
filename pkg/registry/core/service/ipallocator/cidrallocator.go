@@ -169,7 +169,7 @@ func (c *MetaAllocator) deleteServiceCIDR(obj interface{}) {
 	defer c.mu.Unlock()
 	for _, cidr := range serviceCIDR.Spec.CIDRs {
 		// skip IP families not supported by this MetaAllocator
-		if c.ipFamily != api.IPFamily(convertToV1IPFamily(netutils.IPFamilyOfCIDRString(cidr))) {
+		if c.ipFamily != api.IPFamily(convertToV1IPFamily(netutils.IPFamilyOfCIDR(cidr))) {
 			continue
 		}
 		// get the Allocator used by this ServiceCIDR
@@ -254,7 +254,7 @@ func (c *MetaAllocator) syncAllocators() error {
 	for _, serviceCIDR := range serviceCIDRs {
 		for _, cidr := range serviceCIDR.Spec.CIDRs {
 			// skip IP families not supported by this MetaAllocator
-			if c.ipFamily != api.IPFamily(convertToV1IPFamily(netutils.IPFamilyOfCIDRString(cidr))) {
+			if c.ipFamily != api.IPFamily(convertToV1IPFamily(netutils.IPFamilyOfCIDR(cidr))) {
 				continue
 			}
 			// the allocator is ready if the object is ready and is not being deleted
@@ -385,7 +385,7 @@ func (c *MetaAllocator) AllocateNextService(service *api.Service) (net.IP, error
 	// However, we need to validate the best strategy before going to Beta.
 	isIPv6 := c.ipFamily == api.IPFamily(v1.IPv6Protocol)
 	for cidr, item := range c.allocators {
-		if netutils.IsIPv6CIDRString(cidr) != isIPv6 {
+		if netutils.IsIPv6CIDR(cidr) != isIPv6 {
 			continue
 		}
 		ip, err := item.allocator.AllocateNextService(service)

@@ -915,7 +915,7 @@ func (al *Allocators) releaseClusterIPs(service *api.Service) (released map[api.
 
 	toRelease := make(map[api.IPFamily]string)
 	for _, ip := range service.Spec.ClusterIPs {
-		if netutils.IsIPv6String(ip) {
+		if netutils.IsIPv6(ip) {
 			toRelease[api.IPv6Protocol] = ip
 		} else {
 			toRelease[api.IPv4Protocol] = ip
@@ -1092,10 +1092,10 @@ func reducedIPFamilies(after After, before Before) bool {
 
 // Helper to get the IP family of a given IP.
 func familyOf(ip string) api.IPFamily {
-	if netutils.IsIPv4String(ip) {
+	if netutils.IsIPv4(ip) {
 		return api.IPv4Protocol
 	}
-	if netutils.IsIPv6String(ip) {
+	if netutils.IsIPv6(ip) {
 		return api.IPv6Protocol
 	}
 	return api.IPFamily("unknown")

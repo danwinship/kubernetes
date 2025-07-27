@@ -4371,7 +4371,7 @@ func execAffinityTestForSessionAffinityTimeout(ctx context.Context, f *framework
 		framework.ExpectNoError(err)
 		// The node addresses must have the same IP family as the ClusterIP
 		family := v1.IPv4Protocol
-		if netutils.IsIPv6String(svc.Spec.ClusterIP) {
+		if netutils.IsIPv6(svc.Spec.ClusterIP) {
 			family = v1.IPv6Protocol
 		}
 		svcIP = e2enode.FirstAddressByTypeAndFamily(nodes, v1.NodeInternalIP, family)
@@ -4454,7 +4454,7 @@ func execAffinityTestForNonLBServiceWithOptionalTransition(ctx context.Context, 
 		framework.ExpectNoError(err)
 		// The node addresses must have the same IP family as the ClusterIP
 		family := v1.IPv4Protocol
-		if netutils.IsIPv6String(svc.Spec.ClusterIP) {
+		if netutils.IsIPv6(svc.Spec.ClusterIP) {
 			family = v1.IPv6Protocol
 		}
 		svcIP = e2enode.FirstAddressByTypeAndFamily(nodes, v1.NodeInternalIP, family)

@@ -231,7 +231,7 @@ func getAPIServerCommand(cfg *kubeadmapi.ClusterConfiguration, localAPIEndpoint 
 		// Default to etcd static pod on localhost
 		// localhost IP family should be the same that the AdvertiseAddress
 		etcdLocalhostAddress := "127.0.0.1"
-		if netutils.IsIPv6String(localAPIEndpoint.AdvertiseAddress) {
+		if netutils.IsIPv6(localAPIEndpoint.AdvertiseAddress) {
 			etcdLocalhostAddress = "::1"
 		}
 		defaultArguments = kubeadmapi.SetArgValues(defaultArguments, "etcd-servers", fmt.Sprintf("https://%s", net.JoinHostPort(etcdLocalhostAddress, strconv.Itoa(kubeadmconstants.EtcdListenClientPort))), 1)

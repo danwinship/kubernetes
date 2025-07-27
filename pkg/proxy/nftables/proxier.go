@@ -858,7 +858,7 @@ func (proxier *Proxier) OnServiceCIDRsChanged(cidrs []string) {
 
 	cidrsForProxier := make([]string, 0)
 	for _, cidr := range cidrs {
-		isIPv4CIDR := netutils.IsIPv4CIDRString(cidr)
+		isIPv4CIDR := netutils.IsIPv4CIDR(cidr)
 		if proxier.ipFamily == v1.IPv4Protocol && isIPv4CIDR {
 			cidrsForProxier = append(cidrsForProxier, cidr)
 		}

@@ -1479,7 +1479,7 @@ func validateServiceAndClusterIPFamily(svc *v1.Service, expectedIPFamilies []v1.
 		}
 
 		// the clusterIP assigned should have the same IPFamily requested
-		if netutils.IsIPv6String(ip) != (expectedIPFamilies[j] == v1.IPv6Protocol) {
+		if netutils.IsIPv6(ip) != (expectedIPFamilies[j] == v1.IPv6Protocol) {
 			errstrings = append(errstrings, fmt.Sprintf("got unexpected service ip %s, should belong to %s ip family", ip, expectedIPFamilies[j]))
 		}
 	}

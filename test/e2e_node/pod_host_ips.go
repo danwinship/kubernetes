@@ -58,7 +58,7 @@ var _ = common.SIGDescribe("Pod Host IPs", func() {
 			gomega.Expect(p.Status.HostIP).Should(gomega.Equal(p.Status.HostIPs[0].IP))
 			if len(p.Status.HostIPs) > 1 {
 				// assert 2 host ips belong to different families
-				if netutils.IsIPv4String(p.Status.HostIPs[0].IP) == netutils.IsIPv4String(p.Status.HostIPs[1].IP) {
+				if netutils.IsIPv4(p.Status.HostIPs[0].IP) == netutils.IsIPv4(p.Status.HostIPs[1].IP) {
 					framework.Failf("both internalIPs %s and %s belong to the same families", p.Status.HostIPs[0].IP, p.Status.HostIPs[1].IP)
 				}
 			}
@@ -89,7 +89,7 @@ var _ = common.SIGDescribe("Pod Host IPs", func() {
 			gomega.Expect(p.Status.HostIP).Should(gomega.Equal(p.Status.HostIPs[0].IP))
 			if len(p.Status.HostIPs) > 1 {
 				// assert 2 host ips belong to different families
-				if netutils.IsIPv4String(p.Status.HostIPs[0].IP) == netutils.IsIPv4String(p.Status.HostIPs[1].IP) {
+				if netutils.IsIPv4(p.Status.HostIPs[0].IP) == netutils.IsIPv4(p.Status.HostIPs[1].IP) {
 					framework.Failf("both internalIPs %s and %s belong to the same families", p.Status.HostIPs[0].IP, p.Status.HostIPs[1].IP)
 				}
 			}

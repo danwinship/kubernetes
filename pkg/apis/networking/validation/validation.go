@@ -829,8 +829,8 @@ func validateServiceCIDRSpec(cidrConfigSpec *networking.ServiceCIDRSpec, fieldPa
 
 	// validate cidrs are dual stack, one of each IP family
 	if len(cidrConfigSpec.CIDRs) == 2 &&
-		netutils.IPFamilyOfCIDRString(cidrConfigSpec.CIDRs[0]) == netutils.IPFamilyOfCIDRString(cidrConfigSpec.CIDRs[1]) &&
-		netutils.IPFamilyOfCIDRString(cidrConfigSpec.CIDRs[0]) != netutils.IPFamilyUnknown {
+		netutils.IPFamilyOfCIDR(cidrConfigSpec.CIDRs[0]) == netutils.IPFamilyOfCIDR(cidrConfigSpec.CIDRs[1]) &&
+		netutils.IPFamilyOfCIDR(cidrConfigSpec.CIDRs[0]) != netutils.IPFamilyUnknown {
 		allErrs = append(allErrs, field.Invalid(fieldPath, cidrConfigSpec.CIDRs, "may specify no more than one IP for each IP family, i.e 192.168.0.0/24 and 2001:db8::/64"))
 	}
 

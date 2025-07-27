@@ -304,7 +304,7 @@ func getVolumeSource(spec *volume.Spec) (*v1.NFSVolumeSource, bool, error) {
 }
 
 func getServerFromSource(source *v1.NFSVolumeSource) string {
-	if netutils.IsIPv6String(source.Server) {
+	if netutils.IsIPv6(source.Server) {
 		return fmt.Sprintf("[%s]", source.Server)
 	}
 	return source.Server

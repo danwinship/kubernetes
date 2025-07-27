@@ -829,7 +829,7 @@ func testReachabilityOverExternalIP(ctx context.Context, externalIP string, sp v
 
 func testReachabilityOverNodePorts(ctx context.Context, nodes *v1.NodeList, sp v1.ServicePort, pod *v1.Pod, clusterIP string, externalIPs bool) error {
 	internalAddrs := e2enode.CollectAddresses(nodes, v1.NodeInternalIP)
-	isClusterIPV4 := netutils.IsIPv4String(clusterIP)
+	isClusterIPV4 := netutils.IsIPv4(clusterIP)
 
 	for _, internalAddr := range internalAddrs {
 		// If the node's internal address points to localhost, then we are not
@@ -839,7 +839,7 @@ func testReachabilityOverNodePorts(ctx context.Context, nodes *v1.NodeList, sp v
 			continue
 		}
 		// Check service reachability on the node internalIP which is same family as clusterIP
-		if isClusterIPV4 != netutils.IsIPv4String(internalAddr) {
+		if isClusterIPV4 != netutils.IsIPv4(internalAddr) {
 			framework.Logf("skipping testEndpointReachability() for internal address %s as it does not match clusterIP (%s) family", internalAddr, clusterIP)
 			continue
 		}
@@ -852,7 +852,7 @@ func testReachabilityOverNodePorts(ctx context.Context, nodes *v1.NodeList, sp v
 	if externalIPs {
 		externalAddrs := e2enode.CollectAddresses(nodes, v1.NodeExternalIP)
 		for _, externalAddr := range externalAddrs {
-			if isClusterIPV4 != netutils.IsIPv4String(externalAddr) {
+			if isClusterIPV4 != netutils.IsIPv4(externalAddr) {
 				framework.Logf("skipping testEndpointReachability() for external address %s as it does not match clusterIP (%s) family", externalAddr, clusterIP)
 				continue
 			}

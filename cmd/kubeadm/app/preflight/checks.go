@@ -411,7 +411,7 @@ func (hst HTTPProxyCheck) Name() string {
 func (hst HTTPProxyCheck) Check() (warnings, errorList []error) {
 	klog.V(1).Infoln("validating if the connectivity type is via proxy or direct")
 	u := &url.URL{Scheme: hst.Proto, Host: hst.Host}
-	if netutils.IsIPv6String(hst.Host) {
+	if netutils.IsIPv6(hst.Host) {
 		u.Host = net.JoinHostPort(hst.Host, "1234")
 	}
 
@@ -920,10 +920,10 @@ func InitNodeChecks(execer utilsexec.Interface, cfg *kubeadmapi.InitConfiguratio
 	cidrs := strings.Split(cfg.Networking.ServiceSubnet, ",")
 	for _, cidr := range cidrs {
 		checks = append(checks, HTTPProxyCIDRCheck{Proto: "https", CIDR: cidr})
-		if !IPV4Check && netutils.IsIPv4CIDRString(cidr) {
+		if !IPV4Check && netutils.IsIPv4CIDR(cidr) {
 			IPV4Check = true
 		}
-		if !IPV6Check && netutils.IsIPv6CIDRString(cidr) {
+		if !IPV6Check && netutils.IsIPv6CIDR(cidr) {
 			IPV6Check = true
 		}
 
@@ -931,10 +931,10 @@ func InitNodeChecks(execer utilsexec.Interface, cfg *kubeadmapi.InitConfiguratio
 	cidrs = strings.Split(cfg.Networking.PodSubnet, ",")
 	for _, cidr := range cidrs {
 		checks = append(checks, HTTPProxyCIDRCheck{Proto: "https", CIDR: cidr})
-		if !IPV4Check && netutils.IsIPv4CIDRString(cidr) {
+		if !IPV4Check && netutils.IsIPv4CIDR(cidr) {
 			IPV4Check = true
 		}
-		if !IPV6Check && netutils.IsIPv6CIDRString(cidr) {
+		if !IPV6Check && netutils.IsIPv6CIDR(cidr) {
 			IPV6Check = true
 		}
 	}

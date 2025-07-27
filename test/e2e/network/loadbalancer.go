@@ -508,7 +508,7 @@ var _ = common.SIGDescribe("LoadBalancers", feature.LoadBalancer, func() {
 
 		// "Allow all". (We should be able to set this dual-stack but maybe
 		// some IPv4-only cloud providers won't handle that.)
-		if netutils.IsIPv4String(acceptPod.Status.HostIP) {
+		if netutils.IsIPv4(acceptPod.Status.HostIP) {
 			sourceRanges = []string{"0.0.0.0/1", "128.0.0.0/1"}
 		} else {
 			sourceRanges = []string{"::/1", "8000::/1"}
@@ -528,7 +528,7 @@ var _ = common.SIGDescribe("LoadBalancers", feature.LoadBalancer, func() {
 		checkReachabilityFromPod(ctx, true, e2eservice.KubeProxyEndpointLagTimeout, namespace, dropPod.Name, ingress)
 
 		// "Deny all, essentially"
-		if netutils.IsIPv4String(acceptPod.Status.HostIP) {
+		if netutils.IsIPv4(acceptPod.Status.HostIP) {
 			sourceRanges = []string{"255.0.0.0/32"}
 		} else {
 			sourceRanges = []string{"ffff::/128"}
@@ -1286,7 +1286,7 @@ var _ = common.SIGDescribe("LoadBalancers ExternalTrafficPolicy: Local", feature
 })
 
 func ipToSourceRange(ip string) string {
-	if netutils.IsIPv6String(ip) {
+	if netutils.IsIPv6(ip) {
 		return ip + "/128"
 	}
 	return ip + "/32"

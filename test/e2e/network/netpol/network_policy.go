@@ -1001,7 +1001,7 @@ var _ = common.SIGDescribe("Netpol", func() {
 			pod := podList.Items[0]
 
 			hostMask := 32
-			if netutils.IsIPv6String(pod.Status.PodIP) {
+			if netutils.IsIPv6(pod.Status.PodIP) {
 				hostMask = 128
 			}
 			podServerCIDR := fmt.Sprintf("%s/%d", pod.Status.PodIP, hostMask)
@@ -1033,7 +1033,7 @@ var _ = common.SIGDescribe("Netpol", func() {
 
 			podServerAllowCIDR := makeLargeCIDRForIP(podB.Status.PodIP)
 			hostMask := 32
-			if netutils.IsIPv6String(podB.Status.PodIP) {
+			if netutils.IsIPv6(podB.Status.PodIP) {
 				hostMask = 128
 			}
 			podServerExceptList := []string{fmt.Sprintf("%s/%d", podB.Status.PodIP, hostMask)}
@@ -1066,7 +1066,7 @@ var _ = common.SIGDescribe("Netpol", func() {
 
 			podServerAllowCIDR := makeLargeCIDRForIP(podB.Status.PodIP)
 			hostMask := 32
-			if netutils.IsIPv6String(podB.Status.PodIP) {
+			if netutils.IsIPv6(podB.Status.PodIP) {
 				hostMask = 128
 			}
 			podServerExceptList := []string{fmt.Sprintf("%s/%d", podB.Status.PodIP, hostMask)}

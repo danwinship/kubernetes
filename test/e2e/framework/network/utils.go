@@ -843,7 +843,7 @@ func (config *NetworkingTestConfig) setup(ctx context.Context, selector map[stri
 	// but for now that would only if the feature gate is enabled.
 	family := v1.IPv4Protocol
 	secondaryFamily := v1.IPv6Protocol
-	if netutils.IsIPv6String(config.ClusterIP) {
+	if netutils.IsIPv6(config.ClusterIP) {
 		family = v1.IPv6Protocol
 		secondaryFamily = v1.IPv4Protocol
 	}

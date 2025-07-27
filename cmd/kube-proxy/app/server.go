@@ -350,7 +350,7 @@ func checkBadIPConfig(s *ProxyServer, dualStackSupported bool) (err error, fatal
 		}
 	}
 
-	if netutils.IPFamilyOfString(s.Config.Winkernel.SourceVip) == badFamily {
+	if netutils.IPFamilyOf(s.Config.Winkernel.SourceVip) == badFamily {
 		errors = append(errors, fmt.Errorf("cluster is %s but winkernel.sourceVip is IPv%s", clusterType, badFamily))
 	}
 
@@ -381,7 +381,7 @@ func badCIDRs(cidrs []string, wrongFamily netutils.IPFamily) bool {
 		return false
 	}
 	for _, cidr := range cidrs {
-		if netutils.IPFamilyOfCIDRString(cidr) != wrongFamily {
+		if netutils.IPFamilyOfCIDR(cidr) != wrongFamily {
 			return false
 		}
 	}

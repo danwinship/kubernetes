@@ -71,7 +71,7 @@ func LoopbackHostPort(bindAddress string) (string, string, error) {
 		return "", "", fmt.Errorf("invalid server bind address: %q", bindAddress)
 	}
 
-	isIPv6 := netutils.IsIPv6String(host)
+	isIPv6 := netutils.IsIPv6(host)
 
 	// Value is expected to be an IP or DNS name, not "0.0.0.0".
 	if host == "0.0.0.0" || host == "::" {

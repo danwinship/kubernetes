@@ -8694,11 +8694,11 @@ func ValidateServiceClusterIPsRelatedFields(service, oldService *core.Service) f
 			}
 
 			// 4=>6
-			if service.Spec.IPFamilies[i] == core.IPv4Protocol && netutils.IsIPv6String(ip) {
+			if service.Spec.IPFamilies[i] == core.IPv4Protocol && netutils.IsIPv6(ip) {
 				allErrs = append(allErrs, field.Invalid(clusterIPsField.Index(i), ip, fmt.Sprintf("expected an IPv4 value as indicated by `ipFamilies[%v]`", i)))
 			}
 			// 6=>4
-			if service.Spec.IPFamilies[i] == core.IPv6Protocol && !netutils.IsIPv6String(ip) {
+			if service.Spec.IPFamilies[i] == core.IPv6Protocol && !netutils.IsIPv6(ip) {
 				allErrs = append(allErrs, field.Invalid(clusterIPsField.Index(i), ip, fmt.Sprintf("expected an IPv6 value as indicated by `ipFamilies[%v]`", i)))
 			}
 		}

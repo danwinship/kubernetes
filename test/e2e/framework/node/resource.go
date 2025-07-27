@@ -262,10 +262,10 @@ func GetAddressesByTypeAndFamily(node *v1.Node, addressType v1.NodeAddressType, 
 		if nodeAddress.Address == "" {
 			continue
 		}
-		if family == v1.IPv6Protocol && netutils.IsIPv6String(nodeAddress.Address) {
+		if family == v1.IPv6Protocol && netutils.IsIPv6(nodeAddress.Address) {
 			ips = append(ips, nodeAddress.Address)
 		}
-		if family == v1.IPv4Protocol && !netutils.IsIPv6String(nodeAddress.Address) {
+		if family == v1.IPv4Protocol && !netutils.IsIPv6(nodeAddress.Address) {
 			ips = append(ips, nodeAddress.Address)
 		}
 	}

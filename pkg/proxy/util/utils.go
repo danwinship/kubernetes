@@ -197,7 +197,7 @@ func GetClusterIPByFamily(ipFamily v1.IPFamily, service *v1.Service) string {
 		}
 
 		IsIPv6Family := (ipFamily == v1.IPv6Protocol)
-		if IsIPv6Family == netutils.IsIPv6String(service.Spec.ClusterIP) {
+		if IsIPv6Family == netutils.IsIPv6(service.Spec.ClusterIP) {
 			return service.Spec.ClusterIP
 		}
 

@@ -411,7 +411,7 @@ func NewProxier(
 func filterCIDRs(wantIPv6 bool, cidrs []string) []string {
 	var filteredCIDRs []string
 	for _, cidr := range cidrs {
-		if netutils.IsIPv6CIDRString(cidr) == wantIPv6 {
+		if netutils.IsIPv6CIDR(cidr) == wantIPv6 {
 			filteredCIDRs = append(filteredCIDRs, cidr)
 		}
 	}

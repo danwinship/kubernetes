@@ -118,7 +118,7 @@ func validateEndpoints(endpoints []discovery.Endpoint, addrType discovery.Addres
 				if len(ipErrs) > 0 {
 					allErrs = append(allErrs, ipErrs...)
 				} else {
-					if !netutils.IsIPv4String(address) {
+					if !netutils.IsIPv4(address) {
 						allErrs = append(allErrs, field.Invalid(addressPath, address, "must be an IPv4 address"))
 					}
 					allErrs = append(allErrs, apivalidation.ValidateEndpointIP(address, addressPath.Index(i))...)
@@ -128,7 +128,7 @@ func validateEndpoints(endpoints []discovery.Endpoint, addrType discovery.Addres
 				if len(ipErrs) > 0 {
 					allErrs = append(allErrs, ipErrs...)
 				} else {
-					if !netutils.IsIPv6String(address) {
+					if !netutils.IsIPv6(address) {
 						allErrs = append(allErrs, field.Invalid(addressPath, address, "must be an IPv6 address"))
 					}
 					allErrs = append(allErrs, apivalidation.ValidateEndpointIP(address, addressPath.Index(i))...)

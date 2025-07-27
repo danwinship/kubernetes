@@ -1595,7 +1595,7 @@ func TestPodToEndpointAddressForService(t *testing.T) {
 				return
 			}
 
-			if netutils.IsIPv6String(epa.IP) != (tc.expectedEndpointFamily == ipv6) {
+			if netutils.IsIPv6(epa.IP) != (tc.expectedEndpointFamily == ipv6) {
 				t.Fatalf("IP: expected %s, got: %s", tc.expectedEndpointFamily, epa.IP)
 			}
 			if strings.HasPrefix(epa.IP, "0") {

@@ -1979,10 +1979,10 @@ func (kl *Kubelet) generateAPIPodStatus(pod *v1.Pod, podStatus *kubecontainer.Po
 			klog.V(4).InfoS("Cannot get host IPs", "err", err)
 		} else {
 			if s.HostIP != "" {
-				if netutils.IPFamilyOfString(s.HostIP) != netutils.IPFamilyOf(hostIPs[0]) {
+				if netutils.IPFamilyOf(s.HostIP) != netutils.IPFamilyOf(hostIPs[0]) {
 					kl.recorder.Eventf(pod, v1.EventTypeWarning, "HostIPsIPFamilyMismatch",
 						"Kubelet detected an IPv%s node IP (%s), but the cloud provider selected an IPv%s node IP (%s); pass an explicit `--node-ip` to kubelet to fix this.",
-						netutils.IPFamilyOfString(s.HostIP), s.HostIP, netutils.IPFamilyOf(hostIPs[0]), hostIPs[0].String())
+						netutils.IPFamilyOf(s.HostIP), s.HostIP, netutils.IPFamilyOf(hostIPs[0]), hostIPs[0].String())
 				}
 			}
 			s.HostIP = hostIPs[0].String()
@@ -2001,7 +2001,7 @@ func (kl *Kubelet) generateAPIPodStatus(pod *v1.Pod, podStatus *kubecontainer.Po
 				}
 				// Secondary IP is not set #105320
 				if len(hostIPs) == 2 && len(s.PodIPs) == 1 {
-					if netutils.IPFamilyOfString(s.PodIPs[0].IP) != netutils.IPFamilyOf(hostIPs[1]) {
+					if netutils.IPFamilyOf(s.PodIPs[0].IP) != netutils.IPFamilyOf(hostIPs[1]) {
 						s.PodIPs = append(s.PodIPs, v1.PodIP{IP: hostIPs[1].String()})
 					}
 				}

@@ -215,7 +215,7 @@ var _ = common.SIGDescribe("KubeProxy", func() {
 		// the conntrack file uses the IPv6 expanded format
 		ip := serverNodeInfo.nodeIP
 		ipFamily := "ipv4"
-		if netutils.IsIPv6String(ip) {
+		if netutils.IsIPv6(ip) {
 			ipFamily = "ipv6"
 		}
 		// Obtain the corresponding conntrack entry on the host checking

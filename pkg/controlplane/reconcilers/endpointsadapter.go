@@ -153,7 +153,7 @@ func getEndpointsFromAddresses(addresses []corev1.EndpointAddress, addressType d
 	isIPv6AddressType := addressType == discovery.AddressTypeIPv6
 
 	for _, address := range addresses {
-		if netutils.IsIPv6String(address.IP) == isIPv6AddressType {
+		if netutils.IsIPv6(address.IP) == isIPv6AddressType {
 			endpoints = append(endpoints, endpointFromAddress(address, ready))
 		}
 	}
@@ -183,7 +183,7 @@ func allAddressesIPv6(addresses []corev1.EndpointAddress) bool {
 	}
 
 	for _, address := range addresses {
-		if !netutils.IsIPv6String(address.IP) {
+		if !netutils.IsIPv6(address.IP) {
 			return false
 		}
 	}

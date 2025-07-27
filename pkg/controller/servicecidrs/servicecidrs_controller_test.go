@@ -263,7 +263,7 @@ func makeServiceCIDR(name, primary, secondary string) *networkingapiv1.ServiceCI
 
 func makeIPAddress(name string) *networkingapiv1.IPAddress {
 	family := string(v1.IPv4Protocol)
-	if netutils.IsIPv6String(name) {
+	if netutils.IsIPv6(name) {
 		family = string(v1.IPv6Protocol)
 	}
 	return &networkingapiv1.IPAddress{

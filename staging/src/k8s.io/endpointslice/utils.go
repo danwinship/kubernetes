@@ -315,7 +315,7 @@ func getAddressTypesForService(logger klog.Logger, service *v1.Service) sets.Set
 
 	if len(service.Spec.ClusterIP) > 0 && service.Spec.ClusterIP != v1.ClusterIPNone { // headfull
 		addrType := discovery.AddressTypeIPv4
-		if netutils.IsIPv6String(service.Spec.ClusterIP) {
+		if netutils.IsIPv6(service.Spec.ClusterIP) {
 			addrType = discovery.AddressTypeIPv6
 		}
 		serviceSupportedAddresses.Insert(addrType)
