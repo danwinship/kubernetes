@@ -26,7 +26,7 @@ import (
 	utiltesting "k8s.io/client-go/util/testing"
 
 	"k8s.io/apiserver/pkg/storage/storagebackend"
-	netutils "k8s.io/utils/net"
+	netutils "k8s.io/utils/net/v2"
 
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
 	apiserver "k8s.io/kubernetes/cmd/kube-apiserver/app"

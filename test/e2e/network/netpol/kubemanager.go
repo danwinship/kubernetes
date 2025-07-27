@@ -26,7 +26,7 @@ import (
 	clientset "k8s.io/client-go/kubernetes"
 	"k8s.io/kubernetes/test/e2e/framework"
 	e2epod "k8s.io/kubernetes/test/e2e/framework/pod"
-	netutils "k8s.io/utils/net"
+	netutils "k8s.io/utils/net/v2"
 	"net"
 	"strconv"
 	"strings"

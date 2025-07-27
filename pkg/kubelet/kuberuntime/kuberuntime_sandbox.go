@@ -32,7 +32,7 @@ import (
 	runtimeutil "k8s.io/kubernetes/pkg/kubelet/kuberuntime/util"
 	"k8s.io/kubernetes/pkg/kubelet/util"
 	"k8s.io/kubernetes/pkg/kubelet/util/format"
-	netutils "k8s.io/utils/net"
+	netutils "k8s.io/utils/net/v2"
 )
 
 // createPodSandbox creates a pod sandbox and returns (podSandBoxID, message, error).

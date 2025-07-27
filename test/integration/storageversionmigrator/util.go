@@ -69,7 +69,7 @@ import (
 	"k8s.io/kubernetes/test/integration/framework"
 	"k8s.io/kubernetes/test/utils"
 	"k8s.io/kubernetes/test/utils/kubeconfig"
-	netutils "k8s.io/utils/net"
+	netutils "k8s.io/utils/net/v2"
 	"k8s.io/utils/ptr"
 )
 

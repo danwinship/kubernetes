@@ -28,7 +28,7 @@ import (
 	"k8s.io/kubernetes/pkg/cluster/ports"
 	"k8s.io/kubernetes/pkg/kubelet/qos"
 	proxyutil "k8s.io/kubernetes/pkg/proxy/util"
-	netutils "k8s.io/utils/net"
+	netutils "k8s.io/utils/net/v2"
 	"k8s.io/utils/ptr"
 )
 

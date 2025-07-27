@@ -37,7 +37,7 @@ import (
 	cmconfig "k8s.io/controller-manager/config"
 	cmoptions "k8s.io/controller-manager/options"
 	migration "k8s.io/controller-manager/pkg/leadermigration/options"
-	netutils "k8s.io/utils/net"
+	netutils "k8s.io/utils/net/v2"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"

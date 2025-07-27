@@ -28,7 +28,7 @@ import (
 	"k8s.io/component-base/metrics/testutil"
 	api "k8s.io/kubernetes/pkg/apis/core"
 	"k8s.io/kubernetes/pkg/registry/core/service/ipallocator"
-	netutils "k8s.io/utils/net"
+	netutils "k8s.io/utils/net/v2"
 )
 
 type mockRangeRegistry struct {

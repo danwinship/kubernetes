@@ -60,7 +60,7 @@ import (
 	"k8s.io/kubernetes/pkg/kubelet/secret"
 	kubetypes "k8s.io/kubernetes/pkg/kubelet/types"
 	"k8s.io/kubernetes/pkg/volume"
-	netutils "k8s.io/utils/net"
+	netutils "k8s.io/utils/net/v2"
 	"k8s.io/utils/ptr"
 )
 

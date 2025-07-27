@@ -21,7 +21,7 @@ import (
 	"net"
 
 	restclient "k8s.io/client-go/rest"
-	netutils "k8s.io/utils/net"
+	netutils "k8s.io/utils/net/v2"
 )
 
 // LoopbackClientServerNameOverride is passed to the apiserver from the loopback client in order to

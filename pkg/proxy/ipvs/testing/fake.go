@@ -23,7 +23,7 @@ import (
 	"fmt"
 
 	"k8s.io/apimachinery/pkg/util/sets"
-	netutils "k8s.io/utils/net"
+	netutils "k8s.io/utils/net/v2"
 )
 
 // FakeNetlinkHandle mock implementation of proxy NetlinkHandle

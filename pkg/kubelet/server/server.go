@@ -42,7 +42,7 @@ import (
 	"google.golang.org/grpc"
 	"k8s.io/klog/v2"
 	"k8s.io/utils/clock"
-	netutils "k8s.io/utils/net"
+	netutils "k8s.io/utils/net/v2"
 	"k8s.io/utils/ptr"
 
 	v1 "k8s.io/api/core/v1"

@@ -31,7 +31,7 @@ import (
 	apimachineryversion "k8s.io/apimachinery/pkg/version"
 	componentversion "k8s.io/component-base/version"
 	"k8s.io/klog/v2"
-	netutils "k8s.io/utils/net"
+	netutils "k8s.io/utils/net/v2"
 
 	kubeadmapi "k8s.io/kubernetes/cmd/kubeadm/app/apis/kubeadm"
 	kubeadmscheme "k8s.io/kubernetes/cmd/kubeadm/app/apis/kubeadm/scheme"

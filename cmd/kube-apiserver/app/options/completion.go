@@ -24,7 +24,7 @@ import (
 
 	apiserveroptions "k8s.io/apiserver/pkg/server/options"
 	_ "k8s.io/component-base/metrics/prometheus/workqueue"
-	netutils "k8s.io/utils/net"
+	netutils "k8s.io/utils/net/v2"
 
 	cp "k8s.io/kubernetes/pkg/controlplane/apiserver/options"
 	"k8s.io/kubernetes/pkg/kubeapiserver"

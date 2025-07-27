@@ -47,7 +47,7 @@ import (
 	v1qos "k8s.io/kubernetes/pkg/apis/core/v1/helper/qos"
 	"k8s.io/kubernetes/pkg/scheduler/framework/plugins/tainttoleration"
 	utilfs "k8s.io/kubernetes/pkg/util/filesystem"
-	netutils "k8s.io/utils/net"
+	netutils "k8s.io/utils/net/v2"
 	"k8s.io/utils/ptr"
 
 	v1 "k8s.io/api/core/v1"

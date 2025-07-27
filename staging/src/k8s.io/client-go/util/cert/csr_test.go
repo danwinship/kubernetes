@@ -25,7 +25,7 @@ import (
 	"testing"
 
 	"k8s.io/client-go/util/keyutil"
-	netutils "k8s.io/utils/net"
+	netutils "k8s.io/utils/net/v2"
 )
 
 func TestMakeCSR(t *testing.T) {

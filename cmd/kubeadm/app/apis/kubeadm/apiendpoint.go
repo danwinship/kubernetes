@@ -20,7 +20,7 @@ import (
 	"net"
 	"strconv"
 
-	netutils "k8s.io/utils/net"
+	netutils "k8s.io/utils/net/v2"
 
 	"k8s.io/kubernetes/cmd/kubeadm/app/util/errors"
 )

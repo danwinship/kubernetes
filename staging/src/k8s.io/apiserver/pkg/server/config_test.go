@@ -51,7 +51,7 @@ import (
 	featuregatetesting "k8s.io/component-base/featuregate/testing"
 	"k8s.io/component-base/tracing"
 	"k8s.io/klog/v2/ktesting"
-	netutils "k8s.io/utils/net"
+	netutils "k8s.io/utils/net/v2"
 )
 
 func TestAuthorizeClientBearerTokenNoops(t *testing.T) {

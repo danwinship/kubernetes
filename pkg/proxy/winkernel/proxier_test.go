@@ -41,7 +41,7 @@ import (
 	"k8s.io/kubernetes/pkg/proxy/apis/config"
 	"k8s.io/kubernetes/pkg/proxy/healthcheck"
 	fakehcn "k8s.io/kubernetes/pkg/proxy/winkernel/testing"
-	netutils "k8s.io/utils/net"
+	netutils "k8s.io/utils/net/v2"
 	"k8s.io/utils/ptr"
 )
 

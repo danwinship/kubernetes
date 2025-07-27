@@ -37,7 +37,7 @@ import (
 	"strings"
 	"time"
 
-	netutils "k8s.io/utils/net"
+	netutils "k8s.io/utils/net/v2"
 
 	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"

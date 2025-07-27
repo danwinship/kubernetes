@@ -31,7 +31,7 @@ import (
 	corev1helper "k8s.io/kubernetes/pkg/apis/core/v1/helper"
 	kubeletconfig "k8s.io/kubernetes/pkg/kubelet/apis/config"
 	utiltaints "k8s.io/kubernetes/pkg/util/taints"
-	netutils "k8s.io/utils/net"
+	netutils "k8s.io/utils/net/v2"
 )
 
 // TODO(mikedanese): remove these flag wrapper types when we remove command line flags

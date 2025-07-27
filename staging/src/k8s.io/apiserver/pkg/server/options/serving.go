@@ -27,7 +27,7 @@ import (
 
 	"github.com/spf13/pflag"
 	"k8s.io/klog/v2"
-	netutils "k8s.io/utils/net"
+	netutils "k8s.io/utils/net/v2"
 
 	utilnet "k8s.io/apimachinery/pkg/util/net"
 	"k8s.io/apiserver/pkg/server"

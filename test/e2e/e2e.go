@@ -46,7 +46,7 @@ import (
 	e2enode "k8s.io/kubernetes/test/e2e/framework/node"
 	e2epod "k8s.io/kubernetes/test/e2e/framework/pod"
 	e2ereporters "k8s.io/kubernetes/test/e2e/reporters"
-	netutils "k8s.io/utils/net"
+	netutils "k8s.io/utils/net/v2"
 
 	clientset "k8s.io/client-go/kubernetes"
 	// ensure auth plugins are loaded

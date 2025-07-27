@@ -21,7 +21,7 @@ import (
 	"net"
 	"net/http"
 
-	netutils "k8s.io/utils/net"
+	netutils "k8s.io/utils/net/v2"
 )
 
 // listener allows for testing of ServiceHealthServer and ProxyHealthServer.

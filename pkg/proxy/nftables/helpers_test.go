@@ -34,7 +34,7 @@ import (
 
 	"k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
-	netutils "k8s.io/utils/net"
+	netutils "k8s.io/utils/net/v2"
 	"sigs.k8s.io/knftables"
 )
 

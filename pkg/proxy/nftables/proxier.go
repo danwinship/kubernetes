@@ -51,7 +51,7 @@ import (
 	"k8s.io/kubernetes/pkg/proxy/runner"
 	proxyutil "k8s.io/kubernetes/pkg/proxy/util"
 	utilkernel "k8s.io/kubernetes/pkg/util/kernel"
-	netutils "k8s.io/utils/net"
+	netutils "k8s.io/utils/net/v2"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/knftables"
 )

@@ -40,7 +40,7 @@ import (
 	"k8s.io/kubernetes/pkg/api/servicecidr"
 	api "k8s.io/kubernetes/pkg/apis/core"
 	"k8s.io/kubernetes/pkg/features"
-	netutils "k8s.io/utils/net"
+	netutils "k8s.io/utils/net/v2"
 )
 
 // MetaAllocator maintains a structure with IP alloctors for the corresponding ServiceCIDRs.

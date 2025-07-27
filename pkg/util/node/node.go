@@ -21,7 +21,7 @@ import (
 	"net"
 
 	v1 "k8s.io/api/core/v1"
-	netutils "k8s.io/utils/net"
+	netutils "k8s.io/utils/net/v2"
 )
 
 const (

@@ -24,7 +24,7 @@ import (
 
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/klog/v2"
-	netutils "k8s.io/utils/net"
+	netutils "k8s.io/utils/net/v2"
 )
 
 func parseIP(fldPath *field.Path, value string, strictValidation bool) (net.IP, field.ErrorList) {

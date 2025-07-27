@@ -37,7 +37,7 @@ import (
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/klog/v2"
 	api "k8s.io/kubernetes/pkg/apis/core"
-	netutils "k8s.io/utils/net"
+	netutils "k8s.io/utils/net/v2"
 	utiltrace "k8s.io/utils/trace"
 )
 

@@ -48,7 +48,7 @@ import (
 	"k8s.io/apiserver/pkg/util/webhook"
 	scheme "k8s.io/client-go/kubernetes/scheme"
 	corev1 "k8s.io/client-go/listers/core/v1"
-	netutils "k8s.io/utils/net"
+	netutils "k8s.io/utils/net/v2"
 )
 
 const defaultEtcdPathPrefix = "/registry/apiextensions.kubernetes.io"

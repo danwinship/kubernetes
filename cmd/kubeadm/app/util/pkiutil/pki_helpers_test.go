@@ -31,7 +31,7 @@ import (
 	"testing"
 
 	certutil "k8s.io/client-go/util/cert"
-	netutils "k8s.io/utils/net"
+	netutils "k8s.io/utils/net/v2"
 
 	kubeadmapi "k8s.io/kubernetes/cmd/kubeadm/app/apis/kubeadm"
 )

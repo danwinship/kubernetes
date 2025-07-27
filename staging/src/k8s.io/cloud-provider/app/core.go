@@ -34,7 +34,7 @@ import (
 	controllermanagerapp "k8s.io/controller-manager/app"
 	"k8s.io/controller-manager/controller"
 	"k8s.io/klog/v2"
-	netutils "k8s.io/utils/net"
+	netutils "k8s.io/utils/net/v2"
 
 	utilfeature "k8s.io/apiserver/pkg/util/feature"
 )

@@ -44,7 +44,7 @@ import (
 	svcreg "k8s.io/kubernetes/pkg/registry/core/service"
 	"k8s.io/kubernetes/pkg/registry/core/service/ipallocator"
 	"k8s.io/kubernetes/pkg/registry/core/service/portallocator"
-	netutils "k8s.io/utils/net"
+	netutils "k8s.io/utils/net/v2"
 	"sigs.k8s.io/structured-merge-diff/v6/fieldpath"
 )
 

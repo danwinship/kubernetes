@@ -24,7 +24,7 @@ import (
 	"strings"
 	"time"
 
-	netutils "k8s.io/utils/net"
+	netutils "k8s.io/utils/net/v2"
 )
 
 // TCP port to listen

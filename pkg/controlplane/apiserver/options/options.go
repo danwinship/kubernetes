@@ -36,7 +36,7 @@ import (
 	"k8s.io/component-base/metrics"
 	"k8s.io/component-base/zpages/flagz"
 	"k8s.io/klog/v2"
-	netutils "k8s.io/utils/net"
+	netutils "k8s.io/utils/net/v2"
 
 	"k8s.io/kubernetes/pkg/apis/authentication/validation"
 	_ "k8s.io/kubernetes/pkg/features"

@@ -45,7 +45,7 @@ import (
 	"k8s.io/klog/v2"
 	"k8s.io/kubernetes/pkg/api/servicecidr"
 	"k8s.io/kubernetes/pkg/registry/core/service/ipallocator"
-	netutils "k8s.io/utils/net"
+	netutils "k8s.io/utils/net/v2"
 )
 
 const (

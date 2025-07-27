@@ -23,7 +23,7 @@ import (
 	"testing"
 
 	utilipvs "k8s.io/kubernetes/pkg/proxy/ipvs/util"
-	netutils "k8s.io/utils/net"
+	netutils "k8s.io/utils/net/v2"
 )
 
 func TestVirtualServer(t *testing.T) {

@@ -33,7 +33,7 @@ import (
 	"k8s.io/apiserver/pkg/util/x509metrics"
 	"k8s.io/client-go/rest"
 	"k8s.io/utils/lru"
-	netutils "k8s.io/utils/net"
+	netutils "k8s.io/utils/net/v2"
 )
 
 const (

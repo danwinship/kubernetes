@@ -48,7 +48,7 @@ import (
 	basecompatibility "k8s.io/component-base/compatibility"
 	baseversion "k8s.io/component-base/version"
 	"k8s.io/klog/v2/ktesting"
-	netutils "k8s.io/utils/net"
+	netutils "k8s.io/utils/net/v2"
 )
 
 func setUp(t *testing.T) server.Config {

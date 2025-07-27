@@ -70,7 +70,7 @@ import (
 	"k8s.io/sample-apiserver/pkg/apiserver"
 	sampleserver "k8s.io/sample-apiserver/pkg/cmd/server"
 	wardlev1alpha1client "k8s.io/sample-apiserver/pkg/generated/clientset/versioned/typed/wardle/v1alpha1"
-	netutils "k8s.io/utils/net"
+	netutils "k8s.io/utils/net/v2"
 )
 
 func TestAPIServiceWaitOnStart(t *testing.T) {

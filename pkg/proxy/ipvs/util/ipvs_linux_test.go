@@ -27,7 +27,7 @@ import (
 	libipvs "github.com/moby/ipvs"
 	"golang.org/x/sys/unix"
 
-	netutils "k8s.io/utils/net"
+	netutils "k8s.io/utils/net/v2"
 )
 
 func Test_toVirtualServer(t *testing.T) {

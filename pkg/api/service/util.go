@@ -21,7 +21,7 @@ import (
 	"strings"
 
 	api "k8s.io/kubernetes/pkg/apis/core"
-	netutils "k8s.io/utils/net"
+	netutils "k8s.io/utils/net/v2"
 )
 
 const (

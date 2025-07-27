@@ -28,7 +28,7 @@ import (
 
 	"k8s.io/klog/v2"
 	utilexec "k8s.io/utils/exec"
-	netutils "k8s.io/utils/net"
+	netutils "k8s.io/utils/net/v2"
 )
 
 var validationError = fmt.Errorf("failed to validate entry for ipset")

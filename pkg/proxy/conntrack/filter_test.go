@@ -26,7 +26,7 @@ import (
 	"github.com/vishvananda/netlink"
 	"golang.org/x/sys/unix"
 
-	netutils "k8s.io/utils/net"
+	netutils "k8s.io/utils/net/v2"
 )
 
 func applyFilter(flowList []netlink.ConntrackFlow, ipv4Filter *conntrackFilter, ipv6Filter *conntrackFilter) (ipv4Match, ipv6Match int) {

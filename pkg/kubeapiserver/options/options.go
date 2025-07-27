@@ -20,7 +20,7 @@ import (
 	"net"
 
 	utilnet "k8s.io/apimachinery/pkg/util/net"
-	netutils "k8s.io/utils/net"
+	netutils "k8s.io/utils/net/v2"
 )
 
 // DefaultServiceNodePortRange is the default port range for NodePort services.

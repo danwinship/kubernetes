@@ -25,7 +25,7 @@ import (
 
 	"github.com/spf13/cobra"
 	"k8s.io/component-base/logs"
-	netutils "k8s.io/utils/net"
+	netutils "k8s.io/utils/net/v2"
 )
 
 // CmdNoSnatTest is used by agnhost Cobra.

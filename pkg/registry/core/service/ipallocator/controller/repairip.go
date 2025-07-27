@@ -45,7 +45,7 @@ import (
 	"k8s.io/kubernetes/pkg/controlplane/controller/defaultservicecidr"
 	"k8s.io/kubernetes/pkg/registry/core/service/ipallocator"
 	"k8s.io/utils/clock"
-	netutils "k8s.io/utils/net"
+	netutils "k8s.io/utils/net/v2"
 )
 
 const (

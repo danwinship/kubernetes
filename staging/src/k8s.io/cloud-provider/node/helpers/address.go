@@ -21,7 +21,7 @@ import (
 
 	v1 "k8s.io/api/core/v1"
 	nodeutil "k8s.io/component-helpers/node/util"
-	netutils "k8s.io/utils/net"
+	netutils "k8s.io/utils/net/v2"
 )
 
 // AddToNodeAddresses appends the NodeAddresses to the passed-by-pointer slice,

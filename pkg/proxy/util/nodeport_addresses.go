@@ -21,7 +21,7 @@ import (
 	"net"
 
 	"k8s.io/api/core/v1"
-	netutils "k8s.io/utils/net"
+	netutils "k8s.io/utils/net/v2"
 )
 
 // NodePortAddresses is used to handle the --nodeport-addresses flag

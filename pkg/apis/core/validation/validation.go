@@ -31,7 +31,7 @@ import (
 	"unicode"
 	"unicode/utf8"
 
-	netutils "k8s.io/utils/net"
+	netutils "k8s.io/utils/net/v2"
 
 	v1 "k8s.io/api/core/v1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"

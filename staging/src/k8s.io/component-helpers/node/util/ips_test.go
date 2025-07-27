@@ -23,7 +23,7 @@ import (
 	"strings"
 	"testing"
 
-	netutils "k8s.io/utils/net"
+	netutils "k8s.io/utils/net/v2"
 )
 
 func TestParseNodeIPArgument(t *testing.T) {

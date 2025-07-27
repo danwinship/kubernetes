@@ -42,7 +42,7 @@ import (
 	"k8s.io/klog/v2"
 	system "k8s.io/system-validators/validators"
 	utilsexec "k8s.io/utils/exec"
-	netutils "k8s.io/utils/net"
+	netutils "k8s.io/utils/net/v2"
 
 	kubeadmapi "k8s.io/kubernetes/cmd/kubeadm/app/apis/kubeadm"
 	kubeadmconstants "k8s.io/kubernetes/cmd/kubeadm/app/constants"

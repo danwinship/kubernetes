@@ -26,7 +26,7 @@ import (
 
 	utilipvs "k8s.io/kubernetes/pkg/proxy/ipvs/util"
 	utilipvstest "k8s.io/kubernetes/pkg/proxy/ipvs/util/testing"
-	netutils "k8s.io/utils/net"
+	netutils "k8s.io/utils/net/v2"
 )
 
 func Test_GracefulDeleteRS(t *testing.T) {

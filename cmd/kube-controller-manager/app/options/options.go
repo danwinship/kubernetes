@@ -55,7 +55,7 @@ import (
 	"k8s.io/kubernetes/pkg/controller/garbagecollector"
 	garbagecollectorconfig "k8s.io/kubernetes/pkg/controller/garbagecollector/config"
 	"k8s.io/kubernetes/pkg/controller/nodeipam/ipam"
-	netutils "k8s.io/utils/net"
+	netutils "k8s.io/utils/net/v2"
 
 	// add the kubernetes feature gates
 	_ "k8s.io/kubernetes/pkg/features"

@@ -23,7 +23,7 @@ import (
 	"testing"
 
 	"k8s.io/component-base/metrics/testutil"
-	netutils "k8s.io/utils/net"
+	netutils "k8s.io/utils/net/v2"
 )
 
 func TestCIDRSetFullyAllocated(t *testing.T) {

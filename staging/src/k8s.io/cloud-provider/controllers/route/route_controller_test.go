@@ -32,7 +32,7 @@ import (
 	fakecloud "k8s.io/cloud-provider/fake"
 	nodeutil "k8s.io/component-helpers/node/util"
 	"k8s.io/klog/v2/ktesting"
-	netutils "k8s.io/utils/net"
+	netutils "k8s.io/utils/net/v2"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"

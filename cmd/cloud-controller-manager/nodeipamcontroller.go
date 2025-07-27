@@ -36,7 +36,7 @@ import (
 	nodeipamcontroller "k8s.io/kubernetes/pkg/controller/nodeipam"
 	nodeipamconfig "k8s.io/kubernetes/pkg/controller/nodeipam/config"
 	"k8s.io/kubernetes/pkg/controller/nodeipam/ipam"
-	netutils "k8s.io/utils/net"
+	netutils "k8s.io/utils/net/v2"
 )
 
 const (

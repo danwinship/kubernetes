@@ -19,7 +19,7 @@ package options
 
 import (
 	genericoptions "k8s.io/apiserver/pkg/server/options"
-	netutils "k8s.io/utils/net"
+	netutils "k8s.io/utils/net/v2"
 )
 
 // NewSecureServingOptions gives default values for the kube-apiserver which are not the options wanted by

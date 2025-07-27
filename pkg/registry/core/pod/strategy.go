@@ -26,7 +26,7 @@ import (
 	"strings"
 	"time"
 
-	netutils "k8s.io/utils/net"
+	netutils "k8s.io/utils/net/v2"
 	"sigs.k8s.io/structured-merge-diff/v6/fieldpath"
 
 	apiv1 "k8s.io/api/core/v1"

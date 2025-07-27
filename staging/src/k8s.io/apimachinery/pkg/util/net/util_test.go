@@ -31,7 +31,7 @@ import (
 
 	"golang.org/x/net/http2"
 
-	netutils "k8s.io/utils/net"
+	netutils "k8s.io/utils/net/v2"
 )
 
 func getIPNet(cidr string) *net.IPNet {

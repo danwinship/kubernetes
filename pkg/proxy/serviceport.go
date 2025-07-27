@@ -26,7 +26,7 @@ import (
 	"k8s.io/klog/v2"
 	apiservice "k8s.io/kubernetes/pkg/api/v1/service"
 	proxyutil "k8s.io/kubernetes/pkg/proxy/util"
-	netutils "k8s.io/utils/net"
+	netutils "k8s.io/utils/net/v2"
 )
 
 // ServicePort is an interface which abstracts information about a service.

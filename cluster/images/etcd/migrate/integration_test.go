@@ -39,7 +39,7 @@ import (
 
 	"github.com/blang/semver/v4"
 	"k8s.io/klog/v2"
-	netutils "k8s.io/utils/net"
+	netutils "k8s.io/utils/net/v2"
 )
 
 var (

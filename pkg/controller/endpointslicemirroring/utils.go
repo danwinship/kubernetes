@@ -29,7 +29,7 @@ import (
 	"k8s.io/client-go/tools/leaderelection/resourcelock"
 	endpointsliceutil "k8s.io/endpointslice/util"
 	"k8s.io/kubernetes/pkg/apis/discovery/validation"
-	netutils "k8s.io/utils/net"
+	netutils "k8s.io/utils/net/v2"
 )
 
 // addrTypePortMapKey is used to uniquely identify groups of endpoint ports and

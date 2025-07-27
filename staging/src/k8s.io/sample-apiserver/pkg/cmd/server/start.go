@@ -45,7 +45,7 @@ import (
 	clientset "k8s.io/sample-apiserver/pkg/generated/clientset/versioned"
 	informers "k8s.io/sample-apiserver/pkg/generated/informers/externalversions"
 	sampleopenapi "k8s.io/sample-apiserver/pkg/generated/openapi"
-	netutils "k8s.io/utils/net"
+	netutils "k8s.io/utils/net/v2"
 )
 
 const defaultEtcdPathPrefix = "/registry/wardle.example.com"

@@ -22,7 +22,7 @@ import (
 
 	"k8s.io/apiserver/pkg/server"
 	"k8s.io/client-go/rest"
-	netutils "k8s.io/utils/net"
+	netutils "k8s.io/utils/net/v2"
 )
 
 func TestEmptyMainCert(t *testing.T) {

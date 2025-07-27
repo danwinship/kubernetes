@@ -52,7 +52,7 @@ import (
 	"k8s.io/client-go/util/retry"
 
 	cloudprovider "k8s.io/cloud-provider"
-	netutils "k8s.io/utils/net"
+	netutils "k8s.io/utils/net/v2"
 	"k8s.io/utils/ptr"
 
 	podutil "k8s.io/kubernetes/pkg/api/v1/pod"

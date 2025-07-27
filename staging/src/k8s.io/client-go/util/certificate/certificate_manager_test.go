@@ -45,7 +45,7 @@ import (
 	clienttesting "k8s.io/client-go/testing"
 	"k8s.io/klog/v2"
 	"k8s.io/klog/v2/ktesting"
-	netutils "k8s.io/utils/net"
+	netutils "k8s.io/utils/net/v2"
 )
 
 var storeCertData = newCertificateData(`-----BEGIN CERTIFICATE-----

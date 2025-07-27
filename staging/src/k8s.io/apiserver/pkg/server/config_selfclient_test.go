@@ -20,7 +20,7 @@ import (
 	"net"
 	"testing"
 
-	netutils "k8s.io/utils/net"
+	netutils "k8s.io/utils/net/v2"
 )
 
 func TestLoopbackHostPortIPv4(t *testing.T) {

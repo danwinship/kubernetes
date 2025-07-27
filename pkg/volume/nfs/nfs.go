@@ -21,7 +21,7 @@ import (
 	"os"
 	"time"
 
-	netutils "k8s.io/utils/net"
+	netutils "k8s.io/utils/net/v2"
 
 	"k8s.io/klog/v2"
 	"k8s.io/mount-utils"

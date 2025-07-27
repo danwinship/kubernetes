@@ -22,7 +22,7 @@ package ipvs
 import (
 	"testing"
 
-	netutils "k8s.io/utils/net"
+	netutils "k8s.io/utils/net/v2"
 )
 
 func TestVirtualServerEqual(t *testing.T) {

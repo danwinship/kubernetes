@@ -20,7 +20,7 @@ import (
 	"net"
 
 	"k8s.io/klog/v2"
-	netutils "k8s.io/utils/net"
+	netutils "k8s.io/utils/net/v2"
 )
 
 // IPPart returns just the IP part of an IP or IP:port or endpoint string. If the IP

@@ -29,7 +29,7 @@ import (
 	v1listers "k8s.io/client-go/listers/core/v1"
 	core "k8s.io/client-go/testing"
 	"k8s.io/client-go/tools/cache"
-	netutils "k8s.io/utils/net"
+	netutils "k8s.io/utils/net/v2"
 )
 
 func TestCreateOrUpdateMasterService(t *testing.T) {

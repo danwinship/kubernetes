@@ -17,7 +17,7 @@ limitations under the License.
 package util
 
 import (
-	netutils "k8s.io/utils/net"
+	netutils "k8s.io/utils/net/v2"
 )
 
 // LocalTrafficDetector generates iptables or nftables rules to detect traffic from local pods.

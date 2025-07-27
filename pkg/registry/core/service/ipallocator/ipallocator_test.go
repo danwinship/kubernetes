@@ -33,7 +33,7 @@ import (
 	k8stesting "k8s.io/client-go/testing"
 	"k8s.io/component-base/metrics/testutil"
 	api "k8s.io/kubernetes/pkg/apis/core"
-	netutils "k8s.io/utils/net"
+	netutils "k8s.io/utils/net/v2"
 )
 
 func newTestAllocator(cidr *net.IPNet) (*Allocator, error) {
