@@ -150,10 +150,9 @@ func endpointSliceFromEndpoints(endpoints *corev1.Endpoints) *discovery.Endpoint
 // match the provided address type.
 func getEndpointsFromAddresses(addresses []corev1.EndpointAddress, addressType discovery.AddressType, ready bool) []discovery.Endpoint {
 	endpoints := []discovery.Endpoint{}
-	isIPv6AddressType := addressType == discovery.AddressTypeIPv6
 
 	for _, address := range addresses {
-		if netutils.IsIPv6(address.IP) == isIPv6AddressType {
+		if netutils.IPFamilyOf(address.IP) == netutils.IPFamily(addressType) {
 			endpoints = append(endpoints, endpointFromAddress(address, ready))
 		}
 	}

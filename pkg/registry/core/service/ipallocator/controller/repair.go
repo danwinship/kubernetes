@@ -82,20 +82,13 @@ func NewRepair(interval time.Duration, serviceClient corev1client.ServicesGetter
 	allocatorByFamily := make(map[v1.IPFamily]rangeallocation.RangeRegistry)
 	leaksByFamily := make(map[v1.IPFamily]map[string]int)
 
-	primary := v1.IPv4Protocol
-	secondary := v1.IPv6Protocol
-	if netutils.IsIPv6(network.IP) {
-		primary = v1.IPv6Protocol
-	}
-
+	primary := v1.IPFamily(netutils.IPFamilyOfCIDR(network))
 	networkByFamily[primary] = network
 	allocatorByFamily[primary] = alloc
 	leaksByFamily[primary] = make(map[string]int)
 
 	if secondaryNetwork != nil && secondaryNetwork.IP != nil {
-		if primary == v1.IPv6Protocol {
-			secondary = v1.IPv4Protocol
-		}
+		secondary := v1.IPFamily(netutils.IPFamilyOfCIDR(secondaryNetwork))
 		networkByFamily[secondary] = secondaryNetwork
 		allocatorByFamily[secondary] = secondaryAlloc
 		leaksByFamily[secondary] = make(map[string]int)

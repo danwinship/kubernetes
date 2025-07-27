@@ -376,7 +376,7 @@ func (c *Controller) canDeleteCIDR(ctx context.Context, serviceCIDR *networkinga
 	for _, cidr := range serviceCIDR.Spec.CIDRs {
 		// get all the IPv4 addresses
 		ipLabelSelector := labels.Set(map[string]string{
-			networkingapiv1.LabelIPAddressFamily: string(convertToV1IPFamily(netutils.IPFamilyOfCIDR(cidr))),
+			networkingapiv1.LabelIPAddressFamily: string(netutils.IPFamilyOfCIDR(cidr)),
 			networkingapiv1.LabelManagedBy:       ipallocator.ControllerName,
 		}).AsSelectorPreValidated()
 		ips, err := c.ipAddressLister.List(ipLabelSelector)
@@ -487,18 +487,4 @@ func (c *Controller) updateConditionIfNeeded(ctx context.Context, cidr *networki
 	svcApply := networkingapiv1apply.ServiceCIDR(cidr.Name).WithStatus(svcApplyStatus)
 	_, err := c.client.NetworkingV1().ServiceCIDRs().ApplyStatus(ctx, svcApply, metav1.ApplyOptions{FieldManager: controllerName, Force: true})
 	return err
-}
-
-// Convert netutils.IPFamily to v1.IPFamily
-// TODO: consolidate helpers
-// copied from pkg/proxy/util/utils.go
-func convertToV1IPFamily(ipFamily netutils.IPFamily) v1.IPFamily {
-	switch ipFamily {
-	case netutils.IPv4:
-		return v1.IPv4Protocol
-	case netutils.IPv6:
-		return v1.IPv6Protocol
-	}
-
-	return v1.IPFamilyUnknown
 }
