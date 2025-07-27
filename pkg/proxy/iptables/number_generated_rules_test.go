@@ -358,10 +358,10 @@ func generateServiceEndpoints(nServices, nEndpoints int, epsFunc func(eps *disco
 
 	// base parameters
 	basePort := 80
-	base := netutils.BigForIP(netutils.ParseIPSloppy("10.0.0.1"))
+	base := netutils.BigForIP(netutils.MustParseIP("10.0.0.1"))
 
 	// generate a base endpoint slice object
-	baseEp := netutils.BigForIP(netutils.ParseIPSloppy("172.16.0.1"))
+	baseEp := netutils.BigForIP(netutils.MustParseIP("172.16.0.1"))
 	epPort := 8080
 
 	eps := &discovery.EndpointSlice{

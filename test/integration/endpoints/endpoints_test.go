@@ -677,7 +677,7 @@ func TestEndpointTruncate(t *testing.T) {
 
 	// create 1001 Pods to reach endpoint max capacity that is set to 1000
 	allPodNames := sets.New[string]()
-	baseIP := netutils.BigForIP(netutils.ParseIPSloppy("10.0.0.1"))
+	baseIP := netutils.BigForIP(netutils.MustParseIP("10.0.0.1"))
 	for i := 0; i < 1001; i++ {
 		pod := basePod.DeepCopy()
 		pod.Name = fmt.Sprintf("%s-%d", basePod.Name, i)

@@ -64,7 +64,7 @@ func TestConntracker_ClearEntries(t *testing.T) {
 				&conntrackFilter{
 					protocol: 17,
 					original: &connectionTuple{dstPort: 8000},
-					reply:    &connectionTuple{srcIP: netutils.ParseIPSloppy("2001:db8:1::2")},
+					reply:    &connectionTuple{srcIP: netutils.MustParseIP("2001:db8:1::2")},
 				},
 			},
 		},
@@ -79,12 +79,12 @@ func TestConntracker_ClearEntries(t *testing.T) {
 				&conntrackFilter{
 					protocol: 17,
 					original: &connectionTuple{dstPort: 5000},
-					reply:    &connectionTuple{srcIP: netutils.ParseIPSloppy("10.244.0.3")},
+					reply:    &connectionTuple{srcIP: netutils.MustParseIP("10.244.0.3")},
 				},
 				&conntrackFilter{
 					protocol: 132,
-					original: &connectionTuple{dstIP: netutils.ParseIPSloppy("10.96.0.10")},
-					reply:    &connectionTuple{srcIP: netutils.ParseIPSloppy("10.244.0.3")},
+					original: &connectionTuple{dstIP: netutils.MustParseIP("10.96.0.10")},
+					reply:    &connectionTuple{srcIP: netutils.MustParseIP("10.244.0.3")},
 				},
 			},
 		},

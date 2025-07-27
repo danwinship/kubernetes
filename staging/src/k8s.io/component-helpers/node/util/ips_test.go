@@ -56,21 +56,21 @@ func TestParseNodeIPArgument(t *testing.T) {
 			desc: "single IPv4",
 			in:   "1.2.3.4",
 			out: []net.IP{
-				netutils.ParseIPSloppy("1.2.3.4"),
+				netutils.MustParseIP("1.2.3.4"),
 			},
 		},
 		{
 			desc: "single IPv4 with whitespace",
 			in:   " 1.2.3.4   ",
 			out: []net.IP{
-				netutils.ParseIPSloppy("1.2.3.4"),
+				netutils.MustParseIP("1.2.3.4"),
 			},
 		},
 		{
 			desc: "single IPv4 non-canonical",
 			in:   "01.2.3.004",
 			out: []net.IP{
-				netutils.ParseIPSloppy("1.2.3.4"),
+				netutils.MustParseIP("1.2.3.4"),
 			},
 		},
 		{
@@ -96,7 +96,7 @@ func TestParseNodeIPArgument(t *testing.T) {
 			desc: "single IPv4 plus ignored garbage",
 			in:   "1.2.3.4,not-an-IPv6-address",
 			out: []net.IP{
-				netutils.ParseIPSloppy("1.2.3.4"),
+				netutils.MustParseIP("1.2.3.4"),
 			},
 			invalids: []string{"not-an-IPv6-address"},
 		},
@@ -104,22 +104,22 @@ func TestParseNodeIPArgument(t *testing.T) {
 			desc: "single IPv6",
 			in:   "abcd::ef01",
 			out: []net.IP{
-				netutils.ParseIPSloppy("abcd::ef01"),
+				netutils.MustParseIP("abcd::ef01"),
 			},
 		},
 		{
 			desc: "single IPv6 non-canonical",
 			in:   "abcd:0abc:00ab:0000:0000::1",
 			out: []net.IP{
-				netutils.ParseIPSloppy("abcd:abc:ab::1"),
+				netutils.MustParseIP("abcd:abc:ab::1"),
 			},
 		},
 		{
 			desc: "simple dual-stack",
 			in:   "1.2.3.4,abcd::ef01",
 			out: []net.IP{
-				netutils.ParseIPSloppy("1.2.3.4"),
-				netutils.ParseIPSloppy("abcd::ef01"),
+				netutils.MustParseIP("1.2.3.4"),
+				netutils.MustParseIP("abcd::ef01"),
 			},
 			ssErr: "not supported in this configuration",
 		},
@@ -127,8 +127,8 @@ func TestParseNodeIPArgument(t *testing.T) {
 			desc: "dual-stack with whitespace",
 			in:   "abcd::ef01 , 1.2.3.4",
 			out: []net.IP{
-				netutils.ParseIPSloppy("abcd::ef01"),
-				netutils.ParseIPSloppy("1.2.3.4"),
+				netutils.MustParseIP("abcd::ef01"),
+				netutils.MustParseIP("1.2.3.4"),
 			},
 			ssErr: "not supported in this configuration",
 		},
@@ -158,8 +158,8 @@ func TestParseNodeIPArgument(t *testing.T) {
 			desc: "dual-stack plus ignored garbage",
 			in:   "abcd::ef01 , 1.2.3.4, something else",
 			out: []net.IP{
-				netutils.ParseIPSloppy("abcd::ef01"),
-				netutils.ParseIPSloppy("1.2.3.4"),
+				netutils.MustParseIP("abcd::ef01"),
+				netutils.MustParseIP("1.2.3.4"),
 			},
 			invalids: []string{"something else"},
 			ssErr:    "not supported in this configuration",
@@ -246,7 +246,7 @@ func TestParseNodeIPAnnotation(t *testing.T) {
 			desc: "single IPv4",
 			in:   "1.2.3.4",
 			out: []net.IP{
-				netutils.ParseIPSloppy("1.2.3.4"),
+				netutils.MustParseIP("1.2.3.4"),
 			},
 		},
 		{
@@ -258,7 +258,7 @@ func TestParseNodeIPAnnotation(t *testing.T) {
 			desc: "single IPv4 non-canonical",
 			in:   "01.2.3.004",
 			out: []net.IP{
-				netutils.ParseIPSloppy("1.2.3.4"),
+				netutils.MustParseIP("1.2.3.4"),
 			},
 		},
 		{
@@ -287,22 +287,22 @@ func TestParseNodeIPAnnotation(t *testing.T) {
 			desc: "single IPv6",
 			in:   "abcd::ef01",
 			out: []net.IP{
-				netutils.ParseIPSloppy("abcd::ef01"),
+				netutils.MustParseIP("abcd::ef01"),
 			},
 		},
 		{
 			desc: "single IPv6 non-canonical",
 			in:   "abcd:0abc:00ab:0000:0000::1",
 			out: []net.IP{
-				netutils.ParseIPSloppy("abcd:abc:ab::1"),
+				netutils.MustParseIP("abcd:abc:ab::1"),
 			},
 		},
 		{
 			desc: "simple dual-stack",
 			in:   "1.2.3.4,abcd::ef01",
 			out: []net.IP{
-				netutils.ParseIPSloppy("1.2.3.4"),
-				netutils.ParseIPSloppy("abcd::ef01"),
+				netutils.MustParseIP("1.2.3.4"),
+				netutils.MustParseIP("abcd::ef01"),
 			},
 			ssErr: "not supported in this configuration",
 		},

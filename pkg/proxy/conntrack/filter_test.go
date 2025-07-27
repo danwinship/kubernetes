@@ -45,39 +45,39 @@ func TestConntrackFilter(t *testing.T) {
 	var flowList []netlink.ConntrackFlow
 	flow1 := netlink.ConntrackFlow{}
 	flow1.FamilyType = unix.AF_INET
-	flow1.Forward.SrcIP = netutils.ParseIPSloppy("10.0.0.1")
-	flow1.Forward.DstIP = netutils.ParseIPSloppy("20.0.0.1")
+	flow1.Forward.SrcIP = netutils.MustParseIP("10.0.0.1")
+	flow1.Forward.DstIP = netutils.MustParseIP("20.0.0.1")
 	flow1.Forward.SrcPort = 1000
 	flow1.Forward.DstPort = 2000
 	flow1.Forward.Protocol = 17
-	flow1.Reverse.SrcIP = netutils.ParseIPSloppy("20.0.0.1")
-	flow1.Reverse.DstIP = netutils.ParseIPSloppy("192.168.1.1")
+	flow1.Reverse.SrcIP = netutils.MustParseIP("20.0.0.1")
+	flow1.Reverse.DstIP = netutils.MustParseIP("192.168.1.1")
 	flow1.Reverse.SrcPort = 2000
 	flow1.Reverse.DstPort = 1000
 	flow1.Reverse.Protocol = 17
 
 	flow2 := netlink.ConntrackFlow{}
 	flow2.FamilyType = unix.AF_INET
-	flow2.Forward.SrcIP = netutils.ParseIPSloppy("10.0.0.2")
-	flow2.Forward.DstIP = netutils.ParseIPSloppy("20.0.0.2")
+	flow2.Forward.SrcIP = netutils.MustParseIP("10.0.0.2")
+	flow2.Forward.DstIP = netutils.MustParseIP("20.0.0.2")
 	flow2.Forward.SrcPort = 5000
 	flow2.Forward.DstPort = 6000
 	flow2.Forward.Protocol = 6
-	flow2.Reverse.SrcIP = netutils.ParseIPSloppy("20.0.0.2")
-	flow2.Reverse.DstIP = netutils.ParseIPSloppy("192.168.1.1")
+	flow2.Reverse.SrcIP = netutils.MustParseIP("20.0.0.2")
+	flow2.Reverse.DstIP = netutils.MustParseIP("192.168.1.1")
 	flow2.Reverse.SrcPort = 6000
 	flow2.Reverse.DstPort = 5000
 	flow2.Reverse.Protocol = 6
 
 	flow3 := netlink.ConntrackFlow{}
 	flow3.FamilyType = unix.AF_INET6
-	flow3.Forward.SrcIP = netutils.ParseIPSloppy("eeee:eeee:eeee:eeee:eeee:eeee:eeee:eeee")
-	flow3.Forward.DstIP = netutils.ParseIPSloppy("dddd:dddd:dddd:dddd:dddd:dddd:dddd:dddd")
+	flow3.Forward.SrcIP = netutils.MustParseIP("eeee:eeee:eeee:eeee:eeee:eeee:eeee:eeee")
+	flow3.Forward.DstIP = netutils.MustParseIP("dddd:dddd:dddd:dddd:dddd:dddd:dddd:dddd")
 	flow3.Forward.SrcPort = 1000
 	flow3.Forward.DstPort = 2000
 	flow3.Forward.Protocol = 132
-	flow3.Reverse.SrcIP = netutils.ParseIPSloppy("dddd:dddd:dddd:dddd:dddd:dddd:dddd:dddd")
-	flow3.Reverse.DstIP = netutils.ParseIPSloppy("eeee:eeee:eeee:eeee:eeee:eeee:eeee:eeee")
+	flow3.Reverse.SrcIP = netutils.MustParseIP("dddd:dddd:dddd:dddd:dddd:dddd:dddd:dddd")
+	flow3.Reverse.DstIP = netutils.MustParseIP("eeee:eeee:eeee:eeee:eeee:eeee:eeee:eeee")
 	flow3.Reverse.SrcPort = 2000
 	flow3.Reverse.DstPort = 1000
 	flow3.Reverse.Protocol = 132
@@ -106,15 +106,15 @@ func TestConntrackFilter(t *testing.T) {
 		},
 		{
 			name:              "Original Source IP filter",
-			filterV4:          &conntrackFilter{original: &connectionTuple{srcIP: netutils.ParseIPSloppy("10.0.0.1")}},
-			filterV6:          &conntrackFilter{original: &connectionTuple{srcIP: netutils.ParseIPSloppy("eeee:eeee:eeee:eeee:eeee:eeee:eeee:eeee")}},
+			filterV4:          &conntrackFilter{original: &connectionTuple{srcIP: netutils.MustParseIP("10.0.0.1")}},
+			filterV6:          &conntrackFilter{original: &connectionTuple{srcIP: netutils.MustParseIP("eeee:eeee:eeee:eeee:eeee:eeee:eeee:eeee")}},
 			expectedV4Matches: 1,
 			expectedV6Matches: 1,
 		},
 		{
 			name:              "Original Destination IP filter",
-			filterV4:          &conntrackFilter{original: &connectionTuple{dstIP: netutils.ParseIPSloppy("20.0.0.1")}},
-			filterV6:          &conntrackFilter{original: &connectionTuple{dstIP: netutils.ParseIPSloppy("dddd:dddd:dddd:dddd:dddd:dddd:dddd:dddd")}},
+			filterV4:          &conntrackFilter{original: &connectionTuple{dstIP: netutils.MustParseIP("20.0.0.1")}},
+			filterV6:          &conntrackFilter{original: &connectionTuple{dstIP: netutils.MustParseIP("dddd:dddd:dddd:dddd:dddd:dddd:dddd:dddd")}},
 			expectedV4Matches: 1,
 			expectedV6Matches: 1,
 		},
@@ -134,15 +134,15 @@ func TestConntrackFilter(t *testing.T) {
 		},
 		{
 			name:              "Reply Source IP filter",
-			filterV4:          &conntrackFilter{reply: &connectionTuple{srcIP: netutils.ParseIPSloppy("20.0.0.1")}},
-			filterV6:          &conntrackFilter{reply: &connectionTuple{srcIP: netutils.ParseIPSloppy("dddd:dddd:dddd:dddd:dddd:dddd:dddd:dddd")}},
+			filterV4:          &conntrackFilter{reply: &connectionTuple{srcIP: netutils.MustParseIP("20.0.0.1")}},
+			filterV6:          &conntrackFilter{reply: &connectionTuple{srcIP: netutils.MustParseIP("dddd:dddd:dddd:dddd:dddd:dddd:dddd:dddd")}},
 			expectedV4Matches: 1,
 			expectedV6Matches: 1,
 		},
 		{
 			name:              "Reply Destination IP filter",
-			filterV4:          &conntrackFilter{reply: &connectionTuple{dstIP: netutils.ParseIPSloppy("192.168.1.1")}},
-			filterV6:          &conntrackFilter{reply: &connectionTuple{dstIP: netutils.ParseIPSloppy("dddd:dddd:dddd:dddd:dddd:dddd:dddd:dddd")}},
+			filterV4:          &conntrackFilter{reply: &connectionTuple{dstIP: netutils.MustParseIP("192.168.1.1")}},
+			filterV6:          &conntrackFilter{reply: &connectionTuple{dstIP: netutils.MustParseIP("dddd:dddd:dddd:dddd:dddd:dddd:dddd:dddd")}},
 			expectedV4Matches: 2,
 			expectedV6Matches: 0,
 		},

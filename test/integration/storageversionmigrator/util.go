@@ -1018,7 +1018,7 @@ func (svm *svmTest) setupServerCert(t *testing.T) *certContext {
 		&cert.Config{
 			CommonName: "127.0.0.1",
 			AltNames: cert.AltNames{
-				IPs: []net.IP{netutils.ParseIPSloppy("127.0.0.1")},
+				IPs: []net.IP{netutils.MustParseIP("127.0.0.1")},
 			},
 			Usages: []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
 		},

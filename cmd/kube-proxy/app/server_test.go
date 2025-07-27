@@ -102,7 +102,7 @@ func Test_detectNodeIPs(t *testing.T) {
 		},
 		{
 			name:           "Bind address 0.0.0.0 and node with IPv4 InternalIP set",
-			rawNodeIPs:     []net.IP{netutils.ParseIPSloppy("192.168.1.1")},
+			rawNodeIPs:     []net.IP{netutils.MustParseIP("192.168.1.1")},
 			bindAddress:    "0.0.0.0",
 			expectedFamily: v1.IPv4Protocol,
 			expectedIPv4:   "192.168.1.1",
@@ -110,7 +110,7 @@ func Test_detectNodeIPs(t *testing.T) {
 		},
 		{
 			name:           "Bind address :: and node with IPv4 InternalIP set",
-			rawNodeIPs:     []net.IP{netutils.ParseIPSloppy("192.168.1.1")},
+			rawNodeIPs:     []net.IP{netutils.MustParseIP("192.168.1.1")},
 			bindAddress:    "::",
 			expectedFamily: v1.IPv4Protocol,
 			expectedIPv4:   "192.168.1.1",
@@ -118,7 +118,7 @@ func Test_detectNodeIPs(t *testing.T) {
 		},
 		{
 			name:           "Bind address 0.0.0.0 and node with IPv6 InternalIP set",
-			rawNodeIPs:     []net.IP{netutils.ParseIPSloppy("fd00:1234::1")},
+			rawNodeIPs:     []net.IP{netutils.MustParseIP("fd00:1234::1")},
 			bindAddress:    "0.0.0.0",
 			expectedFamily: v1.IPv6Protocol,
 			expectedIPv4:   "127.0.0.1",
@@ -126,7 +126,7 @@ func Test_detectNodeIPs(t *testing.T) {
 		},
 		{
 			name:           "Bind address :: and node with IPv6 InternalIP set",
-			rawNodeIPs:     []net.IP{netutils.ParseIPSloppy("fd00:1234::1")},
+			rawNodeIPs:     []net.IP{netutils.MustParseIP("fd00:1234::1")},
 			bindAddress:    "::",
 			expectedFamily: v1.IPv6Protocol,
 			expectedIPv4:   "127.0.0.1",
@@ -135,8 +135,8 @@ func Test_detectNodeIPs(t *testing.T) {
 		{
 			name: "Dual stack, primary IPv4",
 			rawNodeIPs: []net.IP{
-				netutils.ParseIPSloppy("90.90.90.90"),
-				netutils.ParseIPSloppy("2001:db8::2"),
+				netutils.MustParseIP("90.90.90.90"),
+				netutils.MustParseIP("2001:db8::2"),
 			},
 			bindAddress:    "::",
 			expectedFamily: v1.IPv4Protocol,
@@ -146,8 +146,8 @@ func Test_detectNodeIPs(t *testing.T) {
 		{
 			name: "Dual stack, primary IPv6",
 			rawNodeIPs: []net.IP{
-				netutils.ParseIPSloppy("2001:db8::2"),
-				netutils.ParseIPSloppy("90.90.90.90"),
+				netutils.MustParseIP("2001:db8::2"),
+				netutils.MustParseIP("90.90.90.90"),
 			},
 			bindAddress:    "0.0.0.0",
 			expectedFamily: v1.IPv6Protocol,
@@ -157,8 +157,8 @@ func Test_detectNodeIPs(t *testing.T) {
 		{
 			name: "Dual stack, override IPv4",
 			rawNodeIPs: []net.IP{
-				netutils.ParseIPSloppy("2001:db8::2"),
-				netutils.ParseIPSloppy("90.90.90.90"),
+				netutils.MustParseIP("2001:db8::2"),
+				netutils.MustParseIP("90.90.90.90"),
 			},
 			bindAddress:    "80.80.80.80",
 			expectedFamily: v1.IPv4Protocol,
@@ -168,8 +168,8 @@ func Test_detectNodeIPs(t *testing.T) {
 		{
 			name: "Dual stack, override IPv6",
 			rawNodeIPs: []net.IP{
-				netutils.ParseIPSloppy("90.90.90.90"),
-				netutils.ParseIPSloppy("2001:db8::2"),
+				netutils.MustParseIP("90.90.90.90"),
+				netutils.MustParseIP("2001:db8::2"),
 			},
 			bindAddress:    "2001:db8::555",
 			expectedFamily: v1.IPv6Protocol,
@@ -179,8 +179,8 @@ func Test_detectNodeIPs(t *testing.T) {
 		{
 			name: "Dual stack, override primary family, IPv4",
 			rawNodeIPs: []net.IP{
-				netutils.ParseIPSloppy("2001:db8::2"),
-				netutils.ParseIPSloppy("90.90.90.90"),
+				netutils.MustParseIP("2001:db8::2"),
+				netutils.MustParseIP("90.90.90.90"),
 			},
 			bindAddress:    "127.0.0.1",
 			expectedFamily: v1.IPv4Protocol,
@@ -190,8 +190,8 @@ func Test_detectNodeIPs(t *testing.T) {
 		{
 			name: "Dual stack, override primary family, IPv6",
 			rawNodeIPs: []net.IP{
-				netutils.ParseIPSloppy("90.90.90.90"),
-				netutils.ParseIPSloppy("2001:db8::2"),
+				netutils.MustParseIP("90.90.90.90"),
+				netutils.MustParseIP("2001:db8::2"),
 			},
 			bindAddress:    "::1",
 			expectedFamily: v1.IPv6Protocol,

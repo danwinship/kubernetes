@@ -100,8 +100,8 @@ func NewFakeProxier(ipt utiliptables.Interface) *Proxier {
 	networkInterfacer := proxyutiltest.NewFakeNetwork()
 	itf := net.Interface{Index: 0, MTU: 0, Name: "lo", HardwareAddr: nil, Flags: 0}
 	addrs := []net.Addr{
-		&net.IPNet{IP: netutils.ParseIPSloppy("127.0.0.1"), Mask: net.CIDRMask(8, 32)},
-		&net.IPNet{IP: netutils.ParseIPSloppy("::1/128"), Mask: net.CIDRMask(128, 128)},
+		&net.IPNet{IP: netutils.MustParseIP("127.0.0.1"), Mask: net.CIDRMask(8, 32)},
+		&net.IPNet{IP: netutils.MustParseIP("::1/128"), Mask: net.CIDRMask(128, 128)},
 	}
 	networkInterfacer.AddInterfaceAddr(&itf, addrs)
 	itf1 := net.Interface{Index: 1, MTU: 0, Name: "eth0", HardwareAddr: nil, Flags: 0}

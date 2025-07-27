@@ -67,11 +67,11 @@ func TestGetNodeIPs(t *testing.T) {
 			itfAddrsPairs: []InterfaceAddrsPair{
 				{
 					itf:   net.Interface{Index: 0, MTU: 0, Name: "eth0", HardwareAddr: nil, Flags: 0},
-					addrs: []net.Addr{&net.IPNet{IP: netutils.ParseIPSloppy("10.20.30.51"), Mask: net.CIDRMask(24, 32)}},
+					addrs: []net.Addr{&net.IPNet{IP: netutils.MustParseIP("10.20.30.51"), Mask: net.CIDRMask(24, 32)}},
 				},
 				{
 					itf:   net.Interface{Index: 2, MTU: 0, Name: "eth1", HardwareAddr: nil, Flags: 0},
-					addrs: []net.Addr{&net.IPNet{IP: netutils.ParseIPSloppy("100.200.201.1"), Mask: net.CIDRMask(24, 32)}},
+					addrs: []net.Addr{&net.IPNet{IP: netutils.MustParseIP("100.200.201.1"), Mask: net.CIDRMask(24, 32)}},
 				},
 			},
 			expected: map[v1.IPFamily]expectation{
@@ -90,11 +90,11 @@ func TestGetNodeIPs(t *testing.T) {
 			itfAddrsPairs: []InterfaceAddrsPair{
 				{
 					itf:   net.Interface{Index: 0, MTU: 0, Name: "eth0", HardwareAddr: nil, Flags: 0},
-					addrs: []net.Addr{&net.IPNet{IP: netutils.ParseIPSloppy("10.20.30.51"), Mask: net.CIDRMask(24, 32)}},
+					addrs: []net.Addr{&net.IPNet{IP: netutils.MustParseIP("10.20.30.51"), Mask: net.CIDRMask(24, 32)}},
 				},
 				{
 					itf:   net.Interface{Index: 1, MTU: 0, Name: "lo", HardwareAddr: nil, Flags: 0},
-					addrs: []net.Addr{&net.IPNet{IP: netutils.ParseIPSloppy("127.0.0.1"), Mask: net.CIDRMask(8, 32)}},
+					addrs: []net.Addr{&net.IPNet{IP: netutils.MustParseIP("127.0.0.1"), Mask: net.CIDRMask(8, 32)}},
 				},
 			},
 			expected: map[v1.IPFamily]expectation{
@@ -114,11 +114,11 @@ func TestGetNodeIPs(t *testing.T) {
 			itfAddrsPairs: []InterfaceAddrsPair{
 				{
 					itf:   net.Interface{Index: 0, MTU: 0, Name: "eth0", HardwareAddr: nil, Flags: 0},
-					addrs: []net.Addr{&net.IPNet{IP: netutils.ParseIPSloppy("2001:db8::1"), Mask: net.CIDRMask(64, 128)}},
+					addrs: []net.Addr{&net.IPNet{IP: netutils.MustParseIP("2001:db8::1"), Mask: net.CIDRMask(64, 128)}},
 				},
 				{
 					itf:   net.Interface{Index: 1, MTU: 0, Name: "lo", HardwareAddr: nil, Flags: 0},
-					addrs: []net.Addr{&net.IPNet{IP: netutils.ParseIPSloppy("::1"), Mask: net.CIDRMask(128, 128)}},
+					addrs: []net.Addr{&net.IPNet{IP: netutils.MustParseIP("::1"), Mask: net.CIDRMask(128, 128)}},
 				},
 			},
 			expected: map[v1.IPFamily]expectation{
@@ -137,11 +137,11 @@ func TestGetNodeIPs(t *testing.T) {
 			itfAddrsPairs: []InterfaceAddrsPair{
 				{
 					itf:   net.Interface{Index: 0, MTU: 0, Name: "eth0", HardwareAddr: nil, Flags: 0},
-					addrs: []net.Addr{&net.IPNet{IP: netutils.ParseIPSloppy("2001:db8::1"), Mask: net.CIDRMask(64, 128)}},
+					addrs: []net.Addr{&net.IPNet{IP: netutils.MustParseIP("2001:db8::1"), Mask: net.CIDRMask(64, 128)}},
 				},
 				{
 					itf:   net.Interface{Index: 1, MTU: 0, Name: "lo", HardwareAddr: nil, Flags: 0},
-					addrs: []net.Addr{&net.IPNet{IP: netutils.ParseIPSloppy("::1"), Mask: net.CIDRMask(128, 128)}},
+					addrs: []net.Addr{&net.IPNet{IP: netutils.MustParseIP("::1"), Mask: net.CIDRMask(128, 128)}},
 				},
 			},
 			expected: map[v1.IPFamily]expectation{
@@ -161,11 +161,11 @@ func TestGetNodeIPs(t *testing.T) {
 			itfAddrsPairs: []InterfaceAddrsPair{
 				{
 					itf:   net.Interface{Index: 0, MTU: 0, Name: "eth0", HardwareAddr: nil, Flags: 0},
-					addrs: []net.Addr{&net.IPNet{IP: netutils.ParseIPSloppy("10.20.30.51"), Mask: net.CIDRMask(24, 32)}},
+					addrs: []net.Addr{&net.IPNet{IP: netutils.MustParseIP("10.20.30.51"), Mask: net.CIDRMask(24, 32)}},
 				},
 				{
 					itf:   net.Interface{Index: 1, MTU: 0, Name: "lo", HardwareAddr: nil, Flags: 0},
-					addrs: []net.Addr{&net.IPNet{IP: netutils.ParseIPSloppy("127.0.0.1"), Mask: net.CIDRMask(8, 32)}},
+					addrs: []net.Addr{&net.IPNet{IP: netutils.MustParseIP("127.0.0.1"), Mask: net.CIDRMask(8, 32)}},
 				},
 			},
 			expected: map[v1.IPFamily]expectation{
@@ -184,7 +184,7 @@ func TestGetNodeIPs(t *testing.T) {
 			itfAddrsPairs: []InterfaceAddrsPair{
 				{
 					itf:   net.Interface{Index: 1, MTU: 0, Name: "lo", HardwareAddr: nil, Flags: 0},
-					addrs: []net.Addr{&net.IPNet{IP: netutils.ParseIPSloppy("127.0.1.1"), Mask: net.CIDRMask(8, 32)}},
+					addrs: []net.Addr{&net.IPNet{IP: netutils.MustParseIP("127.0.1.1"), Mask: net.CIDRMask(8, 32)}},
 				},
 			},
 			expected: map[v1.IPFamily]expectation{
@@ -203,11 +203,11 @@ func TestGetNodeIPs(t *testing.T) {
 			itfAddrsPairs: []InterfaceAddrsPair{
 				{
 					itf:   net.Interface{Index: 0, MTU: 0, Name: "eth0", HardwareAddr: nil, Flags: 0},
-					addrs: []net.Addr{&net.IPNet{IP: netutils.ParseIPSloppy("10.20.30.51"), Mask: net.CIDRMask(24, 32)}},
+					addrs: []net.Addr{&net.IPNet{IP: netutils.MustParseIP("10.20.30.51"), Mask: net.CIDRMask(24, 32)}},
 				},
 				{
 					itf:   net.Interface{Index: 2, MTU: 0, Name: "eth1", HardwareAddr: nil, Flags: 0},
-					addrs: []net.Addr{&net.IPNet{IP: netutils.ParseIPSloppy("100.200.201.1"), Mask: net.CIDRMask(24, 32)}},
+					addrs: []net.Addr{&net.IPNet{IP: netutils.MustParseIP("100.200.201.1"), Mask: net.CIDRMask(24, 32)}},
 				},
 			},
 			expected: map[v1.IPFamily]expectation{
@@ -226,11 +226,11 @@ func TestGetNodeIPs(t *testing.T) {
 			itfAddrsPairs: []InterfaceAddrsPair{
 				{
 					itf:   net.Interface{Index: 0, MTU: 0, Name: "eth0", HardwareAddr: nil, Flags: 0},
-					addrs: []net.Addr{&net.IPNet{IP: netutils.ParseIPSloppy("192.168.1.2"), Mask: net.CIDRMask(24, 32)}},
+					addrs: []net.Addr{&net.IPNet{IP: netutils.MustParseIP("192.168.1.2"), Mask: net.CIDRMask(24, 32)}},
 				},
 				{
 					itf:   net.Interface{Index: 1, MTU: 0, Name: "lo", HardwareAddr: nil, Flags: 0},
-					addrs: []net.Addr{&net.IPNet{IP: netutils.ParseIPSloppy("127.0.0.1"), Mask: net.CIDRMask(8, 32)}},
+					addrs: []net.Addr{&net.IPNet{IP: netutils.MustParseIP("127.0.0.1"), Mask: net.CIDRMask(8, 32)}},
 				},
 			},
 			expected: map[v1.IPFamily]expectation{
@@ -249,11 +249,11 @@ func TestGetNodeIPs(t *testing.T) {
 			itfAddrsPairs: []InterfaceAddrsPair{
 				{
 					itf:   net.Interface{Index: 0, MTU: 0, Name: "eth0", HardwareAddr: nil, Flags: 0},
-					addrs: []net.Addr{&net.IPNet{IP: netutils.ParseIPSloppy("192.168.1.2"), Mask: net.CIDRMask(24, 32)}},
+					addrs: []net.Addr{&net.IPNet{IP: netutils.MustParseIP("192.168.1.2"), Mask: net.CIDRMask(24, 32)}},
 				},
 				{
 					itf:   net.Interface{Index: 1, MTU: 0, Name: "lo", HardwareAddr: nil, Flags: 0},
-					addrs: []net.Addr{&net.IPNet{IP: netutils.ParseIPSloppy("127.0.0.1"), Mask: net.CIDRMask(8, 32)}},
+					addrs: []net.Addr{&net.IPNet{IP: netutils.MustParseIP("127.0.0.1"), Mask: net.CIDRMask(8, 32)}},
 				},
 			},
 			expected: map[v1.IPFamily]expectation{
@@ -273,11 +273,11 @@ func TestGetNodeIPs(t *testing.T) {
 			itfAddrsPairs: []InterfaceAddrsPair{
 				{
 					itf:   net.Interface{Index: 0, MTU: 0, Name: "eth0", HardwareAddr: nil, Flags: 0},
-					addrs: []net.Addr{&net.IPNet{IP: netutils.ParseIPSloppy("2001:db8::1"), Mask: net.CIDRMask(64, 128)}},
+					addrs: []net.Addr{&net.IPNet{IP: netutils.MustParseIP("2001:db8::1"), Mask: net.CIDRMask(64, 128)}},
 				},
 				{
 					itf:   net.Interface{Index: 1, MTU: 0, Name: "lo", HardwareAddr: nil, Flags: 0},
-					addrs: []net.Addr{&net.IPNet{IP: netutils.ParseIPSloppy("::1"), Mask: net.CIDRMask(128, 128)}},
+					addrs: []net.Addr{&net.IPNet{IP: netutils.MustParseIP("::1"), Mask: net.CIDRMask(128, 128)}},
 				},
 			},
 			expected: map[v1.IPFamily]expectation{
@@ -297,7 +297,7 @@ func TestGetNodeIPs(t *testing.T) {
 			itfAddrsPairs: []InterfaceAddrsPair{
 				{
 					itf:   net.Interface{Index: 0, MTU: 0, Name: "eth0", HardwareAddr: nil, Flags: 0},
-					addrs: []net.Addr{&net.IPNet{IP: netutils.ParseIPSloppy("1.2.3.4"), Mask: net.CIDRMask(30, 32)}},
+					addrs: []net.Addr{&net.IPNet{IP: netutils.MustParseIP("1.2.3.4"), Mask: net.CIDRMask(30, 32)}},
 				},
 			},
 			expected: map[v1.IPFamily]expectation{
@@ -318,15 +318,15 @@ func TestGetNodeIPs(t *testing.T) {
 				{
 					itf: net.Interface{Index: 0, MTU: 0, Name: "eth0", HardwareAddr: nil, Flags: 0},
 					addrs: []net.Addr{
-						&net.IPNet{IP: netutils.ParseIPSloppy("1.2.3.4"), Mask: net.CIDRMask(30, 32)},
-						&net.IPNet{IP: netutils.ParseIPSloppy("2001:db8::1"), Mask: net.CIDRMask(64, 128)},
+						&net.IPNet{IP: netutils.MustParseIP("1.2.3.4"), Mask: net.CIDRMask(30, 32)},
+						&net.IPNet{IP: netutils.MustParseIP("2001:db8::1"), Mask: net.CIDRMask(64, 128)},
 					},
 				},
 				{
 					itf: net.Interface{Index: 1, MTU: 0, Name: "lo", HardwareAddr: nil, Flags: 0},
 					addrs: []net.Addr{
-						&net.IPNet{IP: netutils.ParseIPSloppy("127.0.0.1"), Mask: net.CIDRMask(8, 32)},
-						&net.IPNet{IP: netutils.ParseIPSloppy("::1"), Mask: net.CIDRMask(128, 128)},
+						&net.IPNet{IP: netutils.MustParseIP("127.0.0.1"), Mask: net.CIDRMask(8, 32)},
+						&net.IPNet{IP: netutils.MustParseIP("::1"), Mask: net.CIDRMask(128, 128)},
 					},
 				},
 			},
@@ -347,15 +347,15 @@ func TestGetNodeIPs(t *testing.T) {
 				{
 					itf: net.Interface{Index: 0, MTU: 0, Name: "eth0", HardwareAddr: nil, Flags: 0},
 					addrs: []net.Addr{
-						&net.IPNet{IP: netutils.ParseIPSloppy("1.2.3.4"), Mask: net.CIDRMask(30, 32)},
-						&net.IPNet{IP: netutils.ParseIPSloppy("2001:db8::1"), Mask: net.CIDRMask(64, 128)},
+						&net.IPNet{IP: netutils.MustParseIP("1.2.3.4"), Mask: net.CIDRMask(30, 32)},
+						&net.IPNet{IP: netutils.MustParseIP("2001:db8::1"), Mask: net.CIDRMask(64, 128)},
 					},
 				},
 				{
 					itf: net.Interface{Index: 1, MTU: 0, Name: "lo", HardwareAddr: nil, Flags: 0},
 					addrs: []net.Addr{
-						&net.IPNet{IP: netutils.ParseIPSloppy("127.0.0.1"), Mask: net.CIDRMask(8, 32)},
-						&net.IPNet{IP: netutils.ParseIPSloppy("::1"), Mask: net.CIDRMask(128, 128)},
+						&net.IPNet{IP: netutils.MustParseIP("127.0.0.1"), Mask: net.CIDRMask(8, 32)},
+						&net.IPNet{IP: netutils.MustParseIP("::1"), Mask: net.CIDRMask(128, 128)},
 					},
 				},
 			},

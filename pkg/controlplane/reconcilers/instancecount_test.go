@@ -311,7 +311,7 @@ func TestEmptySubsets(t *testing.T) {
 	endpointPorts := []corev1.EndpointPort{
 		{Name: "foo", Port: 8080, Protocol: "TCP"},
 	}
-	err := reconciler.RemoveEndpoints("foo", netutils.ParseIPSloppy("1.2.3.4"), endpointPorts)
+	err := reconciler.RemoveEndpoints("foo", netutils.MustParseIP("1.2.3.4"), endpointPorts)
 	if err != nil {
 		t.Errorf("unexpected error: %v", err)
 	}

@@ -623,7 +623,7 @@ func CanUseIPVSProxier(ctx context.Context, ipvs utilipvs.Interface, ipsetver IP
 	// from documentation is not unheard of, so the restriction to not use the TEST-NET-2 range
 	// must be documented.
 	vs := utilipvs.VirtualServer{
-		Address:   netutils.ParseIPSloppy("198.51.100.0"),
+		Address:   netutils.MustParseIP("198.51.100.0"),
 		Protocol:  "TCP",
 		Port:      20000,
 		Scheduler: scheduler,

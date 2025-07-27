@@ -95,7 +95,7 @@ func NewWebhookServingOptions(defaults ProviderDefaults) *WebhookServingOptions 
 	if defaults.WebhookBindAddress != nil {
 		bindAddress = *defaults.WebhookBindAddress
 	} else {
-		bindAddress = netutils.ParseIPSloppy("0.0.0.0")
+		bindAddress = netutils.MustParseIP("0.0.0.0")
 	}
 
 	if defaults.WebhookBindPort != nil {

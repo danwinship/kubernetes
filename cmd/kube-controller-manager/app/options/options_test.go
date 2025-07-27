@@ -417,7 +417,7 @@ func TestAddFlags(t *testing.T) {
 		},
 		SecureServing: (&apiserveroptions.SecureServingOptions{
 			BindPort:    10001,
-			BindAddress: netutils.ParseIPSloppy("192.168.4.21"),
+			BindAddress: netutils.MustParseIP("192.168.4.21"),
 			ServerCert: apiserveroptions.GeneratableKeyCert{
 				CertDirectory: "/a/b/c",
 				PairName:      "kube-controller-manager",

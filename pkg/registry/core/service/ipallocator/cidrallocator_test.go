@@ -120,7 +120,7 @@ func TestCIDRAllocateMultiple(t *testing.T) {
 	r.enqueueServiceCIDR(cidr)
 	// wait for the cidr to be processed and set the informer synced
 	err = wait.PollUntilContextTimeout(context.Background(), 100*time.Millisecond, 5*time.Second, true, func(ctx context.Context) (bool, error) {
-		allocator, err := r.getAllocator(netutils.ParseIPSloppy("192.168.0.1"), true)
+		allocator, err := r.getAllocator(netutils.MustParseIP("192.168.0.1"), true)
 		if err != nil {
 			t.Logf("unexpected error %v", err)
 			return false, nil
@@ -159,7 +159,7 @@ func TestCIDRAllocateMultiple(t *testing.T) {
 	r.enqueueServiceCIDR(cidr2)
 	// wait for the cidr to be processed
 	err = wait.PollUntilContextTimeout(context.Background(), 100*time.Millisecond, 5*time.Second, true, func(ctx context.Context) (bool, error) {
-		allocator, err := r.getAllocator(netutils.ParseIPSloppy("10.0.0.11"), true)
+		allocator, err := r.getAllocator(netutils.MustParseIP("10.0.0.11"), true)
 		if err != nil {
 			return false, nil
 		}
@@ -170,7 +170,7 @@ func TestCIDRAllocateMultiple(t *testing.T) {
 		t.Fatal(err)
 	}
 	// allocate one IP from the new allocator
-	err = r.Allocate(netutils.ParseIPSloppy("10.0.0.11"))
+	err = r.Allocate(netutils.MustParseIP("10.0.0.11"))
 	if err != nil {
 		t.Fatalf("error allocating IP 10.0.0.11 from new allocator: %v", err)
 	}
@@ -218,7 +218,7 @@ func TestCIDRAllocateShadow(t *testing.T) {
 	r.enqueueServiceCIDR(cidr)
 	// wait for the cidr to be processed and set the informer synced
 	err = wait.PollUntilContextTimeout(context.Background(), 100*time.Millisecond, 5*time.Second, true, func(ctx context.Context) (bool, error) {
-		allocator, err := r.getAllocator(netutils.ParseIPSloppy("192.168.1.1"), true)
+		allocator, err := r.getAllocator(netutils.MustParseIP("192.168.1.1"), true)
 		if err != nil {
 			return false, nil
 		}
@@ -229,7 +229,7 @@ func TestCIDRAllocateShadow(t *testing.T) {
 		t.Fatal(err)
 	}
 	// can not allocate the subnet IP from the new allocator
-	err = r.Allocate(netutils.ParseIPSloppy("192.168.1.0"))
+	err = r.Allocate(netutils.MustParseIP("192.168.1.0"))
 	if err == nil {
 		t.Fatalf("unexpected allocation for IP 192.168.1.0")
 	}
@@ -246,7 +246,7 @@ func TestCIDRAllocateShadow(t *testing.T) {
 	r.enqueueServiceCIDR(cidr2)
 	// wait for the cidr to be processed
 	err = wait.PollUntilContextTimeout(context.Background(), 100*time.Millisecond, 5*time.Second, true, func(ctx context.Context) (bool, error) {
-		allocator, err := r.getAllocator(netutils.ParseIPSloppy("192.168.0.1"), true)
+		allocator, err := r.getAllocator(netutils.MustParseIP("192.168.0.1"), true)
 		if err != nil {
 			return false, nil
 		}
@@ -257,7 +257,7 @@ func TestCIDRAllocateShadow(t *testing.T) {
 		t.Fatal(err)
 	}
 	// allocate one IP from the new allocator
-	err = r.Allocate(netutils.ParseIPSloppy("192.168.1.0"))
+	err = r.Allocate(netutils.MustParseIP("192.168.1.0"))
 	if err != nil {
 		t.Fatalf("error allocating IP 192.168.1.0 from new allocator: %v", err)
 	}
@@ -291,7 +291,7 @@ func TestCIDRAllocateGrow(t *testing.T) {
 	r.enqueueServiceCIDR(cidr)
 	// wait for the cidr to be processed
 	err = wait.PollUntilContextTimeout(context.Background(), 100*time.Millisecond, 5*time.Second, true, func(ctx context.Context) (bool, error) {
-		allocator, err := r.getAllocator(netutils.ParseIPSloppy("192.168.0.1"), true)
+		allocator, err := r.getAllocator(netutils.MustParseIP("192.168.0.1"), true)
 		if err != nil {
 			return false, nil
 		}
@@ -329,7 +329,7 @@ func TestCIDRAllocateGrow(t *testing.T) {
 	r.enqueueServiceCIDR(cidr2)
 	// wait for the cidr to be processed
 	err = wait.PollUntilContextTimeout(context.Background(), 100*time.Millisecond, 5*time.Second, true, func(ctx context.Context) (bool, error) {
-		allocator, err := r.getAllocator(netutils.ParseIPSloppy("192.168.0.253"), true)
+		allocator, err := r.getAllocator(netutils.MustParseIP("192.168.0.253"), true)
 		if err != nil {
 			return false, nil
 		}
@@ -383,7 +383,7 @@ func TestCIDRAllocateShrink(t *testing.T) {
 	r.enqueueServiceCIDR(cidr)
 	// wait for the cidr to be processed
 	err = wait.PollUntilContextTimeout(context.Background(), 100*time.Millisecond, 5*time.Second, true, func(ctx context.Context) (bool, error) {
-		allocator, err := r.getAllocator(netutils.ParseIPSloppy("192.168.0.1"), true)
+		allocator, err := r.getAllocator(netutils.MustParseIP("192.168.0.1"), true)
 		if err != nil {
 			return false, nil
 		}
@@ -435,7 +435,7 @@ func TestCIDRAllocateShrink(t *testing.T) {
 
 	// wait for the cidr to be processed (delete ServiceCIDR)
 	err = wait.PollUntilContextTimeout(context.Background(), 100*time.Millisecond, 5*time.Second, true, func(ctx context.Context) (bool, error) {
-		_, err := r.getAllocator(netutils.ParseIPSloppy("192.168.0.253"), true)
+		_, err := r.getAllocator(netutils.MustParseIP("192.168.0.253"), true)
 		if err != nil {
 			return true, nil
 		}
@@ -447,7 +447,7 @@ func TestCIDRAllocateShrink(t *testing.T) {
 	}
 	// wait for the cidr to be processed (create ServiceCIDR)
 	err = wait.PollUntilContextTimeout(context.Background(), 100*time.Millisecond, 5*time.Second, true, func(ctx context.Context) (bool, error) {
-		allocator, err := r.getAllocator(netutils.ParseIPSloppy("192.168.0.1"), true)
+		allocator, err := r.getAllocator(netutils.MustParseIP("192.168.0.1"), true)
 		if err != nil {
 			return false, nil
 		}
@@ -495,7 +495,7 @@ func TestCIDRAllocateDualWrite(t *testing.T) {
 	r.enqueueServiceCIDR(cidr)
 	// wait for the cidr to be processed and set the informer synced
 	err = wait.PollUntilContextTimeout(context.Background(), 100*time.Millisecond, 5*time.Second, true, func(ctx context.Context) (bool, error) {
-		allocator, err := r.getAllocator(netutils.ParseIPSloppy("192.168.0.1"), true)
+		allocator, err := r.getAllocator(netutils.MustParseIP("192.168.0.1"), true)
 		if err != nil {
 			t.Logf("unexpected error %v", err)
 			return false, nil
@@ -563,7 +563,7 @@ func TestCIDRAllocateDualWriteCollision(t *testing.T) {
 	r.enqueueServiceCIDR(cidr)
 	// wait for the cidr to be processed and set the informer synced
 	err = wait.PollUntilContextTimeout(context.Background(), 100*time.Millisecond, 5*time.Second, true, func(ctx context.Context) (bool, error) {
-		allocator, err := r.getAllocator(netutils.ParseIPSloppy("192.168.0.1"), true)
+		allocator, err := r.getAllocator(netutils.MustParseIP("192.168.0.1"), true)
 		if err != nil {
 			t.Logf("unexpected error %v", err)
 			return false, nil
@@ -587,12 +587,12 @@ func TestCIDRAllocateDualWriteCollision(t *testing.T) {
 	r.bitmapAllocator = bitmapAllocator
 
 	// preallocate one IP in the bitmap allocator
-	err = bitmapAllocator.Allocate(netutils.ParseIPSloppy("192.168.0.5"))
+	err = bitmapAllocator.Allocate(netutils.MustParseIP("192.168.0.5"))
 	if err != nil {
 		t.Fatalf("unexpected error allocating an IP on the bitmap allocator: %v", err)
 	}
 	// the ipallocator must not be able to allocate
-	err = r.Allocate(netutils.ParseIPSloppy("192.168.0.5"))
+	err = r.Allocate(netutils.MustParseIP("192.168.0.5"))
 	if err == nil {
 		t.Fatalf("unexpected allocation: %v", err)
 	}

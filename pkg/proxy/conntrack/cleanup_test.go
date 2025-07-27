@@ -528,28 +528,28 @@ func TestFilterForIPPortNAT(t *testing.T) {
 	}{
 		{
 			name:         "ipv4 + SCTP",
-			origDst:      netutils.ParseIPSloppy("10.96.0.10"),
+			origDst:      netutils.MustParseIP("10.96.0.10"),
 			origPortDst:  80,
-			replySrc:     netutils.ParseIPSloppy("10.244.0.3"),
+			replySrc:     netutils.MustParseIP("10.244.0.3"),
 			replySrcPort: 3000,
 			protocol:     v1.ProtocolSCTP,
 			expectedFilter: &conntrackFilter{
 				protocol: 132,
-				original: &connectionTuple{dstIP: netutils.ParseIPSloppy("10.96.0.10"), dstPort: 80},
-				reply:    &connectionTuple{srcIP: netutils.ParseIPSloppy("10.244.0.3"), srcPort: 3000},
+				original: &connectionTuple{dstIP: netutils.MustParseIP("10.96.0.10"), dstPort: 80},
+				reply:    &connectionTuple{srcIP: netutils.MustParseIP("10.244.0.3"), srcPort: 3000},
 			},
 		},
 		{
 			name:         "ipv6 + UDP",
-			origDst:      netutils.ParseIPSloppy("2001:db8:1::2"),
+			origDst:      netutils.MustParseIP("2001:db8:1::2"),
 			origPortDst:  443,
-			replySrc:     netutils.ParseIPSloppy("4001:ab8::2"),
+			replySrc:     netutils.MustParseIP("4001:ab8::2"),
 			replySrcPort: 5000,
 			protocol:     v1.ProtocolUDP,
 			expectedFilter: &conntrackFilter{
 				protocol: 17,
-				original: &connectionTuple{dstIP: netutils.ParseIPSloppy("2001:db8:1::2"), dstPort: 443},
-				reply:    &connectionTuple{srcIP: netutils.ParseIPSloppy("4001:ab8::2"), srcPort: 5000},
+				original: &connectionTuple{dstIP: netutils.MustParseIP("2001:db8:1::2"), dstPort: 443},
+				reply:    &connectionTuple{srcIP: netutils.MustParseIP("4001:ab8::2"), srcPort: 5000},
 			},
 		},
 	}
@@ -574,25 +574,25 @@ func TestFilterForPortNAT(t *testing.T) {
 		{
 			name:         "ipv4 + TCP",
 			origPortDst:  80,
-			replySrc:     netutils.ParseIPSloppy("10.96.0.10"),
+			replySrc:     netutils.MustParseIP("10.96.0.10"),
 			replySrcPort: 3000,
 			protocol:     v1.ProtocolTCP,
 			expectedFilter: &conntrackFilter{
 				protocol: 6,
 				original: &connectionTuple{dstPort: 80},
-				reply:    &connectionTuple{srcIP: netutils.ParseIPSloppy("10.96.0.10"), srcPort: 3000},
+				reply:    &connectionTuple{srcIP: netutils.MustParseIP("10.96.0.10"), srcPort: 3000},
 			},
 		},
 		{
 			name:         "ipv6 + UDP",
 			origPortDst:  8000,
-			replySrc:     netutils.ParseIPSloppy("2001:db8:1::2"),
+			replySrc:     netutils.MustParseIP("2001:db8:1::2"),
 			replySrcPort: 5000,
 			protocol:     v1.ProtocolUDP,
 			expectedFilter: &conntrackFilter{
 				protocol: 17,
 				original: &connectionTuple{dstPort: 8000},
-				reply:    &connectionTuple{srcIP: netutils.ParseIPSloppy("2001:db8:1::2"), srcPort: 5000},
+				reply:    &connectionTuple{srcIP: netutils.MustParseIP("2001:db8:1::2"), srcPort: 5000},
 			},
 		},
 	}

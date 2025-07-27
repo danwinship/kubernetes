@@ -133,7 +133,7 @@ func TestAddFlags(t *testing.T) {
 	// This is a snapshot of expected options parsed by args.
 	expected := &Options{
 		GenericServerRunOptions: &apiserveroptions.ServerRunOptions{
-			AdvertiseAddress:             netutils.ParseIPSloppy("192.168.10.10"),
+			AdvertiseAddress:             netutils.MustParseIP("192.168.10.10"),
 			CorsAllowedOriginList:        []string{"10.10.10.100", "10.10.10.200"},
 			MaxRequestsInFlight:          400,
 			MaxMutatingRequestsInFlight:  200,
@@ -184,7 +184,7 @@ func TestAddFlags(t *testing.T) {
 			DefaultWatchCacheSize:   100,
 		},
 		SecureServing: (&apiserveroptions.SecureServingOptions{
-			BindAddress: netutils.ParseIPSloppy("192.168.10.20"),
+			BindAddress: netutils.MustParseIP("192.168.10.20"),
 			BindPort:    6443,
 			ServerCert: apiserveroptions.GeneratableKeyCert{
 				CertDirectory: "/var/run/kubernetes",

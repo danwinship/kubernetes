@@ -81,7 +81,7 @@ func key() string {
 func TestEmpty(t *testing.T) {
 	_, storage, _, _, destroyFunc := newStorage(t)
 	defer destroyFunc()
-	if err := storage.Allocate(netutils.ParseIPSloppy("192.168.1.2")); !strings.Contains(err.Error(), "cannot allocate resources of type serviceipallocations at this time") {
+	if err := storage.Allocate(netutils.MustParseIP("192.168.1.2")); !strings.Contains(err.Error(), "cannot allocate resources of type serviceipallocations at this time") {
 		t.Fatal(err)
 	}
 }
@@ -89,7 +89,7 @@ func TestEmpty(t *testing.T) {
 func TestErrors(t *testing.T) {
 	_, storage, _, _, destroyFunc := newStorage(t)
 	defer destroyFunc()
-	err := storage.Allocate(netutils.ParseIPSloppy("192.168.0.0"))
+	err := storage.Allocate(netutils.MustParseIP("192.168.0.0"))
 	if _, ok := err.(*ipallocator.ErrNotInRange); !ok {
 		t.Fatal(err)
 	}
@@ -102,7 +102,7 @@ func TestStore(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	if err := storage.Allocate(netutils.ParseIPSloppy("192.168.1.2")); err != nil {
+	if err := storage.Allocate(netutils.MustParseIP("192.168.1.2")); err != nil {
 		t.Fatal(err)
 	}
 	ok, err := backing.Allocate(1)
@@ -112,7 +112,7 @@ func TestStore(t *testing.T) {
 	if ok {
 		t.Fatal("Expected allocation to fail")
 	}
-	if err := storage.Allocate(netutils.ParseIPSloppy("192.168.1.2")); err != ipallocator.ErrAllocated {
+	if err := storage.Allocate(netutils.MustParseIP("192.168.1.2")); err != ipallocator.ErrAllocated {
 		t.Fatal(err)
 	}
 }
@@ -152,7 +152,7 @@ func TestAllocateReserved(t *testing.T) {
 		t.Error("Allocator expected to be full")
 	}
 	// release one address in the allocated block and another a new one randomly
-	if err := storage.Release(netutils.ParseIPSloppy("192.168.1.10")); err != nil {
+	if err := storage.Release(netutils.MustParseIP("192.168.1.10")); err != nil {
 		t.Fatalf("Unexpected error trying to release ip 192.168.1.10: %v", err)
 	}
 	if _, err := storage.AllocateNext(); err != nil {

@@ -75,7 +75,7 @@ func TestCreateOrUpdateMasterService(t *testing.T) {
 			serviceStore := cache.NewIndexer(cache.MetaNamespaceKeyFunc, cache.Indexers{})
 			master.serviceLister = v1listers.NewServiceLister(serviceStore)
 			master.client = fakeClient
-			master.CreateOrUpdateMasterServiceIfNeeded(test.serviceName, netutils.ParseIPSloppy("1.2.3.4"), test.servicePorts, test.serviceType, false)
+			master.CreateOrUpdateMasterServiceIfNeeded(test.serviceName, netutils.MustParseIP("1.2.3.4"), test.servicePorts, test.serviceType, false)
 			creates := []core.CreateAction{}
 			for _, action := range fakeClient.Actions() {
 				if action.GetVerb() == "create" {
@@ -366,7 +366,7 @@ func TestCreateOrUpdateMasterService(t *testing.T) {
 			}
 			master.serviceLister = v1listers.NewServiceLister(serviceStore)
 			master.client = fakeClient
-			err = master.CreateOrUpdateMasterServiceIfNeeded(test.serviceName, netutils.ParseIPSloppy("1.2.3.4"), test.servicePorts, test.serviceType, true)
+			err = master.CreateOrUpdateMasterServiceIfNeeded(test.serviceName, netutils.MustParseIP("1.2.3.4"), test.servicePorts, test.serviceType, true)
 			if err != nil {
 				t.Errorf("case %q: unexpected error: %v", test.testName, err)
 			}
@@ -435,7 +435,7 @@ func TestCreateOrUpdateMasterService(t *testing.T) {
 			}
 			master.serviceLister = v1listers.NewServiceLister(serviceStore)
 
-			err = master.CreateOrUpdateMasterServiceIfNeeded(test.serviceName, netutils.ParseIPSloppy("1.2.3.4"), test.servicePorts, test.serviceType, false)
+			err = master.CreateOrUpdateMasterServiceIfNeeded(test.serviceName, netutils.MustParseIP("1.2.3.4"), test.servicePorts, test.serviceType, false)
 			if err != nil {
 				t.Errorf("case %q: unexpected error: %v", test.testName, err)
 			}

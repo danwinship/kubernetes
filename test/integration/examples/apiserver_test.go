@@ -758,7 +758,7 @@ func prepareAggregatedWardleAPIServer(ctx context.Context, t *testing.T, namespa
 		fmt.Sprintf("api.%s.svc", namespace),
 	}
 	wardleOptions.RecommendedOptions.SecureServing.Listener = listener
-	wardleOptions.RecommendedOptions.SecureServing.BindAddress = netutils.ParseIPSloppy("127.0.0.1")
+	wardleOptions.RecommendedOptions.SecureServing.BindAddress = netutils.MustParseIP("127.0.0.1")
 
 	return testServer, wardleOptions, wardlePort
 }

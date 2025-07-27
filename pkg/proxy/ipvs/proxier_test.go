@@ -559,7 +559,7 @@ func TestNodePortIPv4(t *testing.T) {
 						Port:     80,
 						Protocol: "TCP",
 					}: {
-						Address:   netutils.ParseIPSloppy("10.20.30.41"),
+						Address:   netutils.MustParseIP("10.20.30.41"),
 						Protocol:  "TCP",
 						Port:      uint16(80),
 						Scheduler: "rr",
@@ -569,7 +569,7 @@ func TestNodePortIPv4(t *testing.T) {
 						Port:     3001,
 						Protocol: "TCP",
 					}: {
-						Address:   netutils.ParseIPSloppy("100.101.102.103"),
+						Address:   netutils.MustParseIP("100.101.102.103"),
 						Protocol:  "TCP",
 						Port:      uint16(3001),
 						Scheduler: "rr",
@@ -582,7 +582,7 @@ func TestNodePortIPv4(t *testing.T) {
 						Protocol: "TCP",
 					}: {
 						{
-							Address: netutils.ParseIPSloppy("10.180.0.1"),
+							Address: netutils.MustParseIP("10.180.0.1"),
 							Port:    uint16(80),
 							Weight:  1,
 						},
@@ -593,7 +593,7 @@ func TestNodePortIPv4(t *testing.T) {
 						Protocol: "TCP",
 					}: {
 						{
-							Address: netutils.ParseIPSloppy("10.180.0.1"),
+							Address: netutils.MustParseIP("10.180.0.1"),
 							Port:    uint16(80),
 							Weight:  1,
 						},
@@ -637,7 +637,7 @@ func TestNodePortIPv4(t *testing.T) {
 						Port:     80,
 						Protocol: "UDP",
 					}: {
-						Address:   netutils.ParseIPSloppy("10.20.30.41"),
+						Address:   netutils.MustParseIP("10.20.30.41"),
 						Protocol:  "UDP",
 						Port:      uint16(80),
 						Scheduler: "rr",
@@ -647,7 +647,7 @@ func TestNodePortIPv4(t *testing.T) {
 						Port:     3001,
 						Protocol: "UDP",
 					}: {
-						Address:   netutils.ParseIPSloppy("100.101.102.103"),
+						Address:   netutils.MustParseIP("100.101.102.103"),
 						Protocol:  "UDP",
 						Port:      uint16(3001),
 						Scheduler: "rr",
@@ -660,7 +660,7 @@ func TestNodePortIPv4(t *testing.T) {
 						Protocol: "UDP",
 					}: {
 						{
-							Address: netutils.ParseIPSloppy("10.180.0.1"),
+							Address: netutils.MustParseIP("10.180.0.1"),
 							Port:    uint16(80),
 							Weight:  1,
 						},
@@ -671,7 +671,7 @@ func TestNodePortIPv4(t *testing.T) {
 						Protocol: "UDP",
 					}: {
 						{
-							Address: netutils.ParseIPSloppy("10.180.0.1"),
+							Address: netutils.MustParseIP("10.180.0.1"),
 							Port:    uint16(80),
 							Weight:  1,
 						},
@@ -726,7 +726,7 @@ func TestNodePortIPv4(t *testing.T) {
 						Port:     80,
 						Protocol: "TCP",
 					}: {
-						Address:   netutils.ParseIPSloppy("10.20.30.41"),
+						Address:   netutils.MustParseIP("10.20.30.41"),
 						Protocol:  "TCP",
 						Port:      uint16(80),
 						Scheduler: "rr",
@@ -736,7 +736,7 @@ func TestNodePortIPv4(t *testing.T) {
 						Port:     3001,
 						Protocol: "TCP",
 					}: {
-						Address:   netutils.ParseIPSloppy("100.101.102.103"),
+						Address:   netutils.MustParseIP("100.101.102.103"),
 						Protocol:  "TCP",
 						Port:      uint16(3001),
 						Scheduler: "rr",
@@ -799,7 +799,7 @@ func TestNodePortIPv4(t *testing.T) {
 						Port:     80,
 						Protocol: "SCTP",
 					}: {
-						Address:   netutils.ParseIPSloppy("10.20.30.41"),
+						Address:   netutils.MustParseIP("10.20.30.41"),
 						Protocol:  "SCTP",
 						Port:      uint16(80),
 						Scheduler: "rr",
@@ -809,7 +809,7 @@ func TestNodePortIPv4(t *testing.T) {
 						Port:     3001,
 						Protocol: "SCTP",
 					}: {
-						Address:   netutils.ParseIPSloppy("100.101.102.103"),
+						Address:   netutils.MustParseIP("100.101.102.103"),
 						Protocol:  "SCTP",
 						Port:      uint16(3001),
 						Scheduler: "rr",
@@ -819,7 +819,7 @@ func TestNodePortIPv4(t *testing.T) {
 						Port:     3001,
 						Protocol: "SCTP",
 					}: {
-						Address:   netutils.ParseIPSloppy("100.101.102.104"),
+						Address:   netutils.MustParseIP("100.101.102.104"),
 						Protocol:  "SCTP",
 						Port:      uint16(3001),
 						Scheduler: "rr",
@@ -829,7 +829,7 @@ func TestNodePortIPv4(t *testing.T) {
 						Port:     3001,
 						Protocol: "SCTP",
 					}: {
-						Address:   netutils.ParseIPSloppy("100.101.102.105"),
+						Address:   netutils.MustParseIP("100.101.102.105"),
 						Protocol:  "SCTP",
 						Port:      uint16(3001),
 						Scheduler: "rr",
@@ -842,7 +842,7 @@ func TestNodePortIPv4(t *testing.T) {
 						Protocol: "SCTP",
 					}: {
 						{
-							Address: netutils.ParseIPSloppy("10.180.0.1"),
+							Address: netutils.MustParseIP("10.180.0.1"),
 							Port:    uint16(80),
 							Weight:  1,
 						},
@@ -853,7 +853,7 @@ func TestNodePortIPv4(t *testing.T) {
 						Protocol: "SCTP",
 					}: {
 						{
-							Address: netutils.ParseIPSloppy("10.180.0.1"),
+							Address: netutils.MustParseIP("10.180.0.1"),
 							Port:    uint16(80),
 							Weight:  1,
 						},
@@ -864,7 +864,7 @@ func TestNodePortIPv4(t *testing.T) {
 						Protocol: "SCTP",
 					}: {
 						{
-							Address: netutils.ParseIPSloppy("10.180.0.1"),
+							Address: netutils.MustParseIP("10.180.0.1"),
 							Port:    uint16(80),
 							Weight:  1,
 						},
@@ -875,7 +875,7 @@ func TestNodePortIPv4(t *testing.T) {
 						Protocol: "SCTP",
 					}: {
 						{
-							Address: netutils.ParseIPSloppy("10.180.0.1"),
+							Address: netutils.MustParseIP("10.180.0.1"),
 							Port:    uint16(80),
 							Weight:  1,
 						},
@@ -946,7 +946,7 @@ func TestNodePortIPv4(t *testing.T) {
 						Port:     80,
 						Protocol: "SCTP",
 					}: {
-						Address:   netutils.ParseIPSloppy("10.20.30.41"),
+						Address:   netutils.MustParseIP("10.20.30.41"),
 						Protocol:  "SCTP",
 						Port:      uint16(80),
 						Scheduler: "rr",
@@ -956,7 +956,7 @@ func TestNodePortIPv4(t *testing.T) {
 						Port:     3001,
 						Protocol: "SCTP",
 					}: {
-						Address:   netutils.ParseIPSloppy("100.101.102.103"),
+						Address:   netutils.MustParseIP("100.101.102.103"),
 						Protocol:  "SCTP",
 						Port:      uint16(3001),
 						Scheduler: "rr",
@@ -969,12 +969,12 @@ func TestNodePortIPv4(t *testing.T) {
 						Protocol: "SCTP",
 					}: {
 						{
-							Address: netutils.ParseIPSloppy("10.180.0.1"),
+							Address: netutils.MustParseIP("10.180.0.1"),
 							Port:    uint16(80),
 							Weight:  1,
 						},
 						{
-							Address: netutils.ParseIPSloppy("10.180.1.1"),
+							Address: netutils.MustParseIP("10.180.1.1"),
 							Port:    uint16(80),
 							Weight:  1,
 						},
@@ -985,7 +985,7 @@ func TestNodePortIPv4(t *testing.T) {
 						Protocol: "SCTP",
 					}: {
 						{
-							Address: netutils.ParseIPSloppy("10.180.0.1"),
+							Address: netutils.MustParseIP("10.180.0.1"),
 							Port:    uint16(80),
 							Weight:  1,
 						},
@@ -1111,7 +1111,7 @@ func TestNodePortIPv6(t *testing.T) {
 						Port:     3001,
 						Protocol: "TCP",
 					}: {
-						Address:   netutils.ParseIPSloppy("2001:db8::1:1"),
+						Address:   netutils.MustParseIP("2001:db8::1:1"),
 						Protocol:  "TCP",
 						Port:      uint16(3001),
 						Scheduler: "rr",
@@ -1121,7 +1121,7 @@ func TestNodePortIPv6(t *testing.T) {
 						Port:     80,
 						Protocol: "TCP",
 					}: {
-						Address:   netutils.ParseIPSloppy("2020::1"),
+						Address:   netutils.MustParseIP("2020::1"),
 						Protocol:  "TCP",
 						Port:      uint16(80),
 						Scheduler: "rr",
@@ -1134,7 +1134,7 @@ func TestNodePortIPv6(t *testing.T) {
 						Protocol: "TCP",
 					}: {
 						{
-							Address: netutils.ParseIPSloppy("1002:ab8::2:10"),
+							Address: netutils.MustParseIP("1002:ab8::2:10"),
 							Port:    uint16(80),
 							Weight:  1,
 						},
@@ -1146,7 +1146,7 @@ func TestNodePortIPv6(t *testing.T) {
 						Protocol: "TCP",
 					}: {
 						{
-							Address: netutils.ParseIPSloppy("1002:ab8::2:10"),
+							Address: netutils.MustParseIP("1002:ab8::2:10"),
 							Port:    uint16(80),
 							Weight:  1,
 						},
@@ -1217,7 +1217,7 @@ func TestNodePortIPv6(t *testing.T) {
 						Port:     3001,
 						Protocol: "TCP",
 					}: {
-						Address:   netutils.ParseIPSloppy("2001:db8::1:1"),
+						Address:   netutils.MustParseIP("2001:db8::1:1"),
 						Protocol:  "TCP",
 						Port:      uint16(3001),
 						Scheduler: "rr",
@@ -1227,7 +1227,7 @@ func TestNodePortIPv6(t *testing.T) {
 						Port:     80,
 						Protocol: "TCP",
 					}: {
-						Address:   netutils.ParseIPSloppy("2020::1"),
+						Address:   netutils.MustParseIP("2020::1"),
 						Protocol:  "TCP",
 						Port:      uint16(80),
 						Scheduler: "rr",
@@ -1284,7 +1284,7 @@ func TestNodePortIPv6(t *testing.T) {
 						Port:     3001,
 						Protocol: "SCTP",
 					}: {
-						Address:   netutils.ParseIPSloppy("2001:db8::1:1"),
+						Address:   netutils.MustParseIP("2001:db8::1:1"),
 						Protocol:  "SCTP",
 						Port:      uint16(3001),
 						Scheduler: "rr",
@@ -1294,7 +1294,7 @@ func TestNodePortIPv6(t *testing.T) {
 						Port:     3001,
 						Protocol: "SCTP",
 					}: {
-						Address:   netutils.ParseIPSloppy("2001:db8::1:2"),
+						Address:   netutils.MustParseIP("2001:db8::1:2"),
 						Protocol:  "SCTP",
 						Port:      uint16(3001),
 						Scheduler: "rr",
@@ -1304,7 +1304,7 @@ func TestNodePortIPv6(t *testing.T) {
 						Port:     80,
 						Protocol: "SCTP",
 					}: {
-						Address:   netutils.ParseIPSloppy("2020::1"),
+						Address:   netutils.MustParseIP("2020::1"),
 						Protocol:  "SCTP",
 						Port:      uint16(80),
 						Scheduler: "rr",
@@ -1317,7 +1317,7 @@ func TestNodePortIPv6(t *testing.T) {
 						Protocol: "SCTP",
 					}: {
 						{
-							Address: netutils.ParseIPSloppy("2001::1"),
+							Address: netutils.MustParseIP("2001::1"),
 							Port:    uint16(80),
 							Weight:  1,
 						},
@@ -1328,7 +1328,7 @@ func TestNodePortIPv6(t *testing.T) {
 						Protocol: "SCTP",
 					}: {
 						{
-							Address: netutils.ParseIPSloppy("2001::1"),
+							Address: netutils.MustParseIP("2001::1"),
 							Port:    uint16(80),
 							Weight:  1,
 						},
@@ -1339,7 +1339,7 @@ func TestNodePortIPv6(t *testing.T) {
 						Protocol: "SCTP",
 					}: {
 						{
-							Address: netutils.ParseIPSloppy("2001::1"),
+							Address: netutils.MustParseIP("2001::1"),
 							Port:    uint16(80),
 							Weight:  1,
 						},
@@ -1429,7 +1429,7 @@ func Test_syncEndpoint_updateWeightsOnRestart(t *testing.T) {
 	fp.syncProxyRules()
 
 	serv := &utilipvs.VirtualServer{
-		Address:   netutils.ParseIPSloppy("10.20.30.41"),
+		Address:   netutils.MustParseIP("10.20.30.41"),
 		Port:      uint16(80),
 		Protocol:  string(v1.ProtocolTCP),
 		Scheduler: fp.ipvsScheduler,
@@ -1535,7 +1535,7 @@ func TestIPv4Proxier(t *testing.T) {
 						Port:     80,
 						Protocol: "TCP",
 					}: {
-						Address:   netutils.ParseIPSloppy("10.20.30.41"),
+						Address:   netutils.MustParseIP("10.20.30.41"),
 						Protocol:  "TCP",
 						Port:      uint16(80),
 						Scheduler: "rr",
@@ -1548,7 +1548,7 @@ func TestIPv4Proxier(t *testing.T) {
 						Protocol: "TCP",
 					}: {
 						{
-							Address: netutils.ParseIPSloppy("10.180.0.1"),
+							Address: netutils.MustParseIP("10.180.0.1"),
 							Port:    uint16(80),
 							Weight:  1,
 						},
@@ -1576,7 +1576,7 @@ func TestIPv4Proxier(t *testing.T) {
 						Port:     80,
 						Protocol: "TCP",
 					}: {
-						Address:   netutils.ParseIPSloppy("10.20.30.41"),
+						Address:   netutils.MustParseIP("10.20.30.41"),
 						Protocol:  "TCP",
 						Port:      uint16(80),
 						Scheduler: "rr",
@@ -1673,7 +1673,7 @@ func TestIPv6Proxier(t *testing.T) {
 						Port:     8080,
 						Protocol: "TCP",
 					}: {
-						Address:   netutils.ParseIPSloppy("1002:ab8::2:1"),
+						Address:   netutils.MustParseIP("1002:ab8::2:1"),
 						Protocol:  "TCP",
 						Port:      uint16(8080),
 						Scheduler: "rr",
@@ -1686,7 +1686,7 @@ func TestIPv6Proxier(t *testing.T) {
 						Protocol: "TCP",
 					}: {
 						{
-							Address: netutils.ParseIPSloppy("1009:ab8::5:6"),
+							Address: netutils.MustParseIP("1009:ab8::5:6"),
 							Port:    uint16(8080),
 							Weight:  1,
 						},
@@ -1714,7 +1714,7 @@ func TestIPv6Proxier(t *testing.T) {
 						Port:     80,
 						Protocol: "TCP",
 					}: {
-						Address:   netutils.ParseIPSloppy("2001::1"),
+						Address:   netutils.MustParseIP("2001::1"),
 						Protocol:  "TCP",
 						Port:      uint16(80),
 						Scheduler: "rr",
@@ -2080,7 +2080,7 @@ func TestLoadBalancer(t *testing.T) {
 }
 
 func TestOnlyLocalNodePorts(t *testing.T) {
-	nodeIP := netutils.ParseIPSloppy("100.101.102.103")
+	nodeIP := netutils.MustParseIP("100.101.102.103")
 	ipt, fp := buildFakeProxier(t)
 
 	svcIP := "10.20.30.41"
@@ -2127,9 +2127,9 @@ func TestOnlyLocalNodePorts(t *testing.T) {
 	)
 
 	itf := net.Interface{Index: 0, MTU: 0, Name: "eth0", HardwareAddr: nil, Flags: 0}
-	addrs := []net.Addr{&net.IPNet{IP: netutils.ParseIPSloppy("100.101.102.103"), Mask: net.CIDRMask(24, 32)}}
+	addrs := []net.Addr{&net.IPNet{IP: netutils.MustParseIP("100.101.102.103"), Mask: net.CIDRMask(24, 32)}}
 	itf1 := net.Interface{Index: 1, MTU: 0, Name: "eth1", HardwareAddr: nil, Flags: 0}
-	addrs1 := []net.Addr{&net.IPNet{IP: netutils.ParseIPSloppy("2001:db8::"), Mask: net.CIDRMask(64, 128)}}
+	addrs1 := []net.Addr{&net.IPNet{IP: netutils.MustParseIP("2001:db8::"), Mask: net.CIDRMask(64, 128)}}
 	fp.networkInterfacer.(*proxyutiltest.FakeNetwork).AddInterfaceAddr(&itf, addrs)
 	fp.networkInterfacer.(*proxyutiltest.FakeNetwork).AddInterfaceAddr(&itf1, addrs1)
 	fp.nodePortAddresses = proxyutil.NewNodePortAddresses(v1.IPv4Protocol, []string{"100.101.102.0/24"})
@@ -2215,9 +2215,9 @@ func TestHealthCheckNodePort(t *testing.T) {
 	)
 
 	itf := net.Interface{Index: 0, MTU: 0, Name: "eth0", HardwareAddr: nil, Flags: 0}
-	addrs := []net.Addr{&net.IPNet{IP: netutils.ParseIPSloppy("100.101.102.103"), Mask: net.CIDRMask(24, 32)}}
+	addrs := []net.Addr{&net.IPNet{IP: netutils.MustParseIP("100.101.102.103"), Mask: net.CIDRMask(24, 32)}}
 	itf1 := net.Interface{Index: 1, MTU: 0, Name: "eth1", HardwareAddr: nil, Flags: 0}
-	addrs1 := []net.Addr{&net.IPNet{IP: netutils.ParseIPSloppy("2001:db8::"), Mask: net.CIDRMask(64, 128)}}
+	addrs1 := []net.Addr{&net.IPNet{IP: netutils.MustParseIP("2001:db8::"), Mask: net.CIDRMask(64, 128)}}
 	fp.networkInterfacer.(*proxyutiltest.FakeNetwork).AddInterfaceAddr(&itf, addrs)
 	fp.networkInterfacer.(*proxyutiltest.FakeNetwork).AddInterfaceAddr(&itf1, addrs1)
 	fp.nodePortAddresses = proxyutil.NewNodePortAddresses(v1.IPv4Protocol, []string{"100.101.102.0/24"})
@@ -3608,7 +3608,7 @@ func Test_syncService(t *testing.T) {
 		{
 			// case 0, old virtual server is same as new virtual server
 			oldVirtualServer: &utilipvs.VirtualServer{
-				Address:   netutils.ParseIPSloppy("1.2.3.4"),
+				Address:   netutils.MustParseIP("1.2.3.4"),
 				Protocol:  string(v1.ProtocolTCP),
 				Port:      80,
 				Scheduler: "rr",
@@ -3616,7 +3616,7 @@ func Test_syncService(t *testing.T) {
 			},
 			svcName: "foo",
 			newVirtualServer: &utilipvs.VirtualServer{
-				Address:   netutils.ParseIPSloppy("1.2.3.4"),
+				Address:   netutils.MustParseIP("1.2.3.4"),
 				Protocol:  string(v1.ProtocolTCP),
 				Port:      80,
 				Scheduler: "rr",
@@ -3628,7 +3628,7 @@ func Test_syncService(t *testing.T) {
 		{
 			// case 1, old virtual server is different from new virtual server
 			oldVirtualServer: &utilipvs.VirtualServer{
-				Address:   netutils.ParseIPSloppy("1.2.3.4"),
+				Address:   netutils.MustParseIP("1.2.3.4"),
 				Protocol:  string(v1.ProtocolTCP),
 				Port:      8080,
 				Scheduler: "rr",
@@ -3636,7 +3636,7 @@ func Test_syncService(t *testing.T) {
 			},
 			svcName: "bar",
 			newVirtualServer: &utilipvs.VirtualServer{
-				Address:   netutils.ParseIPSloppy("1.2.3.4"),
+				Address:   netutils.MustParseIP("1.2.3.4"),
 				Protocol:  string(v1.ProtocolTCP),
 				Port:      8080,
 				Scheduler: "rr",
@@ -3648,7 +3648,7 @@ func Test_syncService(t *testing.T) {
 		{
 			// case 2, old virtual server is different from new virtual server
 			oldVirtualServer: &utilipvs.VirtualServer{
-				Address:   netutils.ParseIPSloppy("1.2.3.4"),
+				Address:   netutils.MustParseIP("1.2.3.4"),
 				Protocol:  string(v1.ProtocolTCP),
 				Port:      8080,
 				Scheduler: "rr",
@@ -3656,7 +3656,7 @@ func Test_syncService(t *testing.T) {
 			},
 			svcName: "bar",
 			newVirtualServer: &utilipvs.VirtualServer{
-				Address:   netutils.ParseIPSloppy("1.2.3.4"),
+				Address:   netutils.MustParseIP("1.2.3.4"),
 				Protocol:  string(v1.ProtocolTCP),
 				Port:      8080,
 				Scheduler: "wlc",
@@ -3670,7 +3670,7 @@ func Test_syncService(t *testing.T) {
 			oldVirtualServer: nil,
 			svcName:          "baz",
 			newVirtualServer: &utilipvs.VirtualServer{
-				Address:   netutils.ParseIPSloppy("1.2.3.4"),
+				Address:   netutils.MustParseIP("1.2.3.4"),
 				Protocol:  string(v1.ProtocolUDP),
 				Port:      53,
 				Scheduler: "rr",
@@ -3682,7 +3682,7 @@ func Test_syncService(t *testing.T) {
 		{
 			// case 4, SCTP, old virtual server is same as new virtual server
 			oldVirtualServer: &utilipvs.VirtualServer{
-				Address:   netutils.ParseIPSloppy("1.2.3.4"),
+				Address:   netutils.MustParseIP("1.2.3.4"),
 				Protocol:  string(v1.ProtocolSCTP),
 				Port:      80,
 				Scheduler: "rr",
@@ -3690,7 +3690,7 @@ func Test_syncService(t *testing.T) {
 			},
 			svcName: "foo",
 			newVirtualServer: &utilipvs.VirtualServer{
-				Address:   netutils.ParseIPSloppy("1.2.3.4"),
+				Address:   netutils.MustParseIP("1.2.3.4"),
 				Protocol:  string(v1.ProtocolSCTP),
 				Port:      80,
 				Scheduler: "rr",
@@ -3702,7 +3702,7 @@ func Test_syncService(t *testing.T) {
 		{
 			// case 5, old virtual server is different from new virtual server
 			oldVirtualServer: &utilipvs.VirtualServer{
-				Address:   netutils.ParseIPSloppy("1.2.3.4"),
+				Address:   netutils.MustParseIP("1.2.3.4"),
 				Protocol:  string(v1.ProtocolSCTP),
 				Port:      8080,
 				Scheduler: "rr",
@@ -3710,7 +3710,7 @@ func Test_syncService(t *testing.T) {
 			},
 			svcName: "bar",
 			newVirtualServer: &utilipvs.VirtualServer{
-				Address:   netutils.ParseIPSloppy("1.2.3.4"),
+				Address:   netutils.MustParseIP("1.2.3.4"),
 				Protocol:  string(v1.ProtocolSCTP),
 				Port:      8080,
 				Scheduler: "rr",
@@ -3722,7 +3722,7 @@ func Test_syncService(t *testing.T) {
 		{
 			// case 6, old virtual server is different from new virtual server
 			oldVirtualServer: &utilipvs.VirtualServer{
-				Address:   netutils.ParseIPSloppy("1.2.3.4"),
+				Address:   netutils.MustParseIP("1.2.3.4"),
 				Protocol:  string(v1.ProtocolSCTP),
 				Port:      8080,
 				Scheduler: "rr",
@@ -3730,7 +3730,7 @@ func Test_syncService(t *testing.T) {
 			},
 			svcName: "bar",
 			newVirtualServer: &utilipvs.VirtualServer{
-				Address:   netutils.ParseIPSloppy("1.2.3.4"),
+				Address:   netutils.MustParseIP("1.2.3.4"),
 				Protocol:  string(v1.ProtocolSCTP),
 				Port:      8080,
 				Scheduler: "wlc",
@@ -3744,7 +3744,7 @@ func Test_syncService(t *testing.T) {
 			oldVirtualServer: nil,
 			svcName:          "baz",
 			newVirtualServer: &utilipvs.VirtualServer{
-				Address:   netutils.ParseIPSloppy("1.2.3.4"),
+				Address:   netutils.MustParseIP("1.2.3.4"),
 				Protocol:  string(v1.ProtocolSCTP),
 				Port:      53,
 				Scheduler: "rr",
@@ -3756,7 +3756,7 @@ func Test_syncService(t *testing.T) {
 		{
 			// case 8, virtual server address already binded, skip sync
 			oldVirtualServer: &utilipvs.VirtualServer{
-				Address:   netutils.ParseIPSloppy("1.2.3.4"),
+				Address:   netutils.MustParseIP("1.2.3.4"),
 				Protocol:  string(v1.ProtocolSCTP),
 				Port:      53,
 				Scheduler: "rr",
@@ -3764,7 +3764,7 @@ func Test_syncService(t *testing.T) {
 			},
 			svcName: "baz",
 			newVirtualServer: &utilipvs.VirtualServer{
-				Address:   netutils.ParseIPSloppy("1.2.3.4"),
+				Address:   netutils.MustParseIP("1.2.3.4"),
 				Protocol:  string(v1.ProtocolSCTP),
 				Port:      53,
 				Scheduler: "rr",
@@ -3913,7 +3913,7 @@ func TestCleanLegacyService(t *testing.T) {
 	currentServices := map[string]*utilipvs.VirtualServer{
 		// Created by kube-proxy.
 		"ipvs0": {
-			Address:   netutils.ParseIPSloppy("1.1.1.1"),
+			Address:   netutils.MustParseIP("1.1.1.1"),
 			Protocol:  string(v1.ProtocolUDP),
 			Port:      53,
 			Scheduler: "rr",
@@ -3921,7 +3921,7 @@ func TestCleanLegacyService(t *testing.T) {
 		},
 		// Created by kube-proxy.
 		"ipvs1": {
-			Address:   netutils.ParseIPSloppy("2.2.2.2"),
+			Address:   netutils.MustParseIP("2.2.2.2"),
 			Protocol:  string(v1.ProtocolUDP),
 			Port:      54,
 			Scheduler: "rr",
@@ -3929,7 +3929,7 @@ func TestCleanLegacyService(t *testing.T) {
 		},
 		// Created by an external party.
 		"ipvs2": {
-			Address:   netutils.ParseIPSloppy("3.3.3.3"),
+			Address:   netutils.MustParseIP("3.3.3.3"),
 			Protocol:  string(v1.ProtocolUDP),
 			Port:      55,
 			Scheduler: "rr",
@@ -3937,7 +3937,7 @@ func TestCleanLegacyService(t *testing.T) {
 		},
 		// Created by an external party.
 		"ipvs3": {
-			Address:   netutils.ParseIPSloppy("4.4.4.4"),
+			Address:   netutils.MustParseIP("4.4.4.4"),
 			Protocol:  string(v1.ProtocolUDP),
 			Port:      56,
 			Scheduler: "rr",
@@ -3945,7 +3945,7 @@ func TestCleanLegacyService(t *testing.T) {
 		},
 		// Created by an external party.
 		"ipvs4": {
-			Address:   netutils.ParseIPSloppy("5.5.5.5"),
+			Address:   netutils.MustParseIP("5.5.5.5"),
 			Protocol:  string(v1.ProtocolUDP),
 			Port:      57,
 			Scheduler: "rr",
@@ -3953,7 +3953,7 @@ func TestCleanLegacyService(t *testing.T) {
 		},
 		// Created by kube-proxy, but now stale.
 		"ipvs5": {
-			Address:   netutils.ParseIPSloppy("6.6.6.6"),
+			Address:   netutils.MustParseIP("6.6.6.6"),
 			Protocol:  string(v1.ProtocolUDP),
 			Port:      58,
 			Scheduler: "rr",
@@ -3993,21 +3993,21 @@ func TestCleanLegacyServiceWithRealServers(t *testing.T) {
 	// All ipvs services in the system.
 	currentServices := map[string]*utilipvs.VirtualServer{
 		"ipvs0": { // deleted with real servers
-			Address:   netutils.ParseIPSloppy("1.1.1.1"),
+			Address:   netutils.MustParseIP("1.1.1.1"),
 			Protocol:  string(v1.ProtocolUDP),
 			Port:      53,
 			Scheduler: "rr",
 			Flags:     utilipvs.FlagHashed,
 		},
 		"ipvs1": { // deleted no real server
-			Address:   netutils.ParseIPSloppy("2.2.2.2"),
+			Address:   netutils.MustParseIP("2.2.2.2"),
 			Protocol:  string(v1.ProtocolUDP),
 			Port:      54,
 			Scheduler: "rr",
 			Flags:     utilipvs.FlagHashed,
 		},
 		"ipvs2": { // not deleted
-			Address:   netutils.ParseIPSloppy("3.3.3.3"),
+			Address:   netutils.MustParseIP("3.3.3.3"),
 			Protocol:  string(v1.ProtocolUDP),
 			Port:      54,
 			Scheduler: "rr",
@@ -4018,13 +4018,13 @@ func TestCleanLegacyServiceWithRealServers(t *testing.T) {
 	// "ipvs0" has a real server, but it should still be deleted since the Service is deleted
 	realServers := map[*utilipvs.VirtualServer]*utilipvs.RealServer{
 		{
-			Address:   netutils.ParseIPSloppy("1.1.1.1"),
+			Address:   netutils.MustParseIP("1.1.1.1"),
 			Protocol:  string(v1.ProtocolUDP),
 			Port:      53,
 			Scheduler: "rr",
 			Flags:     utilipvs.FlagHashed,
 		}: {
-			Address: netutils.ParseIPSloppy("10.180.0.1"),
+			Address: netutils.MustParseIP("10.180.0.1"),
 			Port:    uint16(53),
 			Weight:  1,
 		},
@@ -4062,7 +4062,7 @@ func TestCleanLegacyRealServersExcludeCIDRs(t *testing.T) {
 	fp.gracefuldeleteManager = gtm
 
 	vs := &utilipvs.VirtualServer{
-		Address:   netutils.ParseIPSloppy("4.4.4.4"),
+		Address:   netutils.MustParseIP("4.4.4.4"),
 		Protocol:  string(v1.ProtocolUDP),
 		Port:      56,
 		Scheduler: "rr",
@@ -4073,13 +4073,13 @@ func TestCleanLegacyRealServersExcludeCIDRs(t *testing.T) {
 
 	rss := []*utilipvs.RealServer{
 		{
-			Address:      netutils.ParseIPSloppy("10.10.10.10"),
+			Address:      netutils.MustParseIP("10.10.10.10"),
 			Port:         56,
 			ActiveConn:   0,
 			InactiveConn: 0,
 		},
 		{
-			Address:      netutils.ParseIPSloppy("11.11.11.11"),
+			Address:      netutils.MustParseIP("11.11.11.11"),
 			Port:         56,
 			ActiveConn:   0,
 			InactiveConn: 0,
@@ -4111,7 +4111,7 @@ func TestCleanLegacyService6(t *testing.T) {
 	ipset := ipsettest.NewFake(testIPSetVersion)
 	excludeCIDRs, _ := netutils.ParseCIDRs([]string{"3000::/64", "4000::/64"})
 	fp := NewFakeProxier(ctx, ipt, ipvs, ipset, nil, excludeCIDRs, v1.IPv6Protocol)
-	fp.nodeIP = netutils.ParseIPSloppy("::1")
+	fp.nodeIP = netutils.MustParseIP("::1")
 
 	// All ipvs services that were processed in the latest sync loop.
 	activeServices := sets.New("ipvs0", "ipvs1")
@@ -4119,7 +4119,7 @@ func TestCleanLegacyService6(t *testing.T) {
 	currentServices := map[string]*utilipvs.VirtualServer{
 		// Created by kube-proxy.
 		"ipvs0": {
-			Address:   netutils.ParseIPSloppy("1000::1"),
+			Address:   netutils.MustParseIP("1000::1"),
 			Protocol:  string(v1.ProtocolUDP),
 			Port:      53,
 			Scheduler: "rr",
@@ -4127,7 +4127,7 @@ func TestCleanLegacyService6(t *testing.T) {
 		},
 		// Created by kube-proxy.
 		"ipvs1": {
-			Address:   netutils.ParseIPSloppy("1000::2"),
+			Address:   netutils.MustParseIP("1000::2"),
 			Protocol:  string(v1.ProtocolUDP),
 			Port:      54,
 			Scheduler: "rr",
@@ -4135,7 +4135,7 @@ func TestCleanLegacyService6(t *testing.T) {
 		},
 		// Created by an external party.
 		"ipvs2": {
-			Address:   netutils.ParseIPSloppy("3000::1"),
+			Address:   netutils.MustParseIP("3000::1"),
 			Protocol:  string(v1.ProtocolUDP),
 			Port:      55,
 			Scheduler: "rr",
@@ -4143,7 +4143,7 @@ func TestCleanLegacyService6(t *testing.T) {
 		},
 		// Created by an external party.
 		"ipvs3": {
-			Address:   netutils.ParseIPSloppy("4000::1"),
+			Address:   netutils.MustParseIP("4000::1"),
 			Protocol:  string(v1.ProtocolUDP),
 			Port:      56,
 			Scheduler: "rr",
@@ -4151,7 +4151,7 @@ func TestCleanLegacyService6(t *testing.T) {
 		},
 		// Created by an external party.
 		"ipvs4": {
-			Address:   netutils.ParseIPSloppy("5000::1"),
+			Address:   netutils.MustParseIP("5000::1"),
 			Protocol:  string(v1.ProtocolUDP),
 			Port:      57,
 			Scheduler: "rr",
@@ -4159,7 +4159,7 @@ func TestCleanLegacyService6(t *testing.T) {
 		},
 		// Created by kube-proxy, but now stale.
 		"ipvs5": {
-			Address:   netutils.ParseIPSloppy("1000::6"),
+			Address:   netutils.MustParseIP("1000::6"),
 			Protocol:  string(v1.ProtocolUDP),
 			Port:      58,
 			Scheduler: "rr",

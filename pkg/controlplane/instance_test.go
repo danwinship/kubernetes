@@ -101,7 +101,7 @@ func setUp(t *testing.T) (*etcd3testing.EtcdTestServer, Config, *assert.Assertio
 			APIServerServicePort:   443,
 			MasterCount:            1,
 			EndpointReconcilerType: reconcilers.MasterCountReconcilerType,
-			ServiceIPRange:         net.IPNet{IP: netutils.ParseIPSloppy("10.0.0.0"), Mask: net.CIDRMask(24, 32)},
+			ServiceIPRange:         net.IPNet{IP: netutils.MustParseIP("10.0.0.0"), Mask: net.CIDRMask(24, 32)},
 		},
 	}
 
@@ -122,7 +122,7 @@ func setUp(t *testing.T) (*etcd3testing.EtcdTestServer, Config, *assert.Assertio
 	config.ControlPlane.Generic.Authorization.Authorizer = authorizerfactory.NewAlwaysAllowAuthorizer()
 	config.ControlPlane.StorageFactory = storageFactory
 	config.ControlPlane.Generic.LoopbackClientConfig = &restclient.Config{APIPath: "/api", ContentConfig: restclient.ContentConfig{NegotiatedSerializer: legacyscheme.Codecs}}
-	config.ControlPlane.Generic.PublicAddress = netutils.ParseIPSloppy("192.168.10.4")
+	config.ControlPlane.Generic.PublicAddress = netutils.MustParseIP("192.168.10.4")
 	config.ControlPlane.Generic.LegacyAPIGroupPrefixes = sets.NewString("/api")
 	config.Extra.KubeletClientConfig = kubeletclient.KubeletClientConfig{Port: 10250}
 	config.ControlPlane.ProxyTransport = utilnet.SetTransportDefaults(&http.Transport{

@@ -213,8 +213,8 @@ func TestValidatePublicIPServiceClusterIPRangeIPFamilies(t *testing.T) {
 		t.Fatalf("Unexpected error %v", err)
 	}
 
-	ipv4address := netutils.ParseIPSloppy("192.168.1.1")
-	ipv6address := netutils.ParseIPSloppy("2001:db8::1")
+	ipv4address := netutils.MustParseIP("192.168.1.1")
+	ipv6address := netutils.MustParseIP("2001:db8::1")
 
 	tests := []struct {
 		name    string

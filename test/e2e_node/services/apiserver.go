@@ -72,7 +72,7 @@ func (a *APIServer) Start(ctx context.Context) error {
 	if len(framework.TestContext.RuntimeConfig) > 0 {
 		o.APIEnablement.RuntimeConfig = framework.TestContext.RuntimeConfig
 	}
-	o.SecureServing.BindAddress = netutils.ParseIPSloppy("127.0.0.1")
+	o.SecureServing.BindAddress = netutils.MustParseIP("127.0.0.1")
 	o.ServiceClusterIPRanges = ipnet.String()
 	o.AllowPrivileged = true
 	if err := generateTokenFile(tokenFilePath); err != nil {

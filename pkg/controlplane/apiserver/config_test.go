@@ -35,7 +35,7 @@ import (
 func TestBuildGenericConfig(t *testing.T) {
 	opts := options.NewOptions()
 	s := (&apiserveroptions.SecureServingOptions{
-		BindAddress: netutils.ParseIPSloppy("127.0.0.1"),
+		BindAddress: netutils.MustParseIP("127.0.0.1"),
 	}).WithLoopback()
 	ln, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {

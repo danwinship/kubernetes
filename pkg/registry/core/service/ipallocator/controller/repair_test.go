@@ -85,7 +85,7 @@ func TestRepairLeak(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	previous.Allocate(netutils.ParseIPSloppy("192.168.1.10"))
+	previous.Allocate(netutils.MustParseIP("192.168.1.10"))
 
 	var dst api.RangeAllocation
 	err = previous.Snapshot(&dst)
@@ -114,7 +114,7 @@ func TestRepairLeak(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if !after.Has(netutils.ParseIPSloppy("192.168.1.10")) {
+		if !after.Has(netutils.MustParseIP("192.168.1.10")) {
 			t.Errorf("expected ipallocator to still have leaked IP")
 		}
 	}
@@ -126,7 +126,7 @@ func TestRepairLeak(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if after.Has(netutils.ParseIPSloppy("192.168.1.10")) {
+	if after.Has(netutils.MustParseIP("192.168.1.10")) {
 		t.Errorf("expected ipallocator to not have leaked IP")
 	}
 	em := testMetrics{
@@ -222,7 +222,7 @@ func TestRepairWithExisting(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !after.Has(netutils.ParseIPSloppy("192.168.1.1")) || !after.Has(netutils.ParseIPSloppy("192.168.1.100")) {
+	if !after.Has(netutils.MustParseIP("192.168.1.1")) || !after.Has(netutils.MustParseIP("192.168.1.100")) {
 		t.Errorf("unexpected ipallocator state: %#v", after)
 	}
 	if free := after.Free(); free != 252 {
@@ -410,14 +410,14 @@ func TestRepairLeakDualStack(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	previous.Allocate(netutils.ParseIPSloppy("192.168.1.10"))
+	previous.Allocate(netutils.MustParseIP("192.168.1.10"))
 
 	_, secondaryCIDR, _ := netutils.ParseCIDRSloppy("2000::/108")
 	secondaryPrevious, err := ipallocator.NewInMemory(secondaryCIDR)
 	if err != nil {
 		t.Fatal(err)
 	}
-	secondaryPrevious.Allocate(netutils.ParseIPSloppy("2000::1"))
+	secondaryPrevious.Allocate(netutils.MustParseIP("2000::1"))
 
 	var dst api.RangeAllocation
 	err = previous.Snapshot(&dst)
@@ -462,14 +462,14 @@ func TestRepairLeakDualStack(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if !after.Has(netutils.ParseIPSloppy("192.168.1.10")) {
+		if !after.Has(netutils.MustParseIP("192.168.1.10")) {
 			t.Errorf("expected ipallocator to still have leaked IP")
 		}
 		secondaryAfter, err := ipallocator.NewFromSnapshot(secondaryIPRegistry.updated)
 		if err != nil {
 			t.Fatal(err)
 		}
-		if !secondaryAfter.Has(netutils.ParseIPSloppy("2000::1")) {
+		if !secondaryAfter.Has(netutils.MustParseIP("2000::1")) {
 			t.Errorf("expected ipallocator to still have leaked IP")
 		}
 	}
@@ -482,14 +482,14 @@ func TestRepairLeakDualStack(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if after.Has(netutils.ParseIPSloppy("192.168.1.10")) {
+	if after.Has(netutils.MustParseIP("192.168.1.10")) {
 		t.Errorf("expected ipallocator to not have leaked IP")
 	}
 	secondaryAfter, err := ipallocator.NewFromSnapshot(secondaryIPRegistry.updated)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if secondaryAfter.Has(netutils.ParseIPSloppy("2000::1")) {
+	if secondaryAfter.Has(netutils.MustParseIP("2000::1")) {
 		t.Errorf("expected ipallocator to not have leaked IP")
 	}
 
@@ -660,7 +660,7 @@ func TestRepairWithExistingDualStack(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if !after.Has(netutils.ParseIPSloppy("192.168.1.1")) || !after.Has(netutils.ParseIPSloppy("192.168.1.100")) {
+	if !after.Has(netutils.MustParseIP("192.168.1.1")) || !after.Has(netutils.MustParseIP("192.168.1.100")) {
 		t.Errorf("unexpected ipallocator state: %#v", after)
 	}
 	if free := after.Free(); free != 251 {
@@ -671,7 +671,7 @@ func TestRepairWithExistingDualStack(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !secondaryAfter.Has(netutils.ParseIPSloppy("2000::1")) || !secondaryAfter.Has(netutils.ParseIPSloppy("2000::2")) {
+	if !secondaryAfter.Has(netutils.MustParseIP("2000::1")) || !secondaryAfter.Has(netutils.MustParseIP("2000::2")) {
 		t.Errorf("unexpected ipallocator state: %#v", secondaryAfter)
 	}
 	if free := secondaryAfter.Free(); free != 65533 {

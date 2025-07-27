@@ -269,7 +269,7 @@ func TestCertToConfig(t *testing.T) {
 		CommonName:   "test-common-name",
 		Organization: testCertOrganization,
 		AltNames: certutil.AltNames{
-			IPs:      []net.IP{netutils.ParseIPSloppy("10.100.0.1")},
+			IPs:      []net.IP{netutils.MustParseIP("10.100.0.1")},
 			DNSNames: []string{"test-domain.space"},
 		},
 		Usages: []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth},
@@ -282,7 +282,7 @@ func TestCertToConfig(t *testing.T) {
 		},
 		ExtKeyUsage: []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth},
 		DNSNames:    []string{"test-domain.space"},
-		IPAddresses: []net.IP{netutils.ParseIPSloppy("10.100.0.1")},
+		IPAddresses: []net.IP{netutils.MustParseIP("10.100.0.1")},
 	}
 
 	cfg := certToConfig(cert)
@@ -315,7 +315,7 @@ func makeTestCertConfig(organization []string, notBefore, notAfter time.Time) *p
 			CommonName:   "test-common-name",
 			Organization: organization,
 			AltNames: certutil.AltNames{
-				IPs:      []net.IP{netutils.ParseIPSloppy("10.100.0.1")},
+				IPs:      []net.IP{netutils.MustParseIP("10.100.0.1")},
 				DNSNames: []string{"test-domain.space"},
 			},
 			Usages:    []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth},

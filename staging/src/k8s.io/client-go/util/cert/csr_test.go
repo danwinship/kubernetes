@@ -34,7 +34,7 @@ func TestMakeCSR(t *testing.T) {
 		CommonName: "kube-worker",
 	}
 	dnsSANs := []string{"localhost"}
-	ipSANs := []net.IP{netutils.ParseIPSloppy("127.0.0.1")}
+	ipSANs := []net.IP{netutils.MustParseIP("127.0.0.1")}
 
 	keyData, err := os.ReadFile(keyFile)
 	if err != nil {

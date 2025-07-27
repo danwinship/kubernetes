@@ -26,7 +26,7 @@ import (
 // "normal" API servers running on the platform
 func NewSecureServingOptions() *genericoptions.SecureServingOptionsWithLoopback {
 	o := genericoptions.SecureServingOptions{
-		BindAddress: netutils.ParseIPSloppy("0.0.0.0"),
+		BindAddress: netutils.MustParseIP("0.0.0.0"),
 		BindPort:    6443,
 		Required:    true,
 		ServerCert: genericoptions.GeneratableKeyCert{

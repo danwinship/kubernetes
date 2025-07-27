@@ -121,7 +121,7 @@ func TestNewWithDelegate(t *testing.T) {
 	defer cancel(errors.New("test is done"))
 	delegateConfig := NewConfig(codecs)
 	delegateConfig.ExternalAddress = "192.168.10.4:443"
-	delegateConfig.PublicAddress = netutils.ParseIPSloppy("192.168.10.4")
+	delegateConfig.PublicAddress = netutils.MustParseIP("192.168.10.4")
 	delegateConfig.LegacyAPIGroupPrefixes = sets.NewString("/api")
 	delegateConfig.LoopbackClientConfig = &rest.Config{}
 	delegateConfig.EffectiveVersion = basecompatibility.NewEffectiveVersionFromString("", "", "")
@@ -154,7 +154,7 @@ func TestNewWithDelegate(t *testing.T) {
 
 	wrappingConfig := NewConfig(codecs)
 	wrappingConfig.ExternalAddress = "192.168.10.4:443"
-	wrappingConfig.PublicAddress = netutils.ParseIPSloppy("192.168.10.4")
+	wrappingConfig.PublicAddress = netutils.MustParseIP("192.168.10.4")
 	wrappingConfig.LegacyAPIGroupPrefixes = sets.NewString("/api")
 	wrappingConfig.LoopbackClientConfig = &rest.Config{}
 	wrappingConfig.EffectiveVersion = basecompatibility.NewEffectiveVersionFromString("", "", "")

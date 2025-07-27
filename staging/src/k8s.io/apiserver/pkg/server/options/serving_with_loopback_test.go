@@ -30,7 +30,7 @@ func TestEmptyMainCert(t *testing.T) {
 	var loopbackClientConfig *rest.Config
 
 	s := (&SecureServingOptions{
-		BindAddress: netutils.ParseIPSloppy("127.0.0.1"),
+		BindAddress: netutils.MustParseIP("127.0.0.1"),
 	}).WithLoopback()
 	ln, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {

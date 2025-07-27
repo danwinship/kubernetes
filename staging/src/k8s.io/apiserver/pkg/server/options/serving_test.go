@@ -281,7 +281,7 @@ func TestServerRunWithSNI(t *testing.T) {
 			config.EffectiveVersion = basecompatibility.NewEffectiveVersionFromString(fmt.Sprintf("%s.%s", info.Major, info.Minor), "", "")
 			config.EnableIndex = true
 			secureOptions := (&SecureServingOptions{
-				BindAddress: netutils.ParseIPSloppy("127.0.0.1"),
+				BindAddress: netutils.MustParseIP("127.0.0.1"),
 				BindPort:    6443,
 				ServerCert: GeneratableKeyCert{
 					CertKey: CertKey{

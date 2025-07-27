@@ -111,7 +111,7 @@ type GeneratableKeyCert struct {
 
 func NewSecureServingOptions() *SecureServingOptions {
 	return &SecureServingOptions{
-		BindAddress: netutils.ParseIPSloppy("0.0.0.0"),
+		BindAddress: netutils.MustParseIP("0.0.0.0"),
 		BindPort:    443,
 		ServerCert: GeneratableKeyCert{
 			PairName:      "apiserver",

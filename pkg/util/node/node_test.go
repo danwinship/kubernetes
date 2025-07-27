@@ -119,7 +119,7 @@ func TestGetNodeHostIPs(t *testing.T) {
 				{Type: v1.NodeExternalIP, Address: "4.3.2.1"},
 				{Type: v1.NodeExternalIP, Address: "4.3.2.2"},
 			},
-			expectIPs: []net.IP{netutils.ParseIPSloppy("1.2.3.4")},
+			expectIPs: []net.IP{netutils.MustParseIP("1.2.3.4")},
 		},
 		{
 			name: "IPv4-only, external-first",
@@ -128,7 +128,7 @@ func TestGetNodeHostIPs(t *testing.T) {
 				{Type: v1.NodeExternalIP, Address: "4.3.2.2"},
 				{Type: v1.NodeInternalIP, Address: "1.2.3.4"},
 			},
-			expectIPs: []net.IP{netutils.ParseIPSloppy("1.2.3.4")},
+			expectIPs: []net.IP{netutils.MustParseIP("1.2.3.4")},
 		},
 		{
 			name: "IPv4-only, no internal",
@@ -136,7 +136,7 @@ func TestGetNodeHostIPs(t *testing.T) {
 				{Type: v1.NodeExternalIP, Address: "4.3.2.1"},
 				{Type: v1.NodeExternalIP, Address: "4.3.2.2"},
 			},
-			expectIPs: []net.IP{netutils.ParseIPSloppy("4.3.2.1")},
+			expectIPs: []net.IP{netutils.MustParseIP("4.3.2.1")},
 		},
 		{
 			name: "dual-stack node",
@@ -147,7 +147,7 @@ func TestGetNodeHostIPs(t *testing.T) {
 				{Type: v1.NodeInternalIP, Address: "a:b::c:d"},
 				{Type: v1.NodeExternalIP, Address: "d:c::b:a"},
 			},
-			expectIPs: []net.IP{netutils.ParseIPSloppy("1.2.3.4"), netutils.ParseIPSloppy("a:b::c:d")},
+			expectIPs: []net.IP{netutils.MustParseIP("1.2.3.4"), netutils.MustParseIP("a:b::c:d")},
 		},
 		{
 			name: "dual-stack node, different order",
@@ -158,7 +158,7 @@ func TestGetNodeHostIPs(t *testing.T) {
 				{Type: v1.NodeExternalIP, Address: "4.3.2.2"},
 				{Type: v1.NodeExternalIP, Address: "d:c::b:a"},
 			},
-			expectIPs: []net.IP{netutils.ParseIPSloppy("1.2.3.4"), netutils.ParseIPSloppy("a:b::c:d")},
+			expectIPs: []net.IP{netutils.MustParseIP("1.2.3.4"), netutils.MustParseIP("a:b::c:d")},
 		},
 		{
 			name: "dual-stack node, IPv6-first, no internal IPv4, dual-stack cluster",
@@ -168,7 +168,7 @@ func TestGetNodeHostIPs(t *testing.T) {
 				{Type: v1.NodeExternalIP, Address: "4.3.2.1"},
 				{Type: v1.NodeExternalIP, Address: "4.3.2.2"},
 			},
-			expectIPs: []net.IP{netutils.ParseIPSloppy("a:b::c:d"), netutils.ParseIPSloppy("4.3.2.1")},
+			expectIPs: []net.IP{netutils.MustParseIP("a:b::c:d"), netutils.MustParseIP("4.3.2.1")},
 		},
 	}
 

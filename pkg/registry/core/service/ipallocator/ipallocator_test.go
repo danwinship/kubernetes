@@ -258,7 +258,7 @@ func TestAllocateReservedIPAllocator(t *testing.T) {
 		t.Errorf("expected free equal to 0 got: %d", f)
 	}
 	// release one address in the allocated block and another a new one randomly
-	if err := r.Release(netutils.ParseIPSloppy("192.168.1.10")); err != nil {
+	if err := r.Release(netutils.MustParseIP("192.168.1.10")); err != nil {
 		t.Fatalf("Unexpected error trying to release ip 192.168.1.10: %v", err)
 	}
 	if _, err := r.AllocateNext(); err != nil {

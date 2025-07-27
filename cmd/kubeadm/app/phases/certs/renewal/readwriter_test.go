@@ -164,7 +164,7 @@ func writeTestKubeconfig(t *testing.T, dir, name string, caCert *x509.Certificat
 			Organization: testCertOrganization,
 			Usages:       []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth},
 			AltNames: certutil.AltNames{
-				IPs:      []net.IP{netutils.ParseIPSloppy("10.100.0.1")},
+				IPs:      []net.IP{netutils.MustParseIP("10.100.0.1")},
 				DNSNames: []string{"test-domain.space"},
 			},
 			NotBefore: notBefore,

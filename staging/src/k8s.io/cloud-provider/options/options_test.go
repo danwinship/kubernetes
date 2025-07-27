@@ -115,12 +115,12 @@ func TestDefaultFlags(t *testing.T) {
 					PairName:      "cloud-controller-manager-webhook",
 				},
 				BindPort:    10260,
-				BindAddress: netutils.ParseIPSloppy("0.0.0.0"),
+				BindAddress: netutils.MustParseIP("0.0.0.0"),
 			},
 		},
 		SecureServing: (&apiserveroptions.SecureServingOptions{
 			BindPort:    10258,
-			BindAddress: netutils.ParseIPSloppy("0.0.0.0"),
+			BindAddress: netutils.MustParseIP("0.0.0.0"),
 			ServerCert: apiserveroptions.GeneratableKeyCert{
 				CertDirectory: "",
 				PairName:      "cloud-controller-manager",
@@ -276,12 +276,12 @@ func TestAddFlags(t *testing.T) {
 					PairName:      "cloud-controller-manager-webhook",
 				},
 				BindPort:    10260,
-				BindAddress: netutils.ParseIPSloppy("0.0.0.0"),
+				BindAddress: netutils.MustParseIP("0.0.0.0"),
 			},
 		},
 		SecureServing: (&apiserveroptions.SecureServingOptions{
 			BindPort:    10001,
-			BindAddress: netutils.ParseIPSloppy("192.168.4.21"),
+			BindAddress: netutils.MustParseIP("192.168.4.21"),
 			ServerCert: apiserveroptions.GeneratableKeyCert{
 				CertDirectory: "/a/b/c",
 				PairName:      "cloud-controller-manager",
