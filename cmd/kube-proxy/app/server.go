@@ -335,7 +335,7 @@ func checkBadIPConfig(s *ProxyServer, dualStackSupported bool) (err error, fatal
 	}
 
 	if badCIDRs(s.Config.DetectLocal.ClusterCIDRs, badFamily) {
-		errors = append(errors, fmt.Errorf("cluster is %s but clusterCIDRs contains only IPv%s addresses", clusterType, badFamily))
+		errors = append(errors, fmt.Errorf("cluster is %s but clusterCIDRs contains only %s addresses", clusterType, badFamily))
 		if s.Config.DetectLocalMode == kubeproxyconfig.LocalModeClusterCIDR && !dualStackSupported {
 			// This has always been a fatal error
 			fatal = true
@@ -343,7 +343,7 @@ func checkBadIPConfig(s *ProxyServer, dualStackSupported bool) (err error, fatal
 	}
 
 	if badCIDRs(s.podCIDRs, badFamily) {
-		errors = append(errors, fmt.Errorf("cluster is %s but node.spec.podCIDRs contains only IPv%s addresses", clusterType, badFamily))
+		errors = append(errors, fmt.Errorf("cluster is %s but node.spec.podCIDRs contains only %s addresses", clusterType, badFamily))
 		if s.Config.DetectLocalMode == kubeproxyconfig.LocalModeNodeCIDR {
 			// This has always been a fatal error
 			fatal = true
@@ -351,21 +351,21 @@ func checkBadIPConfig(s *ProxyServer, dualStackSupported bool) (err error, fatal
 	}
 
 	if netutils.IPFamilyOf(s.Config.Winkernel.SourceVip) == badFamily {
-		errors = append(errors, fmt.Errorf("cluster is %s but winkernel.sourceVip is IPv%s", clusterType, badFamily))
+		errors = append(errors, fmt.Errorf("cluster is %s but winkernel.sourceVip is %s", clusterType, badFamily))
 	}
 
 	// In some cases, wrong-IP-family is only a problem when the secondary IP family
 	// isn't present at all.
 	if !dualStackSupported {
 		if badCIDRs(s.Config.IPVS.ExcludeCIDRs, badFamily) {
-			errors = append(errors, fmt.Errorf("cluster is %s but ipvs.excludeCIDRs contains only IPv%s addresses", clusterType, badFamily))
+			errors = append(errors, fmt.Errorf("cluster is %s but ipvs.excludeCIDRs contains only %s addresses", clusterType, badFamily))
 		}
 
 		if badBindAddress(s.Config.HealthzBindAddress, badFamily) {
-			errors = append(errors, fmt.Errorf("cluster is %s but healthzBindAddress is IPv%s", clusterType, badFamily))
+			errors = append(errors, fmt.Errorf("cluster is %s but healthzBindAddress is %s", clusterType, badFamily))
 		}
 		if badBindAddress(s.Config.MetricsBindAddress, badFamily) {
-			errors = append(errors, fmt.Errorf("cluster is %s but metricsBindAddress is IPv%s", clusterType, badFamily))
+			errors = append(errors, fmt.Errorf("cluster is %s but metricsBindAddress is %s", clusterType, badFamily))
 		}
 	}
 

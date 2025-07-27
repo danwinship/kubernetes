@@ -1981,7 +1981,7 @@ func (kl *Kubelet) generateAPIPodStatus(pod *v1.Pod, podStatus *kubecontainer.Po
 			if s.HostIP != "" {
 				if netutils.IPFamilyOf(s.HostIP) != netutils.IPFamilyOf(hostIPs[0]) {
 					kl.recorder.Eventf(pod, v1.EventTypeWarning, "HostIPsIPFamilyMismatch",
-						"Kubelet detected an IPv%s node IP (%s), but the cloud provider selected an IPv%s node IP (%s); pass an explicit `--node-ip` to kubelet to fix this.",
+						"Kubelet detected an %s node IP (%s), but the cloud provider selected an %s node IP (%s); pass an explicit `--node-ip` to kubelet to fix this.",
 						netutils.IPFamilyOf(s.HostIP), s.HostIP, netutils.IPFamilyOf(hostIPs[0]), hostIPs[0].String())
 				}
 			}
