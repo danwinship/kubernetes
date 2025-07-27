@@ -111,12 +111,8 @@ func startNodeIpamController(ctx context.Context, initContext app.ControllerInit
 	// the following checks are triggered if both serviceCIDR and secondaryServiceCIDR are provided
 	if serviceCIDR != nil && secondaryServiceCIDR != nil {
 		// should be dual stack (from different IPFamilies)
-		dualstackServiceCIDR, err := netutils.IsDualStackCIDRs([]*net.IPNet{serviceCIDR, secondaryServiceCIDR})
-		if err != nil {
-			return nil, false, fmt.Errorf("failed to perform dualstack check on serviceCIDR and secondaryServiceCIDR error:%v", err)
-		}
-		if !dualstackServiceCIDR {
-			return nil, false, fmt.Errorf("serviceCIDR and secondaryServiceCIDR are not dualstack (from different IPfamiles)")
+		if !netutils.IsDualStackCIDRs([]*net.IPNet{serviceCIDR, secondaryServiceCIDR}) {
+			return nil, false, fmt.Errorf("serviceCIDR and secondaryServiceCIDR are not dual stack (from different IP families)")
 		}
 	}
 
@@ -154,10 +150,7 @@ func processCIDRs(cidrsList string) ([]*net.IPNet, bool, error) {
 	if err != nil {
 		return nil, false, err
 	}
-
-	// if cidrs has an error then the previous call will fail
-	// safe to ignore error checking on next call
-	dualstack, _ := netutils.IsDualStackCIDRs(cidrs)
+	dualstack := netutils.IsDualStackCIDRs(cidrs)
 
 	return cidrs, dualstack, nil
 }

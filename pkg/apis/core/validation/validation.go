@@ -4424,13 +4424,7 @@ func validatePodIPs(pod, oldPod *core.Pod) field.ErrorList {
 			podIPs = append(podIPs, podIP.IP)
 		}
 
-		dualStack, err := netutils.IsDualStackIPStrings(podIPs)
-		if err != nil {
-			allErrs = append(allErrs, field.InternalError(podIPsField, fmt.Errorf("failed to check for dual stack with error:%v", err)))
-		}
-
-		// We only support one from each IP family (i.e. max two IPs in this list).
-		if !dualStack || len(podIPs) > 2 {
+		if !netutils.IsDualStackPair(podIPs) {
 			allErrs = append(allErrs, field.Invalid(podIPsField, pod.Status.PodIPs, "may specify no more than one IP for each IP family"))
 		}
 	}
@@ -4472,13 +4466,7 @@ func validateHostIPs(pod, oldPod *core.Pod) field.ErrorList {
 			hostIPs = append(hostIPs, hostIP.IP)
 		}
 
-		dualStack, err := netutils.IsDualStackIPStrings(hostIPs)
-		if err != nil {
-			allErrs = append(allErrs, field.InternalError(hostIPsField, fmt.Errorf("failed to check for dual stack with error:%v", err)))
-		}
-
-		// We only support one from each IP family (i.e. max two IPs in this list).
-		if !dualStack || len(hostIPs) > 2 {
+		if !netutils.IsDualStackPair(hostIPs) {
 			allErrs = append(allErrs, field.Invalid(hostIPsField, pod.Status.HostIPs, "may specify no more than one IP for each IP family"))
 		}
 	}
@@ -6826,11 +6814,7 @@ func ValidateNode(node *core.Node) field.ErrorList {
 
 		// if more than PodCIDR then it must be a dual-stack pair
 		if len(node.Spec.PodCIDRs) > 1 {
-			dualStack, err := netutils.IsDualStackCIDRStrings(node.Spec.PodCIDRs)
-			if err != nil {
-				allErrs = append(allErrs, field.InternalError(podCIDRsField, fmt.Errorf("invalid PodCIDRs. failed to check with dual stack with error:%v", err)))
-			}
-			if !dualStack || len(node.Spec.PodCIDRs) > 2 {
+			if !netutils.IsDualStackCIDRPair(node.Spec.PodCIDRs) {
 				allErrs = append(allErrs, field.Invalid(podCIDRsField, node.Spec.PodCIDRs, "may specify no more than one CIDR for each IP family"))
 			}
 		}
@@ -8675,13 +8659,7 @@ func ValidateServiceClusterIPsRelatedFields(service, oldService *core.Service) f
 
 	// must be dual stacked ips if they are more than one ip
 	if len(service.Spec.ClusterIPs) > 1 /* meaning: it does not have a None or empty string */ {
-		dualStack, err := netutils.IsDualStackIPStrings(service.Spec.ClusterIPs)
-		if err != nil { // though we check for that earlier. safe > sorry
-			allErrs = append(allErrs, field.InternalError(clusterIPsField, fmt.Errorf("failed to check for dual stack with error:%v", err)))
-		}
-
-		// We only support one from each IP family (i.e. max two IPs in this list).
-		if !dualStack {
+		if !netutils.IsDualStack(service.Spec.ClusterIPs) {
 			allErrs = append(allErrs, field.Invalid(clusterIPsField, service.Spec.ClusterIPs, "may specify no more than one IP for each IP family"))
 		}
 	}

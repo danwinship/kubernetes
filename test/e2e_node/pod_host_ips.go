@@ -56,11 +56,8 @@ var _ = common.SIGDescribe("Pod Host IPs", func() {
 
 			// validate first ip in HostIPs is same as HostIP
 			gomega.Expect(p.Status.HostIP).Should(gomega.Equal(p.Status.HostIPs[0].IP))
-			if len(p.Status.HostIPs) > 1 {
-				// assert 2 host ips belong to different families
-				if netutils.IPFamilyOf(p.Status.HostIPs[0].IP) == netutils.IPFamilyOf(p.Status.HostIPs[1].IP) {
-					framework.Failf("both internalIPs %s and %s belong to the same families", p.Status.HostIPs[0].IP, p.Status.HostIPs[1].IP)
-				}
+			if len(p.Status.HostIPs) > 1 && !netutils.IsDualStackPair(p.Status.HostIPs) {
+				framework.Failf("both HostIPs %s and %s belong to the same family", p.Status.HostIPs[0].IP, p.Status.HostIPs[1].IP)
 			}
 
 			ginkgo.By("comparing pod.Status.HostIPs against node.Status.Addresses")
@@ -87,11 +84,8 @@ var _ = common.SIGDescribe("Pod Host IPs", func() {
 
 			// validate first ip in HostIPs is same as HostIP
 			gomega.Expect(p.Status.HostIP).Should(gomega.Equal(p.Status.HostIPs[0].IP))
-			if len(p.Status.HostIPs) > 1 {
-				// assert 2 host ips belong to different families
-				if netutils.IPFamilyOf(p.Status.HostIPs[0].IP) == netutils.IPFamilyOf(p.Status.HostIPs[1].IP) {
-					framework.Failf("both internalIPs %s and %s belong to the same families", p.Status.HostIPs[0].IP, p.Status.HostIPs[1].IP)
-				}
+			if len(p.Status.HostIPs) > 1 && !netutils.IsDualStackPair(p.Status.HostIPs) {
+				framework.Failf("both hostIPs %s and %s belong to the same family", p.Status.HostIPs[0].IP, p.Status.HostIPs[1].IP)
 			}
 
 			ginkgo.By("comparing pod.Status.HostIPs against node.Status.Addresses")

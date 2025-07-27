@@ -66,11 +66,8 @@ var _ = common.SIGDescribe(feature.IPv6DualStack, func() {
 		for _, node := range nodeList.Items {
 			// get all internal ips for node
 			internalIPs := e2enode.GetAddresses(&node, v1.NodeInternalIP)
-
-			gomega.Expect(internalIPs).To(gomega.HaveLen(2))
-			// assert 2 ips belong to different families
-			if netutils.IPFamilyOf(internalIPs[0]) == netutils.IPFamilyOf(internalIPs[1]) {
-				framework.Failf("both internalIPs %s and %s belong to the same families", internalIPs[0], internalIPs[1])
+			if !netutils.IsDualStackPair(internalIPs) {
+				framework.Failf("expected internalIPs %v to be a dual-stack pair", internalIPs)
 			}
 		}
 	})

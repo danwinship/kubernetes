@@ -151,10 +151,7 @@ func processCIDRs(cidrsList string) ([]*net.IPNet, bool, error) {
 	if err != nil {
 		return nil, false, err
 	}
-
-	// if cidrs has an error then the previous call will fail
-	// safe to ignore error checking on next call
-	dualstack, _ := netutils.IsDualStackCIDRs(cidrs)
+	dualstack := netutils.IsDualStackCIDRs(cidrs)
 
 	return cidrs, dualstack, nil
 }

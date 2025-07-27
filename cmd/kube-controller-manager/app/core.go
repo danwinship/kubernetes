@@ -140,12 +140,8 @@ func startNodeIpamController(ctx context.Context, controllerContext ControllerCo
 	// the following checks are triggered if both serviceCIDR and secondaryServiceCIDR are provided
 	if serviceCIDR != nil && secondaryServiceCIDR != nil {
 		// should be dual stack (from different IPFamilies)
-		dualstackServiceCIDR, err := netutils.IsDualStackCIDRs([]*net.IPNet{serviceCIDR, secondaryServiceCIDR})
-		if err != nil {
-			return nil, false, fmt.Errorf("failed to perform dualstack check on serviceCIDR and secondaryServiceCIDR error: %w", err)
-		}
-		if !dualstackServiceCIDR {
-			return nil, false, fmt.Errorf("serviceCIDR and secondaryServiceCIDR are not dualstack (from different IPfamiles)")
+		if !netutils.IsDualStackCIDRs([]*net.IPNet{serviceCIDR, secondaryServiceCIDR}) {
+			return nil, false, fmt.Errorf("serviceCIDR and secondaryServiceCIDR are not dual stack (from different IP families)")
 		}
 	}
 
@@ -793,19 +789,14 @@ func startLegacyServiceAccountTokenCleanerController(ctx context.Context, contro
 // error if failed to parse any of the cidrs or invalid length of cidrs
 func validateCIDRs(cidrsList string) ([]*net.IPNet, error) {
 	// failure: bad cidrs in config
-	clusterCIDRs, dualStack, err := processCIDRs(cidrsList)
+	clusterCIDRs, err := processCIDRs(cidrsList)
 	if err != nil {
 		return nil, err
 	}
 
 	// failure: more than one cidr but they are not configured as dual stack
-	if len(clusterCIDRs) > 1 && !dualStack {
-		return nil, fmt.Errorf("len of ClusterCIDRs==%v and they are not configured as dual stack (at least one from each IPFamily", len(clusterCIDRs))
-	}
-
-	// failure: more than cidrs is not allowed even with dual stack
-	if len(clusterCIDRs) > 2 {
-		return nil, fmt.Errorf("length of clusterCIDRs is:%v more than max allowed of 2", len(clusterCIDRs))
+	if len(clusterCIDRs) > 1 && netutils.IsDualStackCIDRPair(clusterCIDRs) {
+		return nil, fmt.Errorf("len of ClusterCIDRs==%v and they are not configured as dual stack pair (one IPv4, one IPv6, in either order)", len(clusterCIDRs))
 	}
 
 	return clusterCIDRs, nil
@@ -813,21 +804,11 @@ func validateCIDRs(cidrsList string) ([]*net.IPNet, error) {
 
 // processCIDRs is a helper function that works on a comma separated cidrs and returns
 // a list of typed cidrs
-// a flag if cidrs represents a dual stack
 // error if failed to parse any of the cidrs
-func processCIDRs(cidrsList string) ([]*net.IPNet, bool, error) {
+func processCIDRs(cidrsList string) ([]*net.IPNet, error) {
 	cidrsSplit := strings.Split(strings.TrimSpace(cidrsList), ",")
 
-	cidrs, err := netutils.ParseCIDRs(cidrsSplit)
-	if err != nil {
-		return nil, false, err
-	}
-
-	// if cidrs has an error then the previous call will fail
-	// safe to ignore error checking on next call
-	dualstack, _ := netutils.IsDualStackCIDRs(cidrs)
-
-	return cidrs, dualstack, nil
+	return netutils.ParseCIDRs(cidrsSplit)
 }
 
 // setNodeCIDRMaskSizes returns the IPv4 and IPv6 node cidr mask sizes to the value provided

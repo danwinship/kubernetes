@@ -293,7 +293,7 @@ func checkBadConfig(s *ProxyServer) error {
 	// configuration.
 	anyDualStackConfig := false
 	for _, config := range [][]string{s.Config.DetectLocal.ClusterCIDRs, s.Config.NodePortAddresses, s.Config.IPVS.ExcludeCIDRs, s.podCIDRs} {
-		if dual, _ := netutils.IsDualStackCIDRStrings(config); dual {
+		if netutils.IsDualStackCIDRs(config) {
 			anyDualStackConfig = true
 			break
 		}

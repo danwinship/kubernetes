@@ -64,12 +64,7 @@ func validateClusterIPFlags(options Extra) []error {
 	// the Secondary* must be of different IPFamily than --service-cluster-ip-range
 	if secondaryServiceClusterIPRangeUsed {
 		// Should be dualstack IPFamily(PrimaryServiceClusterIPRange) != IPFamily(SecondaryServiceClusterIPRange)
-		dualstack, err := netutils.IsDualStackCIDRs([]*net.IPNet{&options.PrimaryServiceClusterIPRange, &options.SecondaryServiceClusterIPRange})
-		if err != nil {
-			errs = append(errs, fmt.Errorf("error attempting to validate dualstack for --service-cluster-ip-range value error:%v", err))
-		}
-
-		if !dualstack {
+		if !netutils.IsDualStackCIDRs([]*net.IPNet{&options.PrimaryServiceClusterIPRange, &options.SecondaryServiceClusterIPRange}) {
 			errs = append(errs, errors.New("--service-cluster-ip-range[0] and --service-cluster-ip-range[1] must be of different IP family"))
 		}
 		if !utilfeature.DefaultFeatureGate.Enabled(features.MultiCIDRServiceAllocator) ||

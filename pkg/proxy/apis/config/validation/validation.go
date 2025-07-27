@@ -308,22 +308,16 @@ func validateInterface(iface string, fldPath *field.Path) field.ErrorList {
 
 func validateDualStackCIDRStrings(cidrStrings []string, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
-	switch {
-	case len(cidrStrings) == 0:
+	if len(cidrStrings) == 0 {
 		allErrs = append(allErrs, field.Invalid(fldPath, cidrStrings, "must contain at least one CIDR"))
-	case len(cidrStrings) > 2:
-		allErrs = append(allErrs, field.Invalid(fldPath, cidrStrings, "must be a either a single CIDR or dual-stack pair of CIDRs (e.g. [10.100.0.0/16, fde4:8dba:82e1::/48]"))
-	default:
+	} else {
 		for i, cidrString := range cidrStrings {
 			if _, _, err := netutils.ParseCIDRSloppy(cidrString); err != nil {
 				allErrs = append(allErrs, field.Invalid(fldPath.Index(i), cidrString, "must be a valid CIDR block (e.g. 10.100.0.0/16 or fde4:8dba:82e1::/48)"))
 			}
 		}
-		if len(cidrStrings) == 2 {
-			ifDualStack, err := netutils.IsDualStackCIDRStrings(cidrStrings)
-			if err == nil && !ifDualStack {
-				allErrs = append(allErrs, field.Invalid(fldPath, cidrStrings, "must be a either a single CIDR or dual-stack pair of CIDRs (e.g. [10.100.0.0/16, fde4:8dba:82e1::/48]"))
-			}
+		if len(allErrs) == 0 && len(cidrStrings) > 1 && !netutils.IsDualStackCIDRPair(cidrStrings) {
+			allErrs = append(allErrs, field.Invalid(fldPath, cidrStrings, "must be a either a single CIDR or dual-stack pair of CIDRs (e.g. [10.100.0.0/16, fde4:8dba:82e1::/48]"))
 		}
 	}
 	return allErrs

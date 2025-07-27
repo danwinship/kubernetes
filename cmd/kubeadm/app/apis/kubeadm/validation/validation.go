@@ -429,18 +429,8 @@ func ValidateIPNetFromString(subnetStr string, minAddrs int64, fldPath *field.Pa
 		allErrs = append(allErrs, field.Invalid(fldPath, subnetStr, "couldn't parse subnet"))
 		return allErrs
 	}
-	switch {
-	// if DualStack only 2 CIDRs allowed
-	case len(subnets) > 2:
+	if len(subnets) > 1 && !netutils.IsDualStackCIDRPair(subnets) {
 		allErrs = append(allErrs, field.Invalid(fldPath, subnetStr, "expected one (IPv4 or IPv6) CIDR or two CIDRs from each family for dual-stack networking"))
-	// if DualStack and there are 2 CIDRs validate if there is at least one of each IP family
-	case len(subnets) == 2:
-		areDualStackCIDRs, err := netutils.IsDualStackCIDRs(subnets)
-		if err != nil {
-			allErrs = append(allErrs, field.Invalid(fldPath, subnetStr, err.Error()))
-		} else if !areDualStackCIDRs {
-			allErrs = append(allErrs, field.Invalid(fldPath, subnetStr, "expected one (IPv4 or IPv6) CIDR or two CIDRs from each family for dual-stack networking"))
-		}
 	}
 	// validate the subnet/s
 	for _, s := range subnets {
