@@ -40,6 +40,10 @@ func init() {
 // Init initializes the winkernel backend, applies backend-specific config defaults, and
 // confirms that the backend can run on this node with this config.
 func (backend *Backend) Init(ctx context.Context, config *proxyconfigapi.KubeProxyConfiguration, primaryIPFamily v1.IPFamily) error {
+	if config.Winkernel.RootHnsEndpointName == "" {
+		config.Winkernel.RootHnsEndpointName = "cbr0"
+	}
+
 	backend.config = config
 	backend.primaryIPFamily = primaryIPFamily
 	return nil

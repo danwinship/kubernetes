@@ -53,10 +53,6 @@ func CanUseIPVSProxier(ctx context.Context, ipvs utilipvs.Interface, ipsetver IP
 		return fmt.Errorf("ipset version: %s is less than min required version: %s", versionString, MinIPSetCheckVersion)
 	}
 
-	if scheduler == "" {
-		scheduler = defaultScheduler
-	}
-
 	// If any virtual server (VS) using the scheduler exist we skip the checks.
 	vservers, err := ipvs.GetVirtualServers()
 	if err != nil {
