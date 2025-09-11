@@ -38,6 +38,11 @@ func init() {
 // Init initializes the NFTables backend, applies backend-specific config defaults, and
 // confirms that the backend can run on this node with this config.
 func (backend *Backend) Init(ctx context.Context, config *proxyconfigapi.KubeProxyConfiguration) error {
+	// If NodePortAddresses is unspecified, default to `--nodeport-addresses primary`
+	if len(config.NodePortAddresses) == 0 {
+		config.NodePortAddresses = []string{proxyconfigapi.NodePortAddressesPrimary}
+	}
+
 	backend.config = config
 	return nil
 }

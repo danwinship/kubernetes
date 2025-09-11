@@ -348,11 +348,6 @@ func NewProxier(
 
 	logger.V(2).Info("Record nodeIP and family", "nodeIP", nodeIP, "family", ipFamily)
 
-	if len(scheduler) == 0 {
-		logger.Info("IPVS scheduler not specified, use rr by default")
-		scheduler = defaultScheduler
-	}
-
 	nodePortAddresses := proxyutil.NewNodePortAddresses(ipFamily, nodePortAddressStrings)
 
 	serviceHealthServer := healthcheck.NewServiceHealthServer(nodeName, recorder, nodePortAddresses, healthzServer)
