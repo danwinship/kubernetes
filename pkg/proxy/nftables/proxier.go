@@ -220,7 +220,13 @@ func NewProxier(ctx context.Context,
 ) (*Proxier, error) {
 	logger := klog.LoggerWithValues(klog.FromContext(ctx), "ipFamily", ipFamily)
 
-	nft, err := getNFTablesInterface(ipFamily)
+	var nft knftables.Interface
+	var err error
+	if ipFamily == v1.IPv4Protocol {
+		nft, err = knftables.New(knftables.IPv4Family, kubeProxyTable)
+	} else {
+		nft, err = knftables.New(knftables.IPv6Family, kubeProxyTable)
+	}
 	if err != nil {
 		return nil, err
 	}

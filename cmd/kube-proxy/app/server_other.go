@@ -44,12 +44,6 @@ func (s *ProxyServer) platformSetup(ctx context.Context) error {
 	return unsupportedError
 }
 
-// platformCheckSupported is called immediately before creating the Proxier, to check
-// what IP families are supported (and whether the configuration is usable at all).
-func (s *ProxyServer) platformCheckSupported(ctx context.Context) (ipv4Supported, ipv6Supported, dualStackSupported bool, err error) {
-	return false, false, false, unsupportedError
-}
-
 // createProxier creates the proxy.Proxier
 func (s *ProxyServer) createProxier(ctx context.Context, config *proxyconfigapi.KubeProxyConfiguration, dualStackMode, initOnly bool) (proxy.Proxier, error) {
 	return nil, unsupportedError

@@ -25,7 +25,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"os"
 	goruntime "runtime"
 	"time"
 
@@ -76,47 +75,6 @@ func (s *ProxyServer) platformSetup(ctx context.Context) error {
 // isIPTablesBased checks whether mode is based on iptables rather than nftables
 func isIPTablesBased(mode proxyconfigapi.ProxyMode) bool {
 	return mode == proxyconfigapi.ProxyModeIPTables || mode == proxyconfigapi.ProxyModeIPVS
-}
-
-// platformCheckSupported is called immediately before creating the Proxier, to check
-// what IP families are supported (and whether the configuration is usable at all).
-func (s *ProxyServer) platformCheckSupported(ctx context.Context) (ipv4Supported, ipv6Supported, dualStackSupported bool, err error) {
-	logger := klog.FromContext(ctx)
-
-	if isIPTablesBased(s.Config.Mode) {
-		// Check for the iptables and ip6tables binaries.
-		errv4 := utiliptables.New(utiliptables.ProtocolIPv4).Present()
-		errv6 := utiliptables.New(utiliptables.ProtocolIPv6).Present()
-
-		ipv4Supported = errv4 == nil
-		ipv6Supported = errv6 == nil
-
-		if !ipv4Supported && !ipv6Supported {
-			// errv4 and errv6 are almost certainly the same underlying error
-			// ("iptables isn't installed" or "kernel modules not available")
-			// so it doesn't make sense to try to combine them.
-			err = fmt.Errorf("iptables is not available on this host : %w", errv4)
-		} else if !ipv4Supported {
-			logger.Info("No iptables support for family", "ipFamily", v1.IPv4Protocol, "error", errv4)
-		} else if !ipv6Supported {
-			logger.Info("No iptables support for family", "ipFamily", v1.IPv6Protocol, "error", errv6)
-		}
-	} else {
-		// The nft CLI always supports both families.
-		ipv4Supported, ipv6Supported = true, true
-	}
-
-	// Check if the OS has IPv6 enabled, by verifying if the IPv6 interfaces are available
-	_, errIPv6 := os.Stat("/proc/net/if_inet6")
-	if errIPv6 != nil {
-		logger.Info("No kernel support for family", "ipFamily", v1.IPv6Protocol)
-		ipv6Supported = false
-	}
-
-	// The Linux proxies can always support dual-stack if they can support both IPv4
-	// and IPv6.
-	dualStackSupported = ipv4Supported && ipv6Supported
-	return
 }
 
 // createProxier creates the Proxier
@@ -179,9 +137,6 @@ func (s *ProxyServer) createProxier(ctx context.Context, config *proxyconfigapi.
 	} else if config.Mode == proxyconfigapi.ProxyModeIPVS {
 		ipsetInterface := utilipset.New()
 		ipvsInterface := utilipvs.New()
-		if err := ipvs.CanUseIPVSProxier(ctx, ipvsInterface, ipsetInterface, config.IPVS.Scheduler); err != nil {
-			return nil, fmt.Errorf("can't use the IPVS proxier: %v", err)
-		}
 		ipts := utiliptables.NewBestEffort()
 
 		if dualStack {

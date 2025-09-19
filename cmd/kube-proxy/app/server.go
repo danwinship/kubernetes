@@ -265,12 +265,8 @@ func newProxyServer(ctx context.Context, config *kubeproxyconfig.KubeProxyConfig
 		logger.Error(err, "Kube-proxy configuration may be incomplete or incorrect")
 	}
 
-	ipv4Supported, ipv6Supported, dualStackSupported, err := s.platformCheckSupported(ctx)
-	if err != nil {
-		return nil, err
-	} else if (s.PrimaryIPFamily == v1.IPv4Protocol && !ipv4Supported) || (s.PrimaryIPFamily == v1.IPv6Protocol && !ipv6Supported) {
-		return nil, fmt.Errorf("no support for primary IP family %q", s.PrimaryIPFamily)
-	} else if dualStackSupported {
+	dualStackSupported := backend.DualStackSupported()
+	if dualStackSupported {
 		logger.Info("kube-proxy running in dual-stack mode", "primary ipFamily", s.PrimaryIPFamily)
 	} else {
 		logger.Info("kube-proxy running in single-stack mode", "ipFamily", s.PrimaryIPFamily)
