@@ -57,26 +57,6 @@ func (s *ProxyServer) platformSetup(ctx context.Context) error {
 	return nil
 }
 
-// platformCheckSupported is called immediately before creating the Proxier, to check
-// what IP families are supported (and whether the configuration is usable at all).
-func (s *ProxyServer) platformCheckSupported(ctx context.Context) (ipv4Supported, ipv6Supported, dualStackSupported bool, err error) {
-	// Check if Kernel proxier can be used at all
-	_, err = winkernel.CanUseWinKernelProxier(winkernel.WindowsKernelCompatTester{})
-	if err != nil {
-		return false, false, false, err
-	}
-
-	// winkernel always supports both single-stack IPv4 and single-stack IPv6, but may
-	// not support dual-stack.
-	ipv4Supported = true
-	ipv6Supported = true
-
-	compatTester := winkernel.DualStackCompatTester{}
-	dualStackSupported = compatTester.DualStackCompatible(s.Config.Winkernel.NetworkName)
-
-	return
-}
-
 // createProxier creates the proxy.Proxier
 func (s *ProxyServer) createProxier(ctx context.Context, config *proxyconfigapi.KubeProxyConfiguration, dualStackMode, initOnly bool) (proxy.Proxier, error) {
 	if initOnly {

@@ -23,21 +23,11 @@ import (
 	"fmt"
 	"os"
 
-	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/version"
 	utilkernel "k8s.io/kubernetes/pkg/util/kernel"
-	"sigs.k8s.io/knftables"
 )
 
-// Create a knftables.Interface and check if we can use the nftables proxy mode on this host.
-func getNFTablesInterface(ipFamily v1.IPFamily) (knftables.Interface, error) {
-	var nftablesFamily knftables.Family
-	if ipFamily == v1.IPv4Protocol {
-		nftablesFamily = knftables.IPv4Family
-	} else {
-		nftablesFamily = knftables.IPv6Family
-	}
-
+func checkNFTablesSupport() error {
 	// We require (or rather, knftables.New does) that the nft binary be version 1.0.1
 	// or later, because versions before that would always attempt to parse the entire
 	// nft ruleset at startup, even if you were only operating on a single table.
@@ -46,11 +36,7 @@ func getNFTablesInterface(ipFamily v1.IPFamily) (knftables.Interface, error) {
 	// crash. Thus, if kube-proxy used nft < 1.0.1, it could potentially get locked
 	// out of its rules because of something some other component had done in a
 	// completely different table.
-	nft, err := knftables.New(nftablesFamily, kubeProxyTable)
-	if err != nil {
-		return nil, err
-	}
-
+	//
 	// Likewise, we want to ensure that the host filesystem has nft >= 1.0.1, so that
 	// it's not possible that *our* rules break *the system's* nft. (In particular, we
 	// know that if kube-proxy uses nft >= 1.0.3 and the system has nft <= 0.9.8, that
@@ -65,13 +51,13 @@ func getNFTablesInterface(ipFamily v1.IPFamily) (knftables.Interface, error) {
 	if os.Getenv("KUBE_PROXY_NFTABLES_SKIP_KERNEL_VERSION_CHECK") == "" {
 		kernelVersion, err := utilkernel.GetVersion()
 		if err != nil {
-			return nil, fmt.Errorf("could not check kernel version: %w", err)
+			return fmt.Errorf("could not check kernel version: %w", err)
 		}
 		if kernelVersion.LessThan(version.MustParseGeneric(utilkernel.NFTablesKubeProxyKernelVersion)) {
-			return nil, fmt.Errorf("kube-proxy in nftables mode requires kernel %s or later", utilkernel.NFTablesKubeProxyKernelVersion)
+			return fmt.Errorf("kube-proxy in nftables mode requires kernel %s or later", utilkernel.NFTablesKubeProxyKernelVersion)
 		}
 	}
 
-	return nft, nil
+	return nil
 }
 

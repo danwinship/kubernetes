@@ -22,6 +22,7 @@ package winkernel
 import (
 	"context"
 
+	v1 "k8s.io/api/core/v1"
 	"k8s.io/kubernetes/pkg/proxy"
 	proxyconfigapi "k8s.io/kubernetes/pkg/proxy/apis/config"
 )
@@ -29,6 +30,8 @@ import (
 // Backend implements the winkernel backend
 type Backend struct {
 	config *proxyconfigapi.KubeProxyConfiguration
+
+	dualStackSupported bool
 }
 
 func init() {
@@ -42,6 +45,22 @@ func (backend *Backend) Init(ctx context.Context, config *proxyconfigapi.KubePro
 		config.Winkernel.RootHnsEndpointName = "cbr0"
 	}
 
+	if _, err := CanUseWinKernelProxier(WindowsKernelCompatTester{}); err != nil {
+		return err
+	}
+
+	// winkernel always supports both single-stack IPv4 and single-stack IPv6,
+	// but may not support dual-stack.
+	compatTester := DualStackCompatTester{}
+	backend.dualStackSupported = compatTester.DualStackCompatible(config.Winkernel.NetworkName)
+
 	backend.config = config
 	return nil
+}
+
+// CheckIPFamilySupport checks if the winkernel backend can support the given primary IP
+// family on this host, and whether dual-stack operation is supported. (Assumes Init() has
+// been called.)
+func (backend *Backend) CheckIPFamilySupport(ctx context.Context, primaryIPFamily v1.IPFamily) (singleStackSupported, dualStackSupported bool) {
+	return true, backend.dualStackSupported
 }

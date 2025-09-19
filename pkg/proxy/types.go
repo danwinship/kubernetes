@@ -31,6 +31,11 @@ type Backend interface {
 	// Init initializes the selected backend, applies backend-specific config defaults,
 	// and confirms that the backend can run on this node with this config.
 	Init(ctx context.Context, config *proxyconfigapi.KubeProxyConfiguration) error
+
+	// CheckIPFamilySupport checks if the backend can support the given primary IP
+	// family on this host, and whether dual-stack operation is supported. (Assumes
+	// Init() has been called.)
+	CheckIPFamilySupport(ctx context.Context, primaryIPFamily v1.IPFamily) (singleStackSupported, dualStackSupported bool)
 }
 
 // Backends gives the set of available backends
