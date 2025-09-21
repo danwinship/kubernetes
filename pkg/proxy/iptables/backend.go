@@ -135,7 +135,7 @@ func (backend *Backend) NewProxier(
 
 	if len(backend.ipts) == 2 {
 		// TODO this has side effects that should only happen when Run() is invoked.
-		proxier, err = NewDualStackProxier(
+		proxier, err = newDualStackProxier(
 			ctx,
 			backend.ipts,
 			utilsysctl.New(),
@@ -153,7 +153,7 @@ func (backend *Backend) NewProxier(
 		)
 	} else {
 		// TODO this has side effects that should only happen when Run() is invoked.
-		proxier, err = NewProxier(
+		proxier, err = newProxier(
 			ctx,
 			backend.primaryIPFamily,
 			backend.ipts[backend.primaryIPFamily],
@@ -193,5 +193,5 @@ func (backend *Backend) Cleanup(ctx context.Context, config *proxyconfigapi.Kube
 		return false
 	}
 
-	return CleanupLeftovers(ctx)
+	return cleanupLeftovers(ctx)
 }

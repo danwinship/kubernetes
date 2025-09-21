@@ -51,7 +51,7 @@ func (backend *Backend) Init(ctx context.Context, config *proxyconfigapi.KubePro
 		config.Winkernel.RootHnsEndpointName = "cbr0"
 	}
 
-	if _, err := CanUseWinKernelProxier(WindowsKernelCompatTester{}); err != nil {
+	if _, err := canUseWinKernelProxier(windowsKernelCompatTester{}); err != nil {
 		return err
 	}
 
@@ -60,7 +60,7 @@ func (backend *Backend) Init(ctx context.Context, config *proxyconfigapi.KubePro
 
 	// winkernel always supports both single-stack IPv4 and single-stack IPv6,
 	// but may not support dual-stack.
-	compatTester := DualStackCompatTester{}
+	compatTester := dualStackCompatTester{}
 	backend.dualStackSupported = compatTester.DualStackCompatible(config.Winkernel.NetworkName)
 
 	return nil
@@ -100,7 +100,7 @@ func (backend *Backend) NewProxier(
 	var err error
 
 	if backend.dualStackSupported {
-		proxier, err = NewDualStackProxier(
+		proxier, err = newDualStackProxier(
 			backend.config.SyncPeriod.Duration,
 			backend.config.MinSyncPeriod.Duration,
 			nodeName,
@@ -111,7 +111,7 @@ func (backend *Backend) NewProxier(
 			backend.config.Winkernel,
 		)
 	} else {
-		proxier, err = NewProxier(
+		proxier, err = newProxier(
 			backend.primaryIPFamily,
 			backend.config.SyncPeriod.Duration,
 			backend.config.MinSyncPeriod.Duration,

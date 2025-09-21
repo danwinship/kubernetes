@@ -92,8 +92,8 @@ const (
 	defaultDummyDevice = "kube-ipvs0"
 )
 
-// NewDualStackProxier returns a new Proxier for dual-stack operation
-func NewDualStackProxier(
+// newDualStackProxier returns a new Proxier for dual-stack operation
+func newDualStackProxier(
 	ctx context.Context,
 	ipts map[v1.IPFamily]utiliptables.Interface,
 	ipvs utilipvs.Interface,
@@ -112,7 +112,7 @@ func NewDualStackProxier(
 	nodePortAddresses []string,
 ) (proxy.Proxier, error) {
 	// Create an ipv4 instance of the single-stack proxier
-	ipv4Proxier, err := NewProxier(ctx, v1.IPv4Protocol, ipts[v1.IPv4Protocol], ipvs, ipset,
+	ipv4Proxier, err := newProxier(ctx, v1.IPv4Protocol, ipts[v1.IPv4Protocol], ipvs, ipset,
 		syncPeriod, minSyncPeriod, filterCIDRs(false, excludeCIDRs),
 		masqueradeAll, masqueradeBit,
 		localDetectors[v1.IPv4Protocol], nodeName, nodeIPs[v1.IPv4Protocol], recorder,
@@ -121,7 +121,7 @@ func NewDualStackProxier(
 		return nil, fmt.Errorf("unable to create ipv4 proxier: %v", err)
 	}
 
-	ipv6Proxier, err := NewProxier(ctx, v1.IPv6Protocol, ipts[v1.IPv6Protocol], ipvs, ipset,
+	ipv6Proxier, err := newProxier(ctx, v1.IPv6Protocol, ipts[v1.IPv6Protocol], ipvs, ipset,
 		syncPeriod, minSyncPeriod, filterCIDRs(true, excludeCIDRs),
 		masqueradeAll, masqueradeBit,
 		localDetectors[v1.IPv6Protocol], nodeName, nodeIPs[v1.IPv6Protocol], recorder,
@@ -229,8 +229,8 @@ type Proxier struct {
 // Proxier implements proxy.Proxier
 var _ proxy.Proxier = &Proxier{}
 
-// NewProxier returns a new single-stack IPVS proxier.
-func NewProxier(
+// newProxier returns a new single-stack IPVS proxier.
+func newProxier(
 	ctx context.Context,
 	ipFamily v1.IPFamily,
 	ipt utiliptables.Interface,

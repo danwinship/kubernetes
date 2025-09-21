@@ -29,16 +29,16 @@ import (
 	kubefeatures "k8s.io/kubernetes/pkg/features"
 )
 
-// KernelCompatTester tests whether the required kernel capabilities are
+// kernelCompatTester tests whether the required kernel capabilities are
 // present to run the windows kernel proxier.
-type KernelCompatTester interface {
+type kernelCompatTester interface {
 	IsCompatible() error
 }
 
-// CanUseWinKernelProxier returns true if we should use the Kernel Proxier
+// canUseWinKernelProxier returns true if we should use the Kernel Proxier
 // instead of the "classic" userspace Proxier.  This is determined by checking
 // the windows kernel version and for the existence of kernel features.
-func CanUseWinKernelProxier(kcompat KernelCompatTester) (bool, error) {
+func canUseWinKernelProxier(kcompat kernelCompatTester) (bool, error) {
 	// Check that the kernel supports what we need.
 	if err := kcompat.IsCompatible(); err != nil {
 		return false, err
@@ -46,10 +46,10 @@ func CanUseWinKernelProxier(kcompat KernelCompatTester) (bool, error) {
 	return true, nil
 }
 
-type WindowsKernelCompatTester struct{}
+type windowsKernelCompatTester struct{}
 
 // IsCompatible returns true if winkernel can support this mode of proxy
-func (lkct WindowsKernelCompatTester) IsCompatible() error {
+func (_ windowsKernelCompatTester) IsCompatible() error {
 	_, err := hnslib.HNSListPolicyListRequest()
 	if err != nil {
 		return fmt.Errorf("Windows kernel is not compatible for Kernel mode")
@@ -57,14 +57,14 @@ func (lkct WindowsKernelCompatTester) IsCompatible() error {
 	return nil
 }
 
-// StackCompatTester tests whether the required kernel and network are dualstack capable
-type StackCompatTester interface {
+// stackCompatTester tests whether the required kernel and network are dualstack capable
+type stackCompatTester interface {
 	DualStackCompatible(networkName string) bool
 }
 
-type DualStackCompatTester struct{}
+type dualStackCompatTester struct{}
 
-func (t DualStackCompatTester) DualStackCompatible(networkName string) bool {
+func (_ dualStackCompatTester) DualStackCompatible(networkName string) bool {
 	hcnImpl := newHcnImpl()
 	// First tag of hnslib that has a proper check for dual stack support is v0.8.22 due to a bug.
 	if err := hcnImpl.Ipv6DualStackSupported(); err != nil {

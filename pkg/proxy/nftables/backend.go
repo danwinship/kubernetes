@@ -116,7 +116,7 @@ func (backend *Backend) NewProxier(
 
 	if len(backend.nfts) == 2 {
 		// TODO this has side effects that should only happen when Run() is invoked.
-		proxier, err = NewDualStackProxier(
+		proxier, err = newDualStackProxier(
 			ctx,
 			backend.nfts,
 			backend.config.SyncPeriod.Duration,
@@ -132,7 +132,7 @@ func (backend *Backend) NewProxier(
 		)
 	} else {
 		// TODO this has side effects that should only happen when Run() is invoked.
-		proxier, err = NewProxier(
+		proxier, err = newProxier(
 			ctx,
 			backend.primaryIPFamily,
 			backend.nfts[backend.primaryIPFamily],
@@ -163,5 +163,5 @@ func (backend *Backend) NewProxier(
 // return value indicates whether any errors occurred. (Unlike the other methods, this
 // *does not* require that Init() has been called.)
 func (backend *Backend) Cleanup(ctx context.Context, config *proxyconfigapi.KubeProxyConfiguration, force bool) bool {
-	return CleanupLeftovers(ctx)
+	return cleanupLeftovers(ctx)
 }

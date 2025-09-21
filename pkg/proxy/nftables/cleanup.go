@@ -26,9 +26,9 @@ import (
 	"sigs.k8s.io/knftables"
 )
 
-// CleanupLeftovers removes all nftables rules and chains created by the Proxier
+// cleanupLeftovers removes all nftables rules and chains created by the Proxier
 // It returns true if an error was encountered. Errors are logged.
-func CleanupLeftovers(ctx context.Context) bool {
+func cleanupLeftovers(ctx context.Context) bool {
 	logger := klog.FromContext(ctx)
 	var encounteredError bool
 

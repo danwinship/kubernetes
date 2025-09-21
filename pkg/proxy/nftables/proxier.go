@@ -98,8 +98,8 @@ const (
 	masqueradingChain = "masquerading"
 )
 
-// NewDualStackProxier creates a MetaProxier instance, with IPv4 and IPv6 proxies.
-func NewDualStackProxier(
+// newDualStackProxier creates a MetaProxier instance, with IPv4 and IPv6 proxies.
+func newDualStackProxier(
 	ctx context.Context,
 	nfts map[v1.IPFamily]knftables.Interface,
 	syncPeriod time.Duration,
@@ -114,7 +114,7 @@ func NewDualStackProxier(
 	nodePortAddresses []string,
 ) (proxy.Proxier, error) {
 	// Create an ipv4 instance of the single-stack proxier
-	ipv4Proxier, err := NewProxier(ctx, v1.IPv4Protocol, nfts[v1.IPv4Protocol],
+	ipv4Proxier, err := newProxier(ctx, v1.IPv4Protocol, nfts[v1.IPv4Protocol],
 		syncPeriod, minSyncPeriod, masqueradeAll, masqueradeBit,
 		localDetectors[v1.IPv4Protocol], nodeName, nodeIPs[v1.IPv4Protocol],
 		recorder, healthzServer, nodePortAddresses)
@@ -122,7 +122,7 @@ func NewDualStackProxier(
 		return nil, fmt.Errorf("unable to create ipv4 proxier: %v", err)
 	}
 
-	ipv6Proxier, err := NewProxier(ctx, v1.IPv6Protocol, nfts[v1.IPv6Protocol],
+	ipv6Proxier, err := newProxier(ctx, v1.IPv6Protocol, nfts[v1.IPv6Protocol],
 		syncPeriod, minSyncPeriod, masqueradeAll, masqueradeBit,
 		localDetectors[v1.IPv6Protocol], nodeName, nodeIPs[v1.IPv6Protocol],
 		recorder, healthzServer, nodePortAddresses)
@@ -200,8 +200,8 @@ type Proxier struct {
 // Proxier implements proxy.Proxier
 var _ proxy.Proxier = &Proxier{}
 
-// NewProxier returns a new single-stack NFTables proxier.
-func NewProxier(ctx context.Context,
+// newProxier returns a new single-stack NFTables proxier.
+func newProxier(ctx context.Context,
 	ipFamily v1.IPFamily,
 	nft knftables.Interface,
 	syncPeriod time.Duration,

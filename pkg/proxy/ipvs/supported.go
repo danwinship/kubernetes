@@ -28,12 +28,12 @@ import (
 	netutils "k8s.io/utils/net"
 )
 
-// CanUseIPVSProxier checks if we can use the ipvs Proxier.
+// canUseIPVSProxier checks if we can use the ipvs Proxier.
 // The ipset version and the scheduler are checked. If any virtual servers (VS)
 // already exist with the configured scheduler, we just return. Otherwise
 // we check if a dummy VS can be configured with the configured scheduler.
 // Kernel modules will be loaded automatically if necessary.
-func CanUseIPVSProxier(ctx context.Context, ipvs utilipvs.Interface, ipsetver IPSetVersioner, scheduler string) error {
+func canUseIPVSProxier(ctx context.Context, ipvs utilipvs.Interface, ipsetver IPSetVersioner, scheduler string) error {
 	logger := klog.FromContext(ctx)
 	// BUG: https://github.com/moby/ipvs/issues/27
 	// If ipvs is not compiled into the kernel no error is returned and handle==nil.
