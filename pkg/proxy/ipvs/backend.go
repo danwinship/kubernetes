@@ -79,7 +79,7 @@ func (backend *Backend) Init(ctx context.Context, config *proxyconfigapi.KubePro
 	}
 	backend.ipset = utilipset.New()
 
-	if err := CanUseIPVSProxier(ctx, backend.ipvs, backend.ipset, config.IPVS.Scheduler); err != nil {
+	if err := canUseIPVSProxier(ctx, backend.ipvs, backend.ipset, config.IPVS.Scheduler); err != nil {
 		return err
 	}
 
@@ -204,7 +204,7 @@ func (backend *Backend) NewProxier(
 	var err error
 
 	if len(backend.ipts) == 2 {
-		proxier, err = NewDualStackProxier(
+		proxier, err = newDualStackProxier(
 			ctx,
 			backend.ipts,
 			backend.ipvs,
@@ -223,7 +223,7 @@ func (backend *Backend) NewProxier(
 			backend.config.NodePortAddresses,
 		)
 	} else {
-		proxier, err = NewProxier(
+		proxier, err = newProxier(
 			ctx,
 			primaryIPFamily,
 			backend.ipts[primaryIPFamily],
@@ -267,5 +267,5 @@ func (backend *Backend) Cleanup(ctx context.Context, config *proxyconfigapi.Kube
 		return false
 	}
 
-	return CleanupLeftovers(ctx)
+	return cleanupLeftovers(ctx)
 }

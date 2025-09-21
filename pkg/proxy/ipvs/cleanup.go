@@ -30,7 +30,7 @@ import (
 	utiliptables "k8s.io/kubernetes/pkg/util/iptables"
 )
 
-// CleanupIptablesLeftovers removes all iptables rules and chains created by the Proxier
+// cleanupIptablesLeftovers removes all iptables rules and chains created by the Proxier
 // It returns true if an error was encountered. Errors are logged.
 func cleanupIptablesLeftovers(ctx context.Context, ipt utiliptables.Interface) (encounteredError bool) {
 	logger := klog.FromContext(ctx)
@@ -71,8 +71,8 @@ func cleanupIptablesLeftovers(ctx context.Context, ipt utiliptables.Interface) (
 	return encounteredError
 }
 
-// CleanupLeftovers clean up all ipvs and iptables rules created by ipvs Proxier.
-func CleanupLeftovers(ctx context.Context) (encounteredError bool) {
+// cleanupLeftovers clean up all ipvs and iptables rules created by ipvs Proxier.
+func cleanupLeftovers(ctx context.Context) (encounteredError bool) {
 	// libipvs.New() will log errors if the "ip_vs" kernel module (or the "modprobe"
 	// binary) is not available. Logging an extra error is fine if we were actually
 	// trying to run the ipvs proxier, but it's confusing to see when just doing
@@ -86,10 +86,10 @@ func CleanupLeftovers(ctx context.Context) (encounteredError bool) {
 	ipsetInterface := utilipset.New()
 	ipvsInterface := utilipvs.New()
 
-	return cleanupLeftovers(ctx, ipvsInterface, ipts, ipsetInterface)
+	return cleanupLeftoversInternal(ctx, ipvsInterface, ipts, ipsetInterface)
 }
 
-func cleanupLeftovers(ctx context.Context, ipvs utilipvs.Interface, ipts map[v1.IPFamily]utiliptables.Interface, ipset utilipset.Interface) (encounteredError bool) {
+func cleanupLeftoversInternal(ctx context.Context, ipvs utilipvs.Interface, ipts map[v1.IPFamily]utiliptables.Interface, ipset utilipset.Interface) (encounteredError bool) {
 	logger := klog.FromContext(ctx)
 	// Clear all ipvs rules
 	if ipvs != nil {

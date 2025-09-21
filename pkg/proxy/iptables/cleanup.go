@@ -29,9 +29,9 @@ import (
 	utiliptables "k8s.io/kubernetes/pkg/util/iptables"
 )
 
-// CleanupLeftovers removes all iptables rules and chains created by the Proxier
+// cleanupLeftovers removes all iptables rules and chains created by the Proxier
 // It returns true if an error was encountered. Errors are logged.
-func CleanupLeftovers(ctx context.Context) (encounteredError bool) {
+func cleanupLeftovers(ctx context.Context) (encounteredError bool) {
 	ipts := utiliptables.NewBestEffort()
 	for _, ipt := range ipts {
 		encounteredError = cleanupLeftoversForFamily(ctx, ipt) || encounteredError

@@ -639,8 +639,8 @@ type closeable interface {
 // Proxier implements proxy.Proxier
 var _ proxy.Proxier = &Proxier{}
 
-// NewProxier returns a new single-stack winkernel proxier.
-func NewProxier(
+// newProxier returns a new single-stack winkernel proxier.
+func newProxier(
 	ipFamily v1.IPFamily,
 	syncPeriod time.Duration,
 	minSyncPeriod time.Duration,
@@ -798,7 +798,7 @@ func newProxierInternal(
 	return proxier, nil
 }
 
-func NewDualStackProxier(
+func newDualStackProxier(
 	syncPeriod time.Duration,
 	minSyncPeriod time.Duration,
 	nodeName string,
@@ -810,7 +810,7 @@ func NewDualStackProxier(
 ) (proxy.Proxier, error) {
 
 	// Create an ipv4 instance of the single-stack proxier
-	ipv4Proxier, err := NewProxier(v1.IPv4Protocol, syncPeriod, minSyncPeriod,
+	ipv4Proxier, err := newProxier(v1.IPv4Protocol, syncPeriod, minSyncPeriod,
 		nodeName, nodeIPs[v1.IPv4Protocol], recorder, healthzServer,
 		healthzBindAddress, config)
 
@@ -818,7 +818,7 @@ func NewDualStackProxier(
 		return nil, fmt.Errorf("unable to create ipv4 proxier: %v, nodeName: %s, nodeIP:%v", err, nodeName, nodeIPs[v1.IPv4Protocol])
 	}
 
-	ipv6Proxier, err := NewProxier(v1.IPv6Protocol, syncPeriod, minSyncPeriod,
+	ipv6Proxier, err := newProxier(v1.IPv6Protocol, syncPeriod, minSyncPeriod,
 		nodeName, nodeIPs[v1.IPv6Protocol], recorder, healthzServer,
 		healthzBindAddress, config)
 	if err != nil {
