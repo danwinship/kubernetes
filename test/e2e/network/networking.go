@@ -409,8 +409,7 @@ var _ = common.SIGDescribe("Networking", func() {
 			}
 		})
 
-		// [LinuxOnly]: Windows does not support session affinity.
-		ginkgo.It("should function for client IP based session affinity: http [LinuxOnly]", func(ctx context.Context) {
+		ginkgo.It("should function for client IP based session affinity: http", func(ctx context.Context) {
 			config := e2enetwork.NewNetworkingTestConfig(ctx, f)
 			ginkgo.By(fmt.Sprintf("dialing(http) %v --> %v:%v", config.TestContainerPod.Name, config.SessionAffinityService.Spec.ClusterIP, e2enetwork.ClusterHTTPPort))
 
@@ -427,8 +426,7 @@ var _ = common.SIGDescribe("Networking", func() {
 			}
 		})
 
-		// [LinuxOnly]: Windows does not support session affinity.
-		ginkgo.It("should function for client IP based session affinity: udp [LinuxOnly]", func(ctx context.Context) {
+		ginkgo.It("should function for client IP based session affinity: udp", func(ctx context.Context) {
 			config := e2enetwork.NewNetworkingTestConfig(ctx, f)
 			ginkgo.By(fmt.Sprintf("dialing(udp) %v --> %v:%v", config.TestContainerPod.Name, config.SessionAffinityService.Spec.ClusterIP, e2enetwork.ClusterUDPPort))
 

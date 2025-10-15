@@ -2223,15 +2223,14 @@ var _ = common.SIGDescribe("Services", func() {
 		Create a Deployment to ensure that 3 pods are running and are targeted by the service to serve hostname of the pod when requests are sent to the service.
 		Create another pod to make requests to the service. Service MUST serve the hostname from the same pod of the replica for all consecutive requests.
 		Service MUST be reachable over serviceName and the ClusterIP on servicePort.
-		[LinuxOnly]: Windows does not support session affinity.
 	*/
-	framework.ConformanceIt("should have session affinity work for service with type clusterIP [LinuxOnly]", func(ctx context.Context) {
+	framework.ConformanceIt("should have session affinity work for service with type clusterIP", func(ctx context.Context) {
 		svc := getServeHostnameService("affinity-clusterip")
 		svc.Spec.Type = v1.ServiceTypeClusterIP
 		execAffinityTestForNonLBService(ctx, f, cs, svc)
 	})
 
-	ginkgo.It("should have session affinity timeout work for service with type clusterIP [LinuxOnly]", func(ctx context.Context) {
+	ginkgo.It("should have session affinity timeout work for service with type clusterIP", func(ctx context.Context) {
 		svc := getServeHostnameService("affinity-clusterip-timeout")
 		svc.Spec.Type = v1.ServiceTypeClusterIP
 		execAffinityTestForSessionAffinityTimeout(ctx, f, cs, svc)
@@ -2245,9 +2244,8 @@ var _ = common.SIGDescribe("Services", func() {
 		Create another pod to make requests to the service. Update the service's sessionAffinity to "None". Service update MUST be successful. When a requests are made to the service, it MUST be able serve the hostname from any pod of the replica.
 		When service's sessionAffinily is updated back to "ClientIP", service MUST serve the hostname from the same pod of the replica for all consecutive requests.
 		Service MUST be reachable over serviceName and the ClusterIP on servicePort.
-		[LinuxOnly]: Windows does not support session affinity.
 	*/
-	framework.ConformanceIt("should be able to switch session affinity for service with type clusterIP [LinuxOnly]", func(ctx context.Context) {
+	framework.ConformanceIt("should be able to switch session affinity for service with type clusterIP", func(ctx context.Context) {
 		svc := getServeHostnameService("affinity-clusterip-transition")
 		svc.Spec.Type = v1.ServiceTypeClusterIP
 		execAffinityTestForNonLBServiceWithTransition(ctx, f, cs, svc)
@@ -2260,15 +2258,14 @@ var _ = common.SIGDescribe("Services", func() {
 		Create a Deployment to ensure that 3 pods are running and are targeted by the service to serve hostname of the pod when a requests are sent to the service.
 		Create another pod to make requests to the service on node's IP and NodePort. Service MUST serve the hostname from the same pod of the replica for all consecutive requests.
 		Service MUST be reachable over serviceName and the ClusterIP on servicePort. Service MUST also be reachable over node's IP on NodePort.
-		[LinuxOnly]: Windows does not support session affinity.
 	*/
-	framework.ConformanceIt("should have session affinity work for NodePort service [LinuxOnly]", func(ctx context.Context) {
+	framework.ConformanceIt("should have session affinity work for NodePort service", func(ctx context.Context) {
 		svc := getServeHostnameService("affinity-nodeport")
 		svc.Spec.Type = v1.ServiceTypeNodePort
 		execAffinityTestForNonLBService(ctx, f, cs, svc)
 	})
 
-	ginkgo.It("should have session affinity timeout work for NodePort service [LinuxOnly]", func(ctx context.Context) {
+	ginkgo.It("should have session affinity timeout work for NodePort service", func(ctx context.Context) {
 		svc := getServeHostnameService("affinity-nodeport-timeout")
 		svc.Spec.Type = v1.ServiceTypeNodePort
 		execAffinityTestForSessionAffinityTimeout(ctx, f, cs, svc)
@@ -2282,9 +2279,8 @@ var _ = common.SIGDescribe("Services", func() {
 		Create another pod to make requests to the service. Update the service's sessionAffinity to "None". Service update MUST be successful. When a requests are made to the service on node's IP and NodePort, service MUST be able serve the hostname from any pod of the replica.
 		When service's sessionAffinily is updated back to "ClientIP", service MUST serve the hostname from the same pod of the replica for all consecutive requests.
 		Service MUST be reachable over serviceName and the ClusterIP on servicePort. Service MUST also be reachable over node's IP on NodePort.
-		[LinuxOnly]: Windows does not support session affinity.
 	*/
-	framework.ConformanceIt("should be able to switch session affinity for NodePort service [LinuxOnly]", func(ctx context.Context) {
+	framework.ConformanceIt("should be able to switch session affinity for NodePort service", func(ctx context.Context) {
 		svc := getServeHostnameService("affinity-nodeport-transition")
 		svc.Spec.Type = v1.ServiceTypeNodePort
 		execAffinityTestForNonLBServiceWithTransition(ctx, f, cs, svc)
