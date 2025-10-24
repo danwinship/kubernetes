@@ -19,24 +19,28 @@ package storage
 import (
 	"context"
 	"fmt"
-	"math/rand"
-	"net"
 	"net/http"
 	"net/url"
 	"strconv"
 
+	v1 "k8s.io/api/core/v1"
+	discoveryv1 "k8s.io/api/discovery/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
+	metainternalversion "k8s.io/apimachinery/pkg/apis/meta/internalversion"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilnet "k8s.io/apimachinery/pkg/util/net"
-	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
 	genericapirequest "k8s.io/apiserver/pkg/endpoints/request"
 	"k8s.io/apiserver/pkg/registry/generic"
 	genericregistry "k8s.io/apiserver/pkg/registry/generic/registry"
 	"k8s.io/apiserver/pkg/registry/rest"
 	"k8s.io/apiserver/pkg/util/dryrun"
+	"k8s.io/apiserver/pkg/util/proxy"
 	api "k8s.io/kubernetes/pkg/apis/core"
+	"k8s.io/kubernetes/pkg/apis/discovery"
+	apisdiscoveryv1 "k8s.io/kubernetes/pkg/apis/discovery/v1"
 	"k8s.io/kubernetes/pkg/printers"
 	printersinternal "k8s.io/kubernetes/pkg/printers/internalversion"
 	printerstorage "k8s.io/kubernetes/pkg/printers/storage"
@@ -47,8 +51,8 @@ import (
 	"sigs.k8s.io/structured-merge-diff/v6/fieldpath"
 )
 
-type EndpointsStorage interface {
-	rest.Getter
+type EndpointSliceListerProvider interface {
+	EndpointSliceLister() rest.Lister
 }
 
 type PodStorage interface {
@@ -60,7 +64,7 @@ type REST struct {
 	primaryIPFamily   api.IPFamily
 	secondaryIPFamily api.IPFamily
 	alloc             Allocators
-	endpoints         EndpointsStorage
+	endpointSlices    EndpointSliceListerProvider
 	pods              PodStorage
 	proxyTransport    http.RoundTripper
 }
@@ -79,7 +83,7 @@ func NewREST(
 	serviceIPFamily api.IPFamily,
 	ipAllocs map[api.IPFamily]ipallocator.Interface,
 	portAlloc portallocator.Interface,
-	endpoints EndpointsStorage,
+	endpointSlices EndpointSliceListerProvider,
 	pods PodStorage,
 	proxyTransport http.RoundTripper) (*REST, *StatusREST, *svcreg.ProxyREST, error) {
 
@@ -120,7 +124,7 @@ func NewREST(
 		primaryIPFamily:   primaryIPFamily,
 		secondaryIPFamily: secondaryIPFamily,
 		alloc:             makeAlloc(serviceIPFamily, ipAllocs, portAlloc),
-		endpoints:         endpoints,
+		endpointSlices:    endpointSlices,
 		pods:              pods,
 		proxyTransport:    proxyTransport,
 	}
@@ -435,58 +439,35 @@ func (r *REST) ResourceLocation(ctx context.Context, id string) (*url.URL, http.
 		}
 	}
 
-	obj, err := r.endpoints.Get(ctx, svcName, &metav1.GetOptions{})
+	obj, err := r.endpointSlices.EndpointSliceLister().List(ctx, &metainternalversion.ListOptions{LabelSelector: labels.SelectorFromSet(labels.Set{discoveryv1.LabelServiceName: svcName})})
 	if err != nil {
 		return nil, nil, err
 	}
-	eps := obj.(*api.Endpoints)
-	if len(eps.Subsets) == 0 {
-		return nil, nil, errors.NewServiceUnavailable(fmt.Sprintf("no endpoints available for service %q", svcName))
-	}
-	// Pick a random Subset to start searching from.
-	ssSeed := rand.Intn(len(eps.Subsets))
-	// Find a Subset that has the port.
-	for ssi := 0; ssi < len(eps.Subsets); ssi++ {
-		ss := &eps.Subsets[(ssSeed+ssi)%len(eps.Subsets)]
-		if len(ss.Addresses) == 0 {
-			continue
-		}
-		for i := range ss.Ports {
-			if ss.Ports[i].Name == portStr {
-				addrSeed := rand.Intn(len(ss.Addresses))
-				// This is a little wonky, but it's expensive to test for the presence of a Pod
-				// So we repeatedly try at random and validate it, this means that for an invalid
-				// service with a lot of endpoints we're going to potentially make a lot of calls,
-				// but in the expected case we'll only make one.
-				for try := 0; try < len(ss.Addresses); try++ {
-					addr := ss.Addresses[(addrSeed+try)%len(ss.Addresses)]
-					// We only proxy to addresses that are actually pods.
-					if err := isValidAddress(ctx, &addr, r.pods); err != nil {
-						utilruntime.HandleError(fmt.Errorf("Address %v isn't valid (%v)", addr, err))
-						continue
-					}
-					ip := addr.IP
-					port := int(ss.Ports[i].Port)
-					return &url.URL{
-						Scheme: svcScheme,
-						Host:   net.JoinHostPort(ip, strconv.Itoa(port)),
-					}, r.proxyTransport, nil
-				}
-				utilruntime.HandleError(fmt.Errorf("Failed to find a valid address, skipping subset: %v", ss))
-			}
+	sliceList := obj.(*discovery.EndpointSliceList)
+
+	slices := make([]*discoveryv1.EndpointSlice, len(sliceList.Items))
+	for i := range sliceList.Items {
+		slices[i] = new(discoveryv1.EndpointSlice)
+		if err := apisdiscoveryv1.Convert_discovery_EndpointSlice_To_v1_EndpointSlice(&sliceList.Items[i], slices[i], nil); err != nil {
+			return nil, nil, err
 		}
 	}
-	return nil, nil, errors.NewServiceUnavailable(fmt.Sprintf("no endpoints available for service %q", id))
+
+	host := proxy.RandomEndpoint(slices, portStr, v1.IPFamily(r.primaryIPFamily))
+	if host == "" {
+		return nil, nil, errors.NewServiceUnavailable(fmt.Sprintf("no endpoints available for service %q", id))
+	}
+	return &url.URL{Scheme: svcScheme, Host: host}, r.proxyTransport, nil
 }
 
-func isValidAddress(ctx context.Context, addr *api.EndpointAddress, pods rest.Getter) error {
-	if addr.TargetRef == nil {
-		return fmt.Errorf("Address has no target ref, skipping: %v", addr)
+func isValidAddress(ctx context.Context, ep *discovery.Endpoint, pods rest.Getter) error {
+	if ep.TargetRef == nil {
+		return fmt.Errorf("endpoint has no target ref, skipping: %v", ep)
 	}
-	if genericapirequest.NamespaceValue(ctx) != addr.TargetRef.Namespace {
-		return fmt.Errorf("Address namespace doesn't match context namespace")
+	if genericapirequest.NamespaceValue(ctx) != ep.TargetRef.Namespace {
+		return fmt.Errorf("endpoint namespace doesn't match context namespace")
 	}
-	obj, err := pods.Get(ctx, addr.TargetRef.Name, &metav1.GetOptions{})
+	obj, err := pods.Get(ctx, ep.TargetRef.Name, &metav1.GetOptions{})
 	if err != nil {
 		return err
 	}
@@ -495,14 +476,15 @@ func isValidAddress(ctx context.Context, addr *api.EndpointAddress, pods rest.Ge
 		return fmt.Errorf("failed to cast to pod: %v", obj)
 	}
 	if pod == nil {
-		return fmt.Errorf("pod is missing, skipping (%s/%s)", addr.TargetRef.Namespace, addr.TargetRef.Name)
+		return fmt.Errorf("pod is missing, skipping (%s/%s)", ep.TargetRef.Namespace, ep.TargetRef.Name)
 	}
 	for _, podIP := range pod.Status.PodIPs {
-		if podIP.IP == addr.IP {
+		// (Addresses is an array but only Addresses[0] is used.)
+		if podIP.IP == ep.Addresses[0] {
 			return nil
 		}
 	}
-	return fmt.Errorf("pod ip(s) doesn't match endpoint ip, skipping: %v vs %s (%s/%s)", pod.Status.PodIPs, addr.IP, addr.TargetRef.Namespace, addr.TargetRef.Name)
+	return fmt.Errorf("pod ip(s) doesn't match endpoint ip, skipping: %v vs %s (%s/%s)", pod.Status.PodIPs, ep.Addresses[0], ep.TargetRef.Namespace, ep.TargetRef.Name)
 }
 
 // normalizeClusterIPs adjust clusterIPs based on ClusterIP.  This must not
