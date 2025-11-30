@@ -798,6 +798,9 @@ func (proxier *Proxier) syncProxyRules() (retryError error) {
 	endpointUpdateResult := proxier.endpointsMap.Update(proxier.endpointsChanges)
 
 	proxier.logger.Info("Syncing ipvs proxier rules")
+	if proxier.initialSync {
+		proxier.logger.Info("initial sync")
+	}
 
 	proxier.serviceNoLocalEndpointsInternal = sets.New[string]()
 	proxier.serviceNoLocalEndpointsExternal = sets.New[string]()
@@ -957,6 +960,7 @@ func (proxier *Proxier) syncProxyRules() (retryError error) {
 		// We need to bind ClusterIP to dummy interface, so set `bindAddr` parameter to `true` in syncService()
 		if err := proxier.syncService(svcPortNameString, serv, true, alreadyBoundAddrs); err == nil {
 			activeIPVSServices.Insert(serv.String())
+			proxier.logger.Info("recording active IPVS service for clusterIP", "vs", serv.String())
 			activeBindAddrs.Insert(serv.Address.String())
 			// ExternalTrafficPolicy only works for NodePort and external LB traffic, does not affect ClusterIP
 			// So we still need clusterIP rules in onlyNodeLocalEndpoints mode.
@@ -1015,6 +1019,7 @@ func (proxier *Proxier) syncProxyRules() (retryError error) {
 			shouldBind := !nodeAddressSet.Has(serv.Address.String())
 			if err := proxier.syncService(svcPortNameString, serv, shouldBind, alreadyBoundAddrs); err == nil {
 				activeIPVSServices.Insert(serv.String())
+				proxier.logger.Info("recording active IPVS service for externalIPs", "vs", serv.String())
 				if shouldBind {
 					activeBindAddrs.Insert(serv.Address.String())
 				}
@@ -1124,6 +1129,7 @@ func (proxier *Proxier) syncProxyRules() (retryError error) {
 			shouldBind := !nodeAddressSet.Has(serv.Address.String())
 			if err := proxier.syncService(svcPortNameString, serv, shouldBind, alreadyBoundAddrs); err == nil {
 				activeIPVSServices.Insert(serv.String())
+				proxier.logger.Info("recording active IPVS service for load balancer", "vs", serv.String())
 				if shouldBind {
 					activeBindAddrs.Insert(serv.Address.String())
 				}
@@ -1248,6 +1254,7 @@ func (proxier *Proxier) syncProxyRules() (retryError error) {
 				// There is no need to bind Node IP to dummy interface, so set parameter `bindAddr` to `false`.
 				if err := proxier.syncService(svcPortNameString, serv, false, alreadyBoundAddrs); err == nil {
 					activeIPVSServices.Insert(serv.String())
+					proxier.logger.Info("recording active IPVS service for nodePort", "vs", serv.String())
 					if err := proxier.syncEndpoint(svcPortName, svcInfo.ExternalPolicyLocal(), serv); err != nil {
 						proxier.logger.Error(err, "Failed to sync endpoint for service", "servicePortName", svcPortName, "virtualServer", serv)
 					}
@@ -1333,7 +1340,9 @@ func (proxier *Proxier) syncProxyRules() (retryError error) {
 	currentIPVSServices := make(map[string]*utilipvs.VirtualServer)
 	appliedSvcs, err := proxier.ipvs.GetVirtualServers()
 	if err == nil {
+		proxier.logger.Info("cleaning legacy services", "count", len(appliedSvcs))
 		for _, appliedSvc := range appliedSvcs {
+			proxier.logger.Info("existing vs", "vs", appliedSvc.String())
 			currentIPVSServices[appliedSvc.String()] = appliedSvc
 		}
 	} else {
@@ -1833,12 +1842,15 @@ func (proxier *Proxier) syncEndpoint(svcPortName proxy.ServicePortName, onlyNode
 }
 
 func (proxier *Proxier) cleanLegacyService(activeServices sets.Set[string], currentServices map[string]*utilipvs.VirtualServer) {
+	proxier.logger.Info("cleanLegacyService")
 	for cs, svc := range currentServices {
 		if proxier.isIPInExcludeCIDRs(svc.Address) {
+			proxier.logger.Info("ignoring service in excludeCIDRs", "vs", svc)
 			continue
 		}
 		if getIPFamily(svc.Address) != proxier.ipFamily {
 			// Not our family
+			proxier.logger.Info("ignoring service in wrong IP family", "vs", svc, "family", getIPFamily(svc.Address), "proxier.ipFamily", proxier.ipFamily)
 			continue
 		}
 		if !activeServices.Has(cs) {
@@ -1846,6 +1858,8 @@ func (proxier *Proxier) cleanLegacyService(activeServices sets.Set[string], curr
 			if err := proxier.ipvs.DeleteVirtualServer(svc); err != nil {
 				proxier.logger.Error(err, "Failed to delete service", "virtualServer", svc)
 			}
+		} else {
+			proxier.logger.Info("Keeping active service", "virtualServer", svc)
 		}
 	}
 }
@@ -1854,6 +1868,7 @@ func (proxier *Proxier) isIPInExcludeCIDRs(ip net.IP) bool {
 	// make sure it does not fall within an excluded CIDR range.
 	for _, excludedCIDR := range proxier.excludeCIDRs {
 		if excludedCIDR.Contains(ip) {
+			proxier.logger.Info("service is in excludeCIDRs", "ip", ip.String(), "excludeCIDR", excludedCIDR.String())
 			return true
 		}
 	}
