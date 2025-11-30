@@ -597,17 +597,17 @@ func CanUseIPVSProxier(ctx context.Context, ipvs utilipvs.Interface, ipsetver IP
 		logger.Error(err, "Can't read the ipvs")
 		return err
 	}
-	logger.V(5).Info("Virtual Servers", "count", len(vservers))
+	logger.Info("Virtual Servers", "count", len(vservers))
 	if len(vservers) > 0 {
 		// This is most likely a kube-proxy re-start. We know that ipvs works
 		// and if any VS uses the configured scheduler, we are done.
 		for _, vs := range vservers {
 			if vs.Scheduler == scheduler {
-				logger.V(5).Info("VS exist, Skipping checks")
+				logger.Info("VS exist, Skipping checks")
 				return nil
 			}
 		}
-		logger.V(5).Info("No existing VS uses the configured scheduler", "scheduler", scheduler)
+		logger.Info("No existing VS uses the configured scheduler", "scheduler", scheduler)
 	}
 
 	// Try to insert a dummy VS with the passed scheduler.
@@ -774,7 +774,7 @@ func (proxier *Proxier) syncProxyRules() (retryError error) {
 
 	// don't sync rules till we've received services and endpoints
 	if !proxier.isInitialized() {
-		proxier.logger.V(2).Info("Not syncing ipvs rules until Services and Endpoints have been received from master")
+		proxier.logger.Info("Not syncing ipvs rules until Services and Endpoints have been received from master")
 		return
 	}
 
@@ -788,7 +788,7 @@ func (proxier *Proxier) syncProxyRules() (retryError error) {
 	start := time.Now()
 	defer func() {
 		metrics.SyncProxyRulesLatency.WithLabelValues(string(proxier.ipFamily)).Observe(metrics.SinceInSeconds(start))
-		proxier.logger.V(4).Info("syncProxyRules complete", "elapsed", time.Since(start))
+		proxier.logger.Info("syncProxyRules complete", "elapsed", time.Since(start))
 	}()
 
 	// We assume that if this was called, we really want to sync them,
@@ -797,7 +797,7 @@ func (proxier *Proxier) syncProxyRules() (retryError error) {
 	_ = proxier.svcPortMap.Update(proxier.serviceChanges)
 	endpointUpdateResult := proxier.endpointsMap.Update(proxier.endpointsChanges)
 
-	proxier.logger.V(3).Info("Syncing ipvs proxier rules")
+	proxier.logger.Info("Syncing ipvs proxier rules")
 
 	proxier.serviceNoLocalEndpointsInternal = sets.New[string]()
 	proxier.serviceNoLocalEndpointsExternal = sets.New[string]()
@@ -1313,14 +1313,14 @@ func (proxier *Proxier) syncProxyRules() (retryError error) {
 		for _, lastChangeTriggerTime := range lastChangeTriggerTimes {
 			latency := metrics.SinceInSeconds(lastChangeTriggerTime)
 			metrics.NetworkProgrammingLatency.WithLabelValues(string(proxier.ipFamily)).Observe(latency)
-			proxier.logger.V(4).Info("Network programming", "endpoint", klog.KRef(name.Namespace, name.Name), "elapsed", latency)
+			proxier.logger.Info("Network programming", "endpoint", klog.KRef(name.Namespace, name.Name), "elapsed", latency)
 		}
 	}
 
 	// Remove superfluous addresses from the dummy device
 	superfluousAddresses := alreadyBoundAddrs.Difference(activeBindAddrs)
 	if superfluousAddresses.Len() > 0 {
-		proxier.logger.V(2).Info("Removing addresses", "interface", defaultDummyDevice, "addresses", superfluousAddresses)
+		proxier.logger.Info("Removing addresses", "interface", defaultDummyDevice, "addresses", superfluousAddresses)
 		for adr := range superfluousAddresses {
 			if err := proxier.netlinkHandle.UnbindAddress(adr, defaultDummyDevice); err != nil {
 				proxier.logger.Error(err, "UnbindAddress", "interface", defaultDummyDevice, "address", adr)
@@ -1652,7 +1652,7 @@ func (proxier *Proxier) syncService(svcName string, vs *utilipvs.VirtualServer, 
 	if appliedVirtualServer == nil || !appliedVirtualServer.Equal(vs) {
 		if appliedVirtualServer == nil {
 			// IPVS service is not found, create a new service
-			proxier.logger.V(3).Info("Adding new service", "serviceName", svcName, "virtualServer", vs)
+			proxier.logger.Info("Adding new service", "serviceName", svcName, "virtualServer", vs)
 			if err := proxier.ipvs.AddVirtualServer(vs); err != nil {
 				proxier.logger.Error(err, "Failed to add IPVS service", "serviceName", svcName)
 				return err
@@ -1660,7 +1660,7 @@ func (proxier *Proxier) syncService(svcName string, vs *utilipvs.VirtualServer, 
 		} else {
 			// IPVS service was changed, update the existing one
 			// During updates, service VIP will not go down
-			proxier.logger.V(3).Info("IPVS service was changed", "serviceName", svcName)
+			proxier.logger.Info("IPVS service was changed", "serviceName", svcName)
 			if err := proxier.ipvs.UpdateVirtualServer(vs); err != nil {
 				proxier.logger.Error(err, "Failed to update IPVS service")
 				return err
@@ -1676,7 +1676,7 @@ func (proxier *Proxier) syncService(svcName string, vs *utilipvs.VirtualServer, 
 			return nil
 		}
 
-		proxier.logger.V(4).Info("Bind address", "address", vs.Address)
+		proxier.logger.Info("Bind address", "address", vs.Address)
 		_, err := proxier.netlinkHandle.EnsureAddressBind(vs.Address.String(), defaultDummyDevice)
 		if err != nil {
 			proxier.logger.Error(err, "Failed to bind service address to dummy device", "serviceName", svcName)
@@ -1785,7 +1785,7 @@ func (proxier *Proxier) syncEndpoint(svcPortName proxy.ServicePortName, onlyNode
 			if !proxier.gracefuldeleteManager.InTerminationList(uniqueRS) {
 				continue
 			}
-			proxier.logger.V(5).Info("new ep is in graceful delete list", "uniqueRealServer", uniqueRS)
+			proxier.logger.Info("new ep is in graceful delete list", "uniqueRealServer", uniqueRS)
 			err := proxier.gracefuldeleteManager.MoveRSOutofGracefulDeleteList(uniqueRS)
 			if err != nil {
 				proxier.logger.Error(err, "Failed to delete endpoint in gracefulDeleteQueue", "endpoint", ep)
@@ -1822,7 +1822,7 @@ func (proxier *Proxier) syncEndpoint(svcPortName proxy.ServicePortName, onlyNode
 			Port:    uint16(portNum),
 		}
 
-		proxier.logger.V(5).Info("Using graceful delete", "uniqueRealServer", uniqueRS)
+		proxier.logger.Info("Using graceful delete", "uniqueRealServer", uniqueRS)
 		err = proxier.gracefuldeleteManager.GracefulDeleteRS(appliedVirtualServer, delDest)
 		if err != nil {
 			proxier.logger.Error(err, "Failed to delete destination", "uniqueRealServer", uniqueRS)
@@ -1842,7 +1842,7 @@ func (proxier *Proxier) cleanLegacyService(activeServices sets.Set[string], curr
 			continue
 		}
 		if !activeServices.Has(cs) {
-			proxier.logger.V(4).Info("Delete service", "virtualServer", svc)
+			proxier.logger.Info("Delete service", "virtualServer", svc)
 			if err := proxier.ipvs.DeleteVirtualServer(svc); err != nil {
 				proxier.logger.Error(err, "Failed to delete service", "virtualServer", svc)
 			}
