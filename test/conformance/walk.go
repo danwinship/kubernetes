@@ -101,14 +101,18 @@ func main() {
 			log.Fatal(err)
 		}
 
+		testInfo, err := getTestInfo(spec)
 		if isConformance(spec) {
-			testInfo := getTestInfo(spec)
 			if testInfo != nil {
 				testInfos = append(testInfos, testInfo)
 				if err := validateTestName(testInfo.CodeName); err != nil {
 					log.Fatal(err)
 				}
+			} else {
+				log.Print(err)
 			}
+		} else if !isNodeConformance(spec) && testInfo != nil {
+			log.Printf("Non-conformance test %#v (%s) has conformance comment", getTestName(spec), testInfo.URL)
 		}
 	}
 
@@ -120,7 +124,11 @@ func isConformance(spec *types.SpecReport) bool {
 	return strings.Contains(getTestName(spec), "[Conformance]")
 }
 
-func getTestInfo(spec *types.SpecReport) *ConformanceData {
+func isNodeConformance(spec *types.SpecReport) bool {
+	return strings.Contains(getTestName(spec), "[NodeConformance]")
+}
+
+func getTestInfo(spec *types.SpecReport) (*ConformanceData, error) {
 	var c *ConformanceData
 	var err error
 	// The key to this working is that we don't need to parse every file or walk
@@ -133,14 +141,13 @@ func getTestInfo(spec *types.SpecReport) *ConformanceData {
 	}
 	c, err = getConformanceData(frame)
 	if err != nil {
-		log.Printf("Error looking for conformance data: %v", err)
+		return nil, fmt.Errorf("error looking for conformance data: %v", err)
 	}
 	if c == nil {
-		log.Printf("Did not find test info for spec: %#v\n", getTestName(spec))
-		return nil
+		return nil, fmt.Errorf("did not find test info for spec: %#v", getTestName(spec))
 	}
 	c.CodeName = getTestName(spec)
-	return c
+	return c, nil
 }
 
 func getTestName(spec *types.SpecReport) string {
